@@ -1,4 +1,3 @@
-// firebase-admin is CJS — use dynamic import with interop
 let _admin: any = null;
 let _db: any = null;
 let _authAdmin: any = null;
@@ -7,7 +6,7 @@ let _fieldValue: any = null;
 async function getAdmin() {
   if (_admin) return _admin;
   const mod = await import('firebase-admin');
-  _admin = mod.default || mod;
+  _admin = mod.default;
 
   if (!_admin.apps?.length) {
     const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT;
