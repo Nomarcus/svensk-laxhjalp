@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { db, admin } from './firebase';
+import { db, fieldValue } from './firebase';
 import type { AuthUser } from './auth';
 
 const FREE_CHAT_LIMIT = 3;
@@ -55,7 +55,7 @@ export async function checkSubscription(
         return null;
       }
       await usageRef.set(
-        { imageCount: admin.firestore.FieldValue.increment(1), lastUpdated: new Date().toISOString() },
+        { imageCount: fieldValue.increment(1), lastUpdated: new Date().toISOString() },
         { merge: true }
       );
       return { tier: 'free', allowed: true };
@@ -73,7 +73,7 @@ export async function checkSubscription(
         return null;
       }
       await usageRef.set(
-        { chatCount: admin.firestore.FieldValue.increment(1), lastUpdated: new Date().toISOString() },
+        { chatCount: fieldValue.increment(1), lastUpdated: new Date().toISOString() },
         { merge: true }
       );
       return { tier: 'free', allowed: true };

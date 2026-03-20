@@ -1,17 +1,13 @@
-import * as admin from 'firebase-admin';
+import { db, authAdmin } from './_lib/firebase';
 import { GoogleGenAI } from '@google/genai';
 
 export default async function handler(_req: any, res: any) {
   const results: Record<string, string> = {};
 
   try {
-    if (!admin.apps.length) {
-      const sa = process.env.FIREBASE_SERVICE_ACCOUNT;
-      if (sa) {
-        admin.initializeApp({ credential: admin.credential.cert(JSON.parse(sa)) });
-      }
-    }
-    results['firebase'] = 'OK - apps: ' + admin.apps.length;
+    // Test firebase auth
+    results['firebase-auth'] = typeof authAdmin.verifyIdToken === 'function' ? 'OK' : 'FAIL';
+    results['firebase-db'] = typeof db.doc === 'function' ? 'OK' : 'FAIL';
   } catch (e: any) {
     results['firebase'] = 'FAIL: ' + e.message;
   }
