@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Image as ImageIcon, Loader2, Bot, X } from 'lucide-react';
+import { Image as ImageIcon, Loader2, Bot, X, Calculator, BookOpen, Languages, Beaker, Globe, Book, Check } from 'lucide-react';
 import { db, auth, OperationType, handleFirestoreError } from '../firebase';
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, deleteDoc, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { generateHomeworkHelp, generateImage } from '../services/geminiService';
 import { compressImage } from '../utils/image';
-import type { Message, ChatSession } from '../types';
+import { cn } from '../utils/cn';
+import type { Message, ChatSession, Task } from '../types';
 import ChatHeader from './chat/ChatHeader';
 import ChatMessage from './chat/ChatMessage';
 import ChatInput from './chat/ChatInput';
@@ -14,12 +15,12 @@ interface ChatProps {
   childId: string;
   childName: string;
   ownerId: string;
-  onAddToPlanner?: (subject: string, description: string) => void;
+  tasks?: Task[];
   taskContext?: { taskId: string; subject: string; description: string; imageUrl?: string } | null;
   onTaskContextUsed?: () => void;
 }
 
-export default function Chat({ childId, childName, ownerId, onAddToPlanner, taskContext, onTaskContextUsed }: ChatProps) {
+export default function Chat({ childId, childName, ownerId, tasks = [], taskContext, onTaskContextUsed }: ChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -30,6 +31,8 @@ export default function Chat({ childId, childName, ownerId, onAddToPlanner, task
   const [isDragging, setIsDragging] = useState(false);
   const [generatingImageId, setGeneratingImageId] = useState<string | null>(null);
   const [savedMessageIds, setSavedMessageIds] = useState<Set<string>>(new Set());
+  const [taskPickerContent, setTaskPickerContent] = useState<string | null>(null);
+  const [linkedTaskIds, setLinkedTaskIds] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -128,6 +131,32 @@ export default function Chat({ childId, childName, ownerId, onAddToPlanner, task
       setSavedMessageIds(prev => new Set(prev).add(message.id));
     } catch (err) {
       handleFirestoreError(err, OperationType.CREATE, 'library');
+    }
+  };
+
+  const getSubjectIcon = (subject: string) => {
+    const s = subject.toLowerCase();
+    if (s.includes('matte') || s.includes('math')) return <Calculator size={14} />;
+    if (s.includes('svenska') || s.includes('läs')) return <BookOpen size={14} />;
+    if (s.includes('engelska') || s.includes('english')) return <Languages size={14} />;
+    if (s.includes('no') || s.includes('fysik') || s.includes('kemi') || s.includes('biologi')) return <Beaker size={14} />;
+    if (s.includes('so') || s.includes('historia') || s.includes('geografi')) return <Globe size={14} />;
+    return <Book size={14} />;
+  };
+
+  const saveNoteToTask = async (taskId: string, content: string) => {
+    if (!auth.currentUser || !childId) return;
+    try {
+      const taskRef = doc(db, 'users', ownerId, 'children', childId, 'tasks', taskId);
+      const note = content.length > 500 ? content.slice(0, 500) + '...' : content;
+      await updateDoc(taskRef, {
+        aiNotes: arrayUnion(note),
+        linkedChatSessionId: activeSessionId,
+      });
+      setLinkedTaskIds(prev => new Set(prev).add(taskId));
+      setTaskPickerContent(null);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `tasks/${taskId}`);
     }
   };
 
@@ -292,11 +321,8 @@ export default function Chat({ childId, childName, ownerId, onAddToPlanner, task
                   sendMessage(`Förklara hur det du just berättade om kopplas till den svenska läroplanen (Lgr22). Vilka centrala innehåll och kunskapskrav berörs? Ge konkreta kopplingar så jag som förälder förstår varför mitt barn lär sig detta.\n\nDin förklaring var:\n${content.slice(0, 500)}`);
                 }}
                 hasImage={hasImage}
-                onAddToPlanner={onAddToPlanner ? (content) => {
-                  // Extract subject from first line of AI response
-                  const firstLine = content.split('\n')[0].replace(/[#*]/g, '').trim();
-                  const subject = firstLine.length > 50 ? firstLine.slice(0, 50) : firstLine;
-                  onAddToPlanner(subject, content.slice(0, 300));
+                onAddToPlanner={tasks.length > 0 ? (content) => {
+                  setTaskPickerContent(content);
                 } : undefined}
               />
             );
@@ -325,6 +351,60 @@ export default function Chat({ childId, childName, ownerId, onAddToPlanner, task
         loading={loading}
         onSubmit={sendMessage}
       />
+
+      {/* Task Picker Modal */}
+      {taskPickerContent && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in" onClick={() => setTaskPickerContent(null)}>
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-black/5 animate-in zoom-in-95 duration-200 max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-black/5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-serif italic">Koppla till en läxa</h3>
+                <button onClick={() => setTaskPickerContent(null)} className="p-2 hover:bg-stone-100 rounded-full text-stone-400 transition-colors">
+                  <X size={18} />
+                </button>
+              </div>
+              <p className="text-sm text-stone-500 mt-1">Välj vilken läxa du vill spara AI-svaret till</p>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {tasks.filter(t => !t.completed).length === 0 ? (
+                <p className="text-sm text-stone-400 text-center py-8 italic">Inga aktiva läxor att koppla till.</p>
+              ) : (
+                tasks.filter(t => !t.completed).map(task => (
+                  <button
+                    key={task.id}
+                    onClick={() => saveNoteToTask(task.id, taskPickerContent)}
+                    disabled={linkedTaskIds.has(task.id)}
+                    className={cn(
+                      "w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all",
+                      linkedTaskIds.has(task.id)
+                        ? "bg-emerald-50 border-emerald-200"
+                        : "bg-white border-black/5 hover:bg-emerald-50 hover:border-emerald-200"
+                    )}
+                  >
+                    <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
+                      {getSubjectIcon(task.subject)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-stone-800 truncate">{task.subject}</p>
+                      {task.description && (
+                        <p className="text-xs text-stone-400 truncate">{task.description}</p>
+                      )}
+                    </div>
+                    {linkedTaskIds.has(task.id) ? (
+                      <div className="flex items-center gap-1 text-emerald-600">
+                        <Check size={16} />
+                        <span className="text-xs font-medium">Sparat</span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-stone-400 capitalize">{task.day}</span>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -10,7 +10,7 @@ import Library from './components/Library';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import ChildManager from './components/ChildManager';
 import { Plus } from 'lucide-react';
-import type { Child, UserSubscription } from './types';
+import type { Child, UserSubscription, Task } from './types';
 import InstallPrompt, { InstallGuide } from './components/InstallPrompt';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import Subscription from './components/Subscription';
@@ -27,6 +27,7 @@ export default function App() {
   const [plannerPrefill, setPlannerPrefill] = useState<{ subject: string; description: string } | null>(null);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
   const [chatFromTask, setChatFromTask] = useState<{ taskId: string; subject: string; description: string; imageUrl?: string } | null>(null);
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -144,6 +145,18 @@ export default function App() {
     };
   }, [user, selectedChildId]);
 
+  // Listen to all tasks for the selected child (for AI-planner linking)
+  useEffect(() => {
+    if (!user || !selectedChildId) { setAllTasks([]); return; }
+    const selectedChild = children.find(c => c.id === selectedChildId);
+    const ownerId = selectedChild?.ownerId || user.uid;
+    const tasksRef = collection(db, 'users', ownerId, 'children', selectedChildId, 'tasks');
+    const unsub = onSnapshot(tasksRef, (snap) => {
+      setAllTasks(snap.docs.map(d => ({ id: d.id, ...d.data() })) as Task[]);
+    }, () => setAllTasks([]));
+    return () => unsub();
+  }, [user, selectedChildId, children]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F5F5F0] flex items-center justify-center">
@@ -198,7 +211,7 @@ export default function App() {
         ) : (
           <>
             {activeTab === 'chat' ? (
-              <Chat childId={selectedChildId!} childName={selectedChild?.name || ''} ownerId={selectedChild?.ownerId || user.uid} onAddToPlanner={(subject, description) => { setPlannerPrefill({ subject, description }); setActiveTab('planner'); }} taskContext={chatFromTask} onTaskContextUsed={() => setChatFromTask(null)} />
+              <Chat childId={selectedChildId!} childName={selectedChild?.name || ''} ownerId={selectedChild?.ownerId || user.uid} tasks={allTasks} taskContext={chatFromTask} onTaskContextUsed={() => setChatFromTask(null)} />
             ) : activeTab === 'planner' ? (
               <Planner childId={selectedChildId!} ownerId={selectedChild?.ownerId || user.uid} prefill={plannerPrefill} onPrefillUsed={() => setPlannerPrefill(null)} onOpenAiForTask={(taskId, subject, description, imageUrl) => { setChatFromTask({ taskId, subject, description, imageUrl }); setActiveTab('chat'); }} />
             ) : activeTab === 'library' ? (
