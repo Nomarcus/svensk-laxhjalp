@@ -1,4 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+
 import { GoogleGenAI } from '@google/genai';
 import { verifyAuth } from './_lib/auth';
 import { checkSubscription } from './_lib/subscription';
@@ -57,7 +57,7 @@ function trimHistory(history: { role: string; content: string }[]) {
   return history.slice(-MAX_HISTORY_PAIRS * 2);
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
     return;

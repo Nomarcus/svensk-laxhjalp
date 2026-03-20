@@ -1,4 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+
 import type Stripe from 'stripe';
 import { getStripe } from '../_lib/stripe';
 import { getDb } from '../_lib/firebase';
@@ -9,7 +9,7 @@ export const config = {
   },
 };
 
-async function getRawBody(req: VercelRequest): Promise<Buffer> {
+async function getRawBody(req: any): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     req.on('data', (chunk: Buffer) => chunks.push(chunk));
@@ -18,7 +18,7 @@ async function getRawBody(req: VercelRequest): Promise<Buffer> {
   });
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const sig = req.headers['stripe-signature'];

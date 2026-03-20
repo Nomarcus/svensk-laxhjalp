@@ -1,4 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+
 import { GoogleGenAI } from '@google/genai';
 import { verifyAuth } from './_lib/auth';
 import { checkSubscription } from './_lib/subscription';
@@ -6,7 +6,7 @@ import { checkSubscription } from './_lib/subscription';
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 const IMAGE_MODEL = process.env.AI_IMAGE_MODEL || 'gemini-2.0-flash-preview-image-generation';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
     return;

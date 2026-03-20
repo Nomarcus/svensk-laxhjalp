@@ -1,4 +1,3 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getAuthAdmin } from './firebase';
 
 export interface AuthUser {
@@ -6,10 +5,7 @@ export interface AuthUser {
   email?: string;
 }
 
-export async function verifyAuth(
-  req: VercelRequest,
-  res: VercelResponse
-): Promise<AuthUser | null> {
+export async function verifyAuth(req: any, res: any): Promise<AuthUser | null> {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
     res.status(401).json({ error: 'Ingen autentisering. Logga in först.' });

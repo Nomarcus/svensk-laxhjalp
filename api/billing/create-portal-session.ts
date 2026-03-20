@@ -1,11 +1,11 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+
 import { verifyAuth } from '../_lib/auth';
 import { getDb } from '../_lib/firebase';
 import { getStripe } from '../_lib/stripe';
 
 const CLIENT_URL = process.env.CLIENT_URL || 'https://svensk-laxhjalp.vercel.app';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const user = await verifyAuth(req, res);

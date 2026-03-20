@@ -1,4 +1,3 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getDb, getFieldValue } from './firebase';
 import type { AuthUser } from './auth';
 
@@ -6,8 +5,8 @@ const FREE_CHAT_LIMIT = 3;
 const FREE_IMAGE_LIMIT = 1;
 
 export async function checkSubscription(
-  req: VercelRequest,
-  res: VercelResponse,
+  req: any,
+  res: any,
   user: AuthUser,
   route: 'chat' | 'image' | 'billing' | 'other'
 ): Promise<{ tier: string; allowed: boolean } | null> {
@@ -37,7 +36,7 @@ export async function checkSubscription(
 
     if (route === 'image') {
       res.status(403).json({
-        error: 'Bildgenerering kräver Pro-abonnemang. Uppgradera för att skapa illustrationer.',
+        error: 'Bildgenerering kräver Pro-abonnemang.',
         upgradeRequired: true,
       });
       return null;
@@ -46,7 +45,7 @@ export async function checkSubscription(
     if (route === 'chat' && req.body?.imageBase64) {
       if (imageCount >= FREE_IMAGE_LIMIT) {
         res.status(403).json({
-          error: `Du har använt din gratis bildanalys idag (${FREE_IMAGE_LIMIT}/dag). Uppgradera till Pro för obegränsade bildanalyser.`,
+          error: `Du har använt din gratis bildanalys idag (${FREE_IMAGE_LIMIT}/dag).`,
           upgradeRequired: true,
           limit: FREE_IMAGE_LIMIT,
           used: imageCount,
@@ -63,7 +62,7 @@ export async function checkSubscription(
     if (route === 'chat') {
       if (chatCount >= FREE_CHAT_LIMIT) {
         res.status(429).json({
-          error: `Du har använt dina ${FREE_CHAT_LIMIT} gratis frågor idag. Uppgradera till Pro för obegränsade frågor.`,
+          error: `Du har använt dina ${FREE_CHAT_LIMIT} gratis frågor idag.`,
           upgradeRequired: true,
           limit: FREE_CHAT_LIMIT,
           used: chatCount,
