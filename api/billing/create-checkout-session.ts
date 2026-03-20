@@ -1,63 +1,23 @@
-
-import { verifyAuth } from '../../lib/auth';
-import { getDb } from '../../lib/firebase';
-import { getStripe } from '../../lib/stripe';
-
+import Stripe from 'stripe';
 const CLIENT_URL = process.env.CLIENT_URL || 'https://svensk-laxhjalp.vercel.app';
-
+async function getFirebaseAdmin() { const mod = await import('firebase-admin'); const admin = mod.default; if (!admin.apps?.length) { const sa = process.env.FIREBASE_SERVICE_ACCOUNT; if (sa) admin.initializeApp({ credential: admin.credential.cert(JSON.parse(sa)) }); else admin.initializeApp(); } return admin; }
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-
-  const user = await verifyAuth(req, res);
-  if (!user) return;
-
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: 'Ingen autentisering.' });
   try {
-    const db = await getDb();
+    const admin = await getFirebaseAdmin();
+    const decoded = await admin.auth().verifyIdToken(authHeader.split('Bearer ')[1]);
+    if (!decoded.email) return res.status(400).json({ error: 'E-post kravs.' });
     const { priceId } = req.body;
-
-    if (!user.email) {
-      res.status(400).json({ error: 'Du behöver ett konto med e-post för att prenumerera. Gästkonton stöds inte.' });
-      return;
-    }
-
-    const priceMap: Record<string, string | undefined> = {
-      monthly: process.env.STRIPE_PRICE_ID_MONTHLY,
-      yearly: process.env.STRIPE_PRICE_ID_YEARLY,
-    };
+    const priceMap: Record<string, string | undefined> = { monthly: process.env.STRIPE_PRICE_ID_MONTHLY, yearly: process.env.STRIPE_PRICE_ID_YEARLY };
     const stripePriceId = priceMap[priceId] || priceId;
-
-    if (!stripePriceId) {
-      res.status(400).json({ error: 'Ogiltigt pris-ID.' });
-      return;
-    }
-
-    const userDoc = await db.doc(`users/${user.uid}`).get();
-    const userData = userDoc.data();
-    let customerId = userData?.stripeCustomerId;
-
-    if (!customerId) {
-      const customer = await getStripe().customers.create({
-        email: user.email,
-        metadata: { firebaseUID: user.uid },
-      });
-      customerId = customer.id;
-      await db.doc(`users/${user.uid}`).set({ stripeCustomerId: customerId }, { merge: true });
-    }
-
-    const session = await getStripe().checkout.sessions.create({
-      customer: customerId,
-      mode: 'subscription',
-      line_items: [{ price: stripePriceId, quantity: 1 }],
-      success_url: `${CLIENT_URL}?subscription=success`,
-      cancel_url: `${CLIENT_URL}?subscription=canceled`,
-      metadata: { firebaseUID: user.uid },
-      subscription_data: { metadata: { firebaseUID: user.uid } },
-      locale: 'sv',
-    });
-
+    if (!stripePriceId) return res.status(400).json({ error: 'Ogiltigt pris.' });
+    const db = admin.firestore();
+    let customerId = (await db.doc('users/' + decoded.uid).get()).data()?.stripeCustomerId;
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+    if (!customerId) { const c = await stripe.customers.create({ email: decoded.email, metadata: { firebaseUID: decoded.uid } }); customerId = c.id; await db.doc('users/' + decoded.uid).set({ stripeCustomerId: customerId }, { merge: true }); }
+    const session = await stripe.checkout.sessions.create({ customer: customerId, mode: 'subscription', line_items: [{ price: stripePriceId, quantity: 1 }], success_url: CLIENT_URL + '?subscription=success', cancel_url: CLIENT_URL + '?subscription=canceled', metadata: { firebaseUID: decoded.uid }, subscription_data: { metadata: { firebaseUID: decoded.uid } }, locale: 'sv' });
     res.json({ url: session.url });
-  } catch (error: any) {
-    console.error('Checkout session error:', error.message);
-    res.status(500).json({ error: 'Kunde inte skapa betalningssession.' });
-  }
+  } catch (error: any) { console.error('Checkout error:', error.message); res.status(500).json({ error: 'Betalning misslyckades.' }); }
 }
