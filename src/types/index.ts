@@ -38,6 +38,12 @@ export interface Task {
   dueDay?: string;
   /** Minuter per dag att lägga på läxan */
   minutesPerDay?: number;
+  /** Foto av läxan (base64 data URI) */
+  imageUrl?: string;
+  /** Kopplad AI-chattsession */
+  linkedChatSessionId?: string;
+  /** AI-svar sparade till uppgiften */
+  aiNotes?: string[];
 }
 
 export type SubscriptionTier = 'free' | 'pro';

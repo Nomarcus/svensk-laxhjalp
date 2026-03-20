@@ -15,9 +15,11 @@ interface ChatProps {
   childName: string;
   ownerId: string;
   onAddToPlanner?: (subject: string, description: string) => void;
+  taskContext?: { taskId: string; subject: string; description: string; imageUrl?: string } | null;
+  onTaskContextUsed?: () => void;
 }
 
-export default function Chat({ childId, childName, ownerId, onAddToPlanner }: ChatProps) {
+export default function Chat({ childId, childName, ownerId, onAddToPlanner, taskContext, onTaskContextUsed }: ChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -66,6 +68,28 @@ export default function Chat({ childId, childName, ownerId, onAddToPlanner }: Ch
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
+
+  // Handle task context from planner - auto-send question about the task
+  const taskContextProcessed = useRef(false);
+  useEffect(() => {
+    if (taskContext && activeSessionId && !loading && !taskContextProcessed.current) {
+      taskContextProcessed.current = true;
+      const prompt = `Jag behöver hjälp med denna läxa:\n\nÄmne: ${taskContext.subject}\n${taskContext.description ? `Beskrivning: ${taskContext.description}\n` : ''}Förklara vad uppgiften handlar om och ge tips på hur jag som förälder kan hjälpa mitt barn.`;
+
+      if (taskContext.imageUrl) {
+        setImage(taskContext.imageUrl);
+      }
+
+      // Small delay to ensure session is ready
+      setTimeout(() => {
+        sendMessage(prompt);
+        onTaskContextUsed?.();
+      }, 500);
+    }
+    if (!taskContext) {
+      taskContextProcessed.current = false;
+    }
+  }, [taskContext, activeSessionId]);
 
   const createNewSession = async () => {
     if (!auth.currentUser || !childId) return;

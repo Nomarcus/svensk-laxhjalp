@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, CheckCircle2, Circle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, LayoutList, Calendar, Calculator, BookOpen, Languages, Beaker, Globe, Book, Clock, CalendarCheck, Camera } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Circle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, LayoutList, Calendar, Calculator, BookOpen, Languages, Beaker, Globe, Book, Clock, CalendarCheck, Camera, MessageSquare, X, Image as ImageIcon } from 'lucide-react';
 import { db, auth, OperationType, handleFirestoreError } from '../firebase';
 import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc, where } from 'firebase/firestore';
 import { format, startOfWeek, addDays, getWeek, getYear, addWeeks, subWeeks } from 'date-fns';
@@ -12,11 +12,12 @@ interface PlannerProps {
   ownerId: string;
   prefill?: { subject: string; description: string } | null;
   onPrefillUsed?: () => void;
+  onOpenAiForTask?: (taskId: string, subject: string, description: string, imageUrl?: string) => void;
 }
 
 const DAYS = ['måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag', 'söndag'];
 
-export default function Planner({ childId, ownerId, prefill, onPrefillUsed }: PlannerProps) {
+export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOpenAiForTask }: PlannerProps) {
   const plannerCameraRef = useRef<HTMLInputElement>(null);
   const [viewDate, setViewDate] = useState(new Date());
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -238,6 +239,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed }: Pl
   );
 
   const [taskImage, setTaskImage] = useState<string | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   const handlePlannerCamera = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -257,7 +259,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed }: Pl
         className="w-full flex items-center justify-center gap-2 py-3 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl font-medium hover:bg-amber-100 transition-all"
       >
         <Camera size={18} />
-        📸 Fota läxan
+        Fota läxan
       </button>
       <input
         type="file"
@@ -588,13 +590,14 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed }: Pl
                         dayTasks.map((task) => (
                           <div
                             key={task.id}
+                            onClick={() => setSelectedTask(task)}
                             className={cn(
-                              "bg-white rounded-2xl p-4 shadow-sm border border-black/5 flex items-start gap-4 transition-all group",
+                              "bg-white rounded-2xl p-4 shadow-sm border border-black/5 flex items-start gap-4 transition-all group cursor-pointer hover:shadow-md",
                               task.completed && "opacity-60"
                             )}
                           >
                             <button
-                              onClick={() => toggleTask(task)}
+                              onClick={(e) => { e.stopPropagation(); toggleTask(task); }}
                               className={cn(
                                 "mt-1 transition-colors",
                                 task.completed ? "text-emerald-500" : "text-stone-300 hover:text-emerald-500"
@@ -616,14 +619,20 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed }: Pl
                                 )}>
                                   {task.subject}
                                 </h5>
+                                {task.imageUrl && (
+                                  <ImageIcon size={14} className="text-amber-500" />
+                                )}
+                                {task.linkedChatSessionId && (
+                                  <MessageSquare size={14} className="text-emerald-500" />
+                                )}
                               </div>
                               {task.description && (
-                                <p className="text-stone-500 text-sm mt-1">{task.description}</p>
+                                <p className="text-stone-500 text-sm mt-1 line-clamp-2">{task.description}</p>
                               )}
                               <TaskBadges task={task} />
                             </div>
                             <button
-                              onClick={() => deleteTask(task.id)}
+                              onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
                               className="p-2 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
                             >
                               <Trash2 size={18} />
@@ -726,6 +735,103 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed }: Pl
           </div>
         )}
       </div>
+
+      {/* Task Detail Modal */}
+      {selectedTask && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in" onClick={() => setSelectedTask(null)}>
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-black/5 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-black/5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={cn(
+                    "p-2 rounded-xl",
+                    selectedTask.completed ? "bg-stone-100 text-stone-400" : "bg-emerald-50 text-emerald-600"
+                  )}>
+                    {getSubjectIcon(selectedTask.subject)}
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-serif italic">{selectedTask.subject}</h3>
+                    <p className="text-xs text-stone-400 capitalize">{selectedTask.day}</p>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedTask(null)} className="p-2 hover:bg-stone-100 rounded-full text-stone-400 transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Task image */}
+              {selectedTask.imageUrl && (
+                <div>
+                  <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">Foto av läxan</label>
+                  <img src={selectedTask.imageUrl} alt="Läxbild" className="w-full max-h-64 object-contain rounded-xl border border-black/5 bg-stone-50" />
+                </div>
+              )}
+
+              {/* Description */}
+              {selectedTask.description && (
+                <div>
+                  <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">Beskrivning</label>
+                  <p className="text-sm text-stone-600 leading-relaxed">{selectedTask.description}</p>
+                </div>
+              )}
+
+              {/* Badges */}
+              <TaskBadges task={selectedTask} />
+
+              {/* AI Notes */}
+              {selectedTask.aiNotes && selectedTask.aiNotes.length > 0 && (
+                <div>
+                  <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">AI-anteckningar</label>
+                  <div className="space-y-2">
+                    {selectedTask.aiNotes.map((note, i) => (
+                      <div key={i} className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-sm text-emerald-800">
+                        {note.length > 200 ? note.slice(0, 200) + '...' : note}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex flex-col gap-2 pt-2">
+                {onOpenAiForTask && (
+                  <button
+                    onClick={() => {
+                      onOpenAiForTask(selectedTask.id, selectedTask.subject, selectedTask.description, selectedTask.imageUrl);
+                      setSelectedTask(null);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white rounded-2xl font-medium shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all"
+                  >
+                    <MessageSquare size={18} />
+                    Fråga AI om denna läxa
+                  </button>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { toggleTask(selectedTask); setSelectedTask({ ...selectedTask, completed: !selectedTask.completed }); }}
+                    className={cn(
+                      "flex-1 py-3 rounded-2xl font-medium transition-all border",
+                      selectedTask.completed
+                        ? "bg-stone-50 border-stone-200 text-stone-600 hover:bg-stone-100"
+                        : "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                    )}
+                  >
+                    {selectedTask.completed ? 'Markera som ej klar' : 'Markera som klar'}
+                  </button>
+                  <button
+                    onClick={() => { deleteTask(selectedTask.id); setSelectedTask(null); }}
+                    className="py-3 px-4 bg-red-50 border border-red-200 text-red-600 rounded-2xl font-medium hover:bg-red-100 transition-all"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

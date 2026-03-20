@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, MessageSquare, Calendar, BookOpen, User as UserIcon, ChevronDown, Settings, Info, Library, Crown } from 'lucide-react';
+import { LogOut, MessageSquare, Calendar, BookOpen, User as UserIcon, ChevronDown, Settings, Info, Library, Crown, Download } from 'lucide-react';
 import { logout, User } from '../firebase';
 import { cn } from '../utils/cn';
 import type { Child, SubscriptionTier } from '../types';
@@ -14,6 +14,7 @@ interface LayoutProps {
   onSelectChild: (id: string) => void;
   onManageChildren: () => void;
   subscriptionTier?: SubscriptionTier;
+  onShowInstallGuide?: () => void;
 }
 
 export default function Layout({ 
@@ -25,7 +26,8 @@ export default function Layout({
   selectedChildId,
   onSelectChild,
   onManageChildren,
-  subscriptionTier = 'free'
+  subscriptionTier = 'free',
+  onShowInstallGuide
 }: LayoutProps) {
   const [showChildSelect, setShowChildSelect] = React.useState(false);
   const selectedChild = childrenList.find(c => c.id === selectedChildId);
@@ -166,6 +168,15 @@ export default function Layout({
         </nav>
 
         <div className="p-4 border-t border-black/5 mt-auto">
+          {onShowInstallGuide && (
+            <button
+              onClick={onShowInstallGuide}
+              className="w-full flex items-center gap-3 px-4 py-2 mb-2 text-stone-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+            >
+              <Download size={18} />
+              <span className="text-sm">Installera appen</span>
+            </button>
+          )}
           <div className="flex items-center gap-3 px-4 py-3 mb-2">
             {user.photoURL ? (
               <img src={user.photoURL} alt={user.displayName || ''} className="w-8 h-8 rounded-full" referrerPolicy="no-referrer" />

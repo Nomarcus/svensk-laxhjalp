@@ -133,7 +133,7 @@ export default function ChatMessage({
               <Printer size={12} />
               Skriv ut svaret
             </button>
-            {onAddToPlanner && hasImage && (
+            {onAddToPlanner && (
               <button
                 onClick={() => onAddToPlanner(msg.content)}
                 className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-amber-600 transition-colors px-2 py-1 rounded-md hover:bg-amber-50"
