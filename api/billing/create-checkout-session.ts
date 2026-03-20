@@ -1,7 +1,7 @@
 
-import { verifyAuth } from '../_lib/auth';
-import { getDb } from '../_lib/firebase';
-import { getStripe } from '../_lib/stripe';
+import { verifyAuth } from '../lib/auth';
+import { getDb } from '../lib/firebase';
+import { getStripe } from '../lib/stripe';
 
 const CLIENT_URL = process.env.CLIENT_URL || 'https://svensk-laxhjalp.vercel.app';
 

@@ -11,7 +11,7 @@ export default async function handler(_req: any, res: any) {
 
   // Test 2: dynamic import auth
   try {
-    const { verifyAuth } = await import('./_lib/auth');
+    const { verifyAuth } = await import('./lib/auth');
     results['auth'] = typeof verifyAuth === 'function' ? 'OK' : 'FAIL';
   } catch (e: any) {
     results['auth'] = 'FAIL: ' + e.message;

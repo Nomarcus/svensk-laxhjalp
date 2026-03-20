@@ -1,7 +1,7 @@
 
 import { GoogleGenAI } from '@google/genai';
-import { verifyAuth } from './_lib/auth';
-import { checkSubscription } from './_lib/subscription';
+import { verifyAuth } from './lib/auth';
+import { checkSubscription } from './lib/subscription';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 const IMAGE_MODEL = process.env.AI_IMAGE_MODEL || 'gemini-2.0-flash-preview-image-generation';
