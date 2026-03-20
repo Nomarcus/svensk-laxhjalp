@@ -1,23 +1,21 @@
-import { verifyAuth } from './_lib/auth';
-import { GoogleGenAI } from '@google/genai';
-
-export default async function handler(req: any, res: any) {
+export default async function handler(_req: any, res: any) {
   const results: Record<string, string> = {};
 
+  // Test 1: dynamic import genai
   try {
+    const { GoogleGenAI } = await import('@google/genai');
     results['genai'] = typeof GoogleGenAI === 'function' ? 'OK' : 'FAIL';
   } catch (e: any) {
     results['genai'] = 'FAIL: ' + e.message;
   }
 
+  // Test 2: dynamic import auth
   try {
-    const user = await verifyAuth(req, res);
-    results['auth-import'] = 'OK (user: ' + JSON.stringify(user) + ')';
+    const { verifyAuth } = await import('./_lib/auth');
+    results['auth'] = typeof verifyAuth === 'function' ? 'OK' : 'FAIL';
   } catch (e: any) {
-    results['auth-import'] = 'FAIL: ' + e.message;
+    results['auth'] = 'FAIL: ' + e.message;
   }
 
-  if (!res.headersSent) {
-    res.json(results);
-  }
+  res.json(results);
 }
