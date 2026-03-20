@@ -1,20 +1,19 @@
-import admin from 'firebase-admin';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const admin = require('firebase-admin');
 
-// In ESM context, firebase-admin default export might be wrapped
-const firebaseAdmin = (admin as any).default || admin;
-
-if (!firebaseAdmin.apps?.length) {
+if (!admin.apps.length) {
   const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT;
   if (serviceAccount) {
-    firebaseAdmin.initializeApp({
-      credential: firebaseAdmin.credential.cert(JSON.parse(serviceAccount)),
+    admin.initializeApp({
+      credential: admin.credential.cert(JSON.parse(serviceAccount)),
     });
   } else {
-    firebaseAdmin.initializeApp();
+    admin.initializeApp();
   }
 }
 
-export const db = firebaseAdmin.firestore();
-export const authAdmin = firebaseAdmin.auth();
-export const fieldValue = firebaseAdmin.firestore.FieldValue;
-export { firebaseAdmin as admin };
+export const db = admin.firestore();
+export const authAdmin = admin.auth();
+export const fieldValue = admin.firestore.FieldValue;
+export { admin };
