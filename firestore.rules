@@ -39,8 +39,7 @@ service cloud.firestore {
     }
 
     function isValidUser(data) {
-      return data.uid is string && data.uid.size() > 0 &&
-             data.email is string && data.email.size() > 0;
+      return data.uid is string && data.uid.size() > 0;
     }
 
     function isValidChatSession(data) {
@@ -78,11 +77,25 @@ service cloud.firestore {
              (!('subject' in data) || data.subject == null || (data.subject is string && data.subject.size() < 100));
     }
 
+    // Subscription fields that only the server (Admin SDK) can write
+    function noSubscriptionTampering(data) {
+      return (!('tier' in data) || data.tier == resource.data.tier)
+          && (!('subscriptionStatus' in data) || data.subscriptionStatus == resource.data.subscriptionStatus)
+          && (!('stripeCustomerId' in data) || data.stripeCustomerId == resource.data.stripeCustomerId)
+          && (!('stripeSubscriptionId' in data) || data.stripeSubscriptionId == resource.data.stripeSubscriptionId);
+    }
+
     // Rules
     match /users/{userId} {
       allow read: if isOwner(userId);
       allow create: if isOwner(userId) && isValidUser(request.resource.data);
-      allow update: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data)
+                    && (resource.data == null || noSubscriptionTampering(request.resource.data));
+
+      // Usage tracking (read-only for client, server writes via Admin SDK)
+      match /usage/{dateId} {
+        allow read: if isOwner(userId);
+      }
 
       match /children/{childId} {
         allow read: if isOwner(userId) || (isAuthenticated() && 'sharedWith' in resource.data && request.auth.token.email in resource.data.sharedWith);

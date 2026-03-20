@@ -2,14 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { db, auth, OperationType, handleFirestoreError } from '../firebase';
 import { collection, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { Plus, Trash2, User as UserIcon, X, Check, Share2, Mail } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { cn } from '../utils/cn';
 
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
-interface Child {
+interface ChildWithSharing {
   id: string;
   name: string;
   grade?: string;
@@ -21,7 +16,7 @@ interface ChildManagerProps {
 }
 
 export default function ChildManager({ onClose }: ChildManagerProps) {
-  const [children, setChildren] = useState<Child[]>([]);
+  const [children, setChildren] = useState<ChildWithSharing[]>([]);
   const [newName, setNewName] = useState('');
   const [newGrade, setNewGrade] = useState('');
   const [isAdding, setIsAdding] = useState(false);
@@ -36,7 +31,7 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
       const childrenData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })) as Child[];
+      })) as ChildWithSharing[];
       setChildren(childrenData);
     }, (error) => {
       handleFirestoreError(error, OperationType.GET, 'children');

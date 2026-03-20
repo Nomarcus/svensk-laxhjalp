@@ -3,22 +3,8 @@ import { db, auth, OperationType, handleFirestoreError } from '../firebase';
 import { collection, query, onSnapshot, deleteDoc, doc, orderBy } from 'firebase/firestore';
 import { Trash2, BookOpen, Image as ImageIcon, ExternalLink, Share2, Search, Plus } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
-interface LibraryItem {
-  id: string;
-  title: string;
-  content?: string;
-  type: 'text' | 'image';
-  imageUrl?: string;
-  createdAt: any;
-  subject?: string;
-}
+import { cn } from '../utils/cn';
+import type { LibraryItem } from '../types';
 
 interface LibraryProps {
   childId: string;

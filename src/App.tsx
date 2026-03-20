@@ -10,41 +10,69 @@ import Library from './components/Library';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import ChildManager from './components/ChildManager';
 import { Plus } from 'lucide-react';
-
-interface Child {
-  id: string;
-  name: string;
-  grade?: string;
-  ownerId: string;
-}
+import type { Child, UserSubscription } from './types';
+import InstallPrompt from './components/InstallPrompt';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import Subscription from './components/Subscription';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'chat' | 'planner' | 'info' | 'library'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'planner' | 'info' | 'library' | 'subscription'>('chat');
+  const [subscription, setSubscription] = useState<UserSubscription>({ tier: 'free', status: 'none' });
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [showChildManager, setShowChildManager] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Sync user profile to Firestore
-        const userRef = doc(db, 'users', user.uid);
-        await setDoc(userRef, {
-          uid: user.uid,
-          displayName: user.displayName,
-          email: user.email,
-          photoURL: user.photoURL,
-          lastLogin: serverTimestamp()
-        }, { merge: true });
+        // Sync user profile to Firestore (don't block on failure)
+        try {
+          const userRef = doc(db, 'users', user.uid);
+          await setDoc(userRef, {
+            uid: user.uid,
+            displayName: user.displayName || null,
+            email: user.email || null,
+            photoURL: user.photoURL || null,
+            lastLogin: serverTimestamp()
+          }, { merge: true });
+        } catch (err) {
+          console.warn('Could not sync user profile:', err);
+        }
         setUser(user);
+
+        // Listen for subscription changes on user doc
+        const userDocRef = doc(db, 'users', user.uid);
+        onSnapshot(userDocRef, (snap) => {
+          const data = snap.data();
+          if (data) {
+            setSubscription({
+              tier: data.tier || 'free',
+              status: data.subscriptionStatus || 'none',
+              stripeCustomerId: data.stripeCustomerId,
+              stripeSubscriptionId: data.stripeSubscriptionId,
+              currentPeriodEnd: data.currentPeriodEnd || null,
+              cancelAtPeriodEnd: data.cancelAtPeriodEnd || false,
+            });
+          }
+        });
       } else {
         setUser(null);
         setChildren([]);
         setSelectedChildId(null);
+        setSubscription({ tier: 'free', status: 'none' });
       }
       setLoading(false);
+
+      // Handle Stripe redirect query params
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('subscription') === 'success') {
+        window.history.replaceState({}, '', window.location.pathname);
+      } else if (params.get('subscription') === 'canceled') {
+        window.history.replaceState({}, '', window.location.pathname);
+      }
     });
 
     return () => unsubscribe();
@@ -121,8 +149,12 @@ export default function App() {
     );
   }
 
+  if (showPrivacy) {
+    return <PrivacyPolicy onBack={() => setShowPrivacy(false)} />;
+  }
+
   if (!user) {
-    return <Auth />;
+    return <Auth onShowPrivacy={() => setShowPrivacy(true)} />;
   }
 
   const selectedChild = children.find(c => c.id === selectedChildId);
@@ -137,8 +169,11 @@ export default function App() {
         selectedChildId={selectedChildId}
         onSelectChild={setSelectedChildId}
         onManageChildren={() => setShowChildManager(true)}
+        subscriptionTier={subscription.tier}
       >
-        {activeTab === 'info' ? (
+        {activeTab === 'subscription' ? (
+          <Subscription subscription={subscription} />
+        ) : activeTab === 'info' ? (
           <Info />
         ) : children.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-[#F5F5F0]">
@@ -174,6 +209,8 @@ export default function App() {
       {showChildManager && (
         <ChildManager onClose={() => setShowChildManager(false)} />
       )}
+
+      <InstallPrompt />
     </ErrorBoundary>
   );
 }

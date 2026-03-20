@@ -1,28 +1,19 @@
 import React from 'react';
-import { LogOut, MessageSquare, Calendar, BookOpen, User as UserIcon, ChevronDown, Settings, Info, Library } from 'lucide-react';
+import { LogOut, MessageSquare, Calendar, BookOpen, User as UserIcon, ChevronDown, Settings, Info, Library, Crown } from 'lucide-react';
 import { logout, User } from '../firebase';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
-interface Child {
-  id: string;
-  name: string;
-  grade?: string;
-}
+import { cn } from '../utils/cn';
+import type { Child, SubscriptionTier } from '../types';
 
 interface LayoutProps {
   children: React.ReactNode;
   user: User;
-  activeTab: 'chat' | 'planner' | 'info' | 'library';
-  setActiveTab: (tab: 'chat' | 'planner' | 'info' | 'library') => void;
+  activeTab: 'chat' | 'planner' | 'info' | 'library' | 'subscription';
+  setActiveTab: (tab: 'chat' | 'planner' | 'info' | 'library' | 'subscription') => void;
   childrenList: Child[];
   selectedChildId: string | null;
   onSelectChild: (id: string) => void;
   onManageChildren: () => void;
+  subscriptionTier?: SubscriptionTier;
 }
 
 export default function Layout({ 
@@ -33,7 +24,8 @@ export default function Layout({
   childrenList,
   selectedChildId,
   onSelectChild,
-  onManageChildren
+  onManageChildren,
+  subscriptionTier = 'free'
 }: LayoutProps) {
   const [showChildSelect, setShowChildSelect] = React.useState(false);
   const selectedChild = childrenList.find(c => c.id === selectedChildId);
@@ -152,6 +144,24 @@ export default function Layout({
           >
             <Info size={20} />
             <span>Hur det fungerar</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('subscription')}
+            className={cn(
+              "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+              activeTab === 'subscription' ? "bg-emerald-50 text-emerald-700 font-medium shadow-sm" : "text-stone-600 hover:bg-stone-50"
+            )}
+          >
+            <Crown size={20} />
+            <span>Abonnemang</span>
+            <span className={cn(
+              "ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider",
+              subscriptionTier === 'pro'
+                ? "bg-amber-100 text-amber-700"
+                : "bg-stone-100 text-stone-500"
+            )}>
+              {subscriptionTier === 'pro' ? 'Pro' : 'Gratis'}
+            </span>
           </button>
         </nav>
 

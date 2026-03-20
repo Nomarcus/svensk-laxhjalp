@@ -1,44 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, CheckCircle2, Circle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, LayoutList, Calendar, Calculator, BookOpen, Languages, Beaker, Globe, Book } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Circle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, LayoutList, Calendar, Calculator, BookOpen, Languages, Beaker, Globe, Book, Clock, CalendarCheck } from 'lucide-react';
 import { db, auth, OperationType, handleFirestoreError } from '../firebase';
 import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc, where } from 'firebase/firestore';
 import { format, startOfWeek, addDays, getWeek, getYear, addWeeks, subWeeks } from 'date-fns';
 import { sv } from 'date-fns/locale';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
-interface Task {
-  id: string;
-  day: string;
-  subject: string;
-  description: string;
-  completed: boolean;
-}
+import { cn } from '../utils/cn';
+import type { Task } from '../types';
 
 interface PlannerProps {
   childId: string;
   ownerId: string;
 }
 
+const DAYS = ['måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag', 'söndag'];
+
 export default function Planner({ childId, ownerId }: PlannerProps) {
   const [viewDate, setViewDate] = useState(new Date());
   const [tasks, setTasks] = useState<Task[]>([]);
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
-  const [newSubject, setNewSubject] = useState('');
-  const [newDesc, setNewDesc] = useState('');
   const [selectedDay, setSelectedDay] = useState(format(new Date(), 'EEEE', { locale: sv }));
   const [showAddModal, setShowAddModal] = useState(false);
-  
+
+  // Form state
+  const [newSubject, setNewSubject] = useState('');
+  const [newDesc, setNewDesc] = useState('');
+  const [newDateType, setNewDateType] = useState<'due' | 'work'>('due');
+  const [newWorkDays, setNewWorkDays] = useState<string[]>([]);
+  const [newDueDay, setNewDueDay] = useState('');
+  const [newMinutesPerDay, setNewMinutesPerDay] = useState<number | ''>('');
+
   const viewWeek = getWeek(viewDate, { weekStartsOn: 1, firstWeekContainsDate: 4 });
   const viewYear = getYear(viewDate);
-
-  const days = [
-    'måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag', 'söndag'
-  ];
 
   useEffect(() => {
     if (!auth.currentUser || !childId) return;
@@ -62,27 +54,48 @@ export default function Planner({ childId, ownerId }: PlannerProps) {
     return () => unsubscribe();
   }, [viewWeek, viewYear, childId, ownerId]);
 
+  const resetForm = () => {
+    setNewSubject('');
+    setNewDesc('');
+    setNewDateType('due');
+    setNewWorkDays([]);
+    setNewDueDay('');
+    setNewMinutesPerDay('');
+  };
+
   const addTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSubject.trim() || !auth.currentUser || !childId) return;
 
     try {
-      const newTask = {
+      const taskData: any = {
         day: selectedDay,
         subject: newSubject,
         description: newDesc,
-        completed: false
-      };
-
-      await addDoc(collection(db, 'users', ownerId, 'children', childId, 'tasks'), {
-        ...newTask,
+        completed: false,
+        dateType: newDateType,
         weekNumber: viewWeek,
         year: viewYear,
         createdAt: new Date().toISOString()
-      });
+      };
 
-      setNewSubject('');
-      setNewDesc('');
+      if (newMinutesPerDay) {
+        taskData.minutesPerDay = Number(newMinutesPerDay);
+      }
+
+      if (newDateType === 'due') {
+        // selectedDay = inlämningsdag, workDays = vilka dagar barnet ska jobba
+        taskData.dueDay = selectedDay;
+        taskData.workDays = newWorkDays.length > 0 ? newWorkDays : [];
+      } else {
+        // selectedDay = arbetsdag, dueDay = när ska det lämnas in
+        taskData.dueDay = newDueDay || '';
+        taskData.workDays = [selectedDay];
+      }
+
+      await addDoc(collection(db, 'users', ownerId, 'children', childId, 'tasks'), taskData);
+
+      resetForm();
       setShowAddModal(false);
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `users/${ownerId}/children/${childId}/tasks`);
@@ -128,14 +141,18 @@ export default function Planner({ childId, ownerId }: PlannerProps) {
   const handleDrop = (e: React.DragEvent, day: string) => {
     e.preventDefault();
     const taskId = e.dataTransfer.getData('taskId');
-    if (taskId) {
-      moveTask(taskId, day);
-    }
+    if (taskId) moveTask(taskId, day);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+  };
+
+  const toggleWorkDay = (day: string) => {
+    setNewWorkDays(prev =>
+      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+    );
   };
 
   const getSubjectIcon = (subject: string) => {
@@ -148,9 +165,207 @@ export default function Planner({ childId, ownerId }: PlannerProps) {
     return <Book size={14} />;
   };
 
-  const completedCount = tasks.length > 0 ? tasks.filter(t => t.completed).length : 0;
+  const completedCount = tasks.filter(t => t.completed).length;
   const totalCount = tasks.length;
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+
+  // Get all tasks relevant to a specific day (either as work day or due day)
+  const getTasksForDay = (day: string) => {
+    return tasks.filter(t => {
+      // Direct match (the "day" field, backwards compatible)
+      if (t.day === day) return true;
+      // Also show if this day is in workDays
+      if (t.workDays?.includes(day)) return true;
+      return false;
+    });
+  };
+
+  // Deduplicated tasks for day view (avoid showing same task twice)
+  const getUniqueTasksForDay = (day: string) => {
+    const dayTasks = getTasksForDay(day);
+    const seen = new Set<string>();
+    return dayTasks.filter(t => {
+      if (seen.has(t.id)) return false;
+      seen.add(t.id);
+      return true;
+    });
+  };
+
+  const TaskBadges = ({ task }: { task: Task }) => (
+    <div className="flex flex-wrap gap-1.5 mt-2">
+      {task.dateType === 'due' && task.workDays && task.workDays.length > 0 && (
+        <span className="inline-flex items-center gap-1 text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+          <Clock size={10} />
+          Jobba: {task.workDays.map(d => d.slice(0, 3)).join(', ')}
+        </span>
+      )}
+      {task.dateType === 'work' && task.dueDay && (
+        <span className="inline-flex items-center gap-1 text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full">
+          <CalendarCheck size={10} />
+          Inlämning: {task.dueDay.slice(0, 3)}
+        </span>
+      )}
+      {task.dateType === 'due' && task.dueDay && task.day !== task.dueDay && (
+        <span className="inline-flex items-center gap-1 text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full">
+          <CalendarCheck size={10} />
+          Inlämning: {task.dueDay.slice(0, 3)}
+        </span>
+      )}
+      {task.minutesPerDay && (
+        <span className="inline-flex items-center gap-1 text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full">
+          <Clock size={10} />
+          {task.minutesPerDay} min/dag
+        </span>
+      )}
+    </div>
+  );
+
+  const renderFormFields = (inModal = false) => (
+    <>
+      <div>
+        <label className="block text-xs font-medium text-stone-400 uppercase tracking-widest mb-1">Ämne</label>
+        <input
+          type="text"
+          autoFocus={inModal}
+          value={newSubject}
+          onChange={(e) => setNewSubject(e.target.value)}
+          placeholder="t.ex. Matematik"
+          className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 transition-all"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-stone-400 uppercase tracking-widest mb-1">Beskrivning</label>
+        <textarea
+          value={newDesc}
+          onChange={(e) => setNewDesc(e.target.value)}
+          placeholder="Vad ska göras?"
+          rows={inModal ? 3 : 2}
+          className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 transition-all resize-none"
+        />
+      </div>
+
+      {/* Date type selector */}
+      <div>
+        <label className="block text-xs font-medium text-stone-400 uppercase tracking-widest mb-2">
+          Vad betyder {selectedDay}?
+        </label>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setNewDateType('due')}
+            className={cn(
+              "flex-1 py-2.5 px-3 rounded-xl text-sm font-medium transition-all border",
+              newDateType === 'due'
+                ? "bg-amber-50 border-amber-200 text-amber-700"
+                : "bg-stone-50 border-stone-100 text-stone-400 hover:bg-stone-100"
+            )}
+          >
+            Inlämningsdag
+          </button>
+          <button
+            type="button"
+            onClick={() => setNewDateType('work')}
+            className={cn(
+              "flex-1 py-2.5 px-3 rounded-xl text-sm font-medium transition-all border",
+              newDateType === 'work'
+                ? "bg-blue-50 border-blue-200 text-blue-700"
+                : "bg-stone-50 border-stone-100 text-stone-400 hover:bg-stone-100"
+            )}
+          >
+            Arbetsdag
+          </button>
+        </div>
+      </div>
+
+      {/* Due day picker (single select) when dateType is 'due' */}
+      {newDateType === 'due' && (
+        <div>
+          <label className="block text-xs font-medium text-stone-400 uppercase tracking-widest mb-2">
+            Vilken dag ska det lämnas in?
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {DAYS.map(day => (
+              <button
+                key={day}
+                type="button"
+                onClick={() => setNewDueDay(day)}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border capitalize",
+                  newDueDay === day
+                    ? "bg-amber-50 border-amber-200 text-amber-700"
+                    : "bg-stone-50 border-stone-100 text-stone-400 hover:bg-stone-100",
+                )}
+              >
+                {day.slice(0, 3)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Work days picker (multi select) when dateType is 'work' */}
+      {newDateType === 'work' && (
+        <div>
+          <label className="block text-xs font-medium text-stone-400 uppercase tracking-widest mb-2">
+            Vilka dagar ska barnet jobba med läxan?
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {DAYS.map(day => (
+              <button
+                key={day}
+                type="button"
+                onClick={() => toggleWorkDay(day)}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border capitalize",
+                  newWorkDays.includes(day)
+                    ? "bg-blue-50 border-blue-200 text-blue-700"
+                    : "bg-stone-50 border-stone-100 text-stone-400 hover:bg-stone-100"
+                )}
+              >
+                {day.slice(0, 3)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Minutes per day */}
+      <div>
+        <label className="block text-xs font-medium text-stone-400 uppercase tracking-widest mb-1">
+          Tid per dag (minuter)
+        </label>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            min={5}
+            max={180}
+            step={5}
+            value={newMinutesPerDay}
+            onChange={(e) => setNewMinutesPerDay(e.target.value ? Number(e.target.value) : '')}
+            placeholder="t.ex. 30"
+            className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 transition-all"
+          />
+          <div className="flex gap-1">
+            {[15, 30, 45, 60].map(m => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setNewMinutesPerDay(m)}
+                className={cn(
+                  "px-2.5 py-2 rounded-lg text-xs font-medium transition-all border whitespace-nowrap",
+                  newMinutesPerDay === m
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                    : "bg-stone-50 border-stone-100 text-stone-400 hover:bg-stone-100"
+                )}
+              >
+                {m}m
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
 
   return (
     <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-[#F5F5F0]">
@@ -161,21 +376,21 @@ export default function Planner({ childId, ownerId }: PlannerProps) {
               <div>
                 <h2 className="text-3xl font-serif italic mb-1">Veckans Läxor</h2>
                 <div className="flex items-center gap-2 text-stone-500">
-                  <button 
+                  <button
                     onClick={() => setViewDate(prev => subWeeks(prev, 1))}
                     className="p-1 hover:bg-stone-200 rounded-full transition-colors"
                   >
                     <ChevronLeft size={16} />
                   </button>
                   <span className="text-sm font-medium">Vecka {viewWeek}, {viewYear}</span>
-                  <button 
+                  <button
                     onClick={() => setViewDate(prev => addWeeks(prev, 1))}
                     className="p-1 hover:bg-stone-200 rounded-full transition-colors"
                   >
                     <ChevronRight size={16} />
                   </button>
                   {(viewWeek !== getWeek(new Date(), { weekStartsOn: 1, firstWeekContainsDate: 4 }) || viewYear !== getYear(new Date())) && (
-                    <button 
+                    <button
                       onClick={() => setViewDate(new Date())}
                       className="text-[10px] uppercase tracking-widest font-bold text-emerald-600 hover:text-emerald-700 ml-2"
                     >
@@ -209,7 +424,7 @@ export default function Planner({ childId, ownerId }: PlannerProps) {
             </div>
           </div>
           <div className="flex bg-white rounded-xl p-1 shadow-sm border border-black/5 overflow-x-auto">
-            {days.map((day) => (
+            {DAYS.map((day) => (
               <button
                 key={day}
                 onClick={() => setSelectedDay(day)}
@@ -232,7 +447,7 @@ export default function Planner({ childId, ownerId }: PlannerProps) {
               <span className="text-xs font-bold text-emerald-600">{completedCount} av {totalCount} klara ({Math.round(progress)}%)</span>
             </div>
             <div className="h-2 bg-stone-100 rounded-full overflow-hidden">
-              <div 
+              <div
                 className="h-full bg-emerald-500 transition-all duration-500 ease-out"
                 style={{ width: `${progress}%` }}
               />
@@ -243,45 +458,25 @@ export default function Planner({ childId, ownerId }: PlannerProps) {
         {/* Add Task Modal */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-            <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl border border-black/5 animate-in zoom-in-95 duration-200">
+            <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl border border-black/5 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-serif italic flex items-center gap-2">
                   <Plus size={20} className="text-emerald-600" />
-                  Lägg till läxa för {selectedDay}
+                  Lägg till läxa — <span className="capitalize">{selectedDay}</span>
                 </h3>
-                <button 
-                  onClick={() => setShowAddModal(false)}
+                <button
+                  onClick={() => { setShowAddModal(false); resetForm(); }}
                   className="p-2 hover:bg-stone-100 rounded-full text-stone-400 transition-colors"
                 >
                   <Plus size={20} className="rotate-45" />
                 </button>
               </div>
-              <form onSubmit={addTask} className="space-y-6">
-                <div>
-                  <label className="block text-xs font-medium text-stone-400 uppercase tracking-widest mb-2">Ämne</label>
-                  <input
-                    type="text"
-                    autoFocus
-                    value={newSubject}
-                    onChange={(e) => setNewSubject(e.target.value)}
-                    placeholder="t.ex. Matematik"
-                    className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500/20 transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-stone-400 uppercase tracking-widest mb-2">Beskrivning</label>
-                  <textarea
-                    value={newDesc}
-                    onChange={(e) => setNewDesc(e.target.value)}
-                    placeholder="Vad ska göras?"
-                    rows={4}
-                    className="w-full bg-stone-50 border-none rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500/20 transition-all resize-none"
-                  />
-                </div>
+              <form onSubmit={addTask} className="space-y-5">
+                {renderFormFields(true)}
                 <div className="flex gap-3 pt-2">
                   <button
                     type="button"
-                    onClick={() => setShowAddModal(false)}
+                    onClick={() => { setShowAddModal(false); resetForm(); }}
                     className="flex-1 py-4 bg-stone-100 text-stone-600 rounded-2xl font-medium hover:bg-stone-200 transition-all"
                   >
                     Avbryt
@@ -306,29 +501,10 @@ export default function Planner({ childId, ownerId }: PlannerProps) {
               <div className="bg-white rounded-2xl p-6 shadow-sm border border-black/5 sticky top-8">
                 <h3 className="font-medium mb-4 flex items-center gap-2">
                   <Plus size={18} className="text-emerald-600" />
-                  Lägg till läxa
+                  Lägg till läxa — <span className="capitalize">{selectedDay}</span>
                 </h3>
                 <form onSubmit={addTask} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-medium text-stone-400 uppercase tracking-widest mb-1">Ämne</label>
-                    <input
-                      type="text"
-                      value={newSubject}
-                      onChange={(e) => setNewSubject(e.target.value)}
-                      placeholder="t.ex. Matematik"
-                      className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-stone-400 uppercase tracking-widest mb-1">Beskrivning</label>
-                    <textarea
-                      value={newDesc}
-                      onChange={(e) => setNewDesc(e.target.value)}
-                      placeholder="Vad ska göras?"
-                      rows={3}
-                      className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 transition-all resize-none"
-                    />
-                  </div>
+                  {renderFormFields(false)}
                   <button
                     type="submit"
                     disabled={!newSubject.trim()}
@@ -342,8 +518,8 @@ export default function Planner({ childId, ownerId }: PlannerProps) {
 
             {/* Task List */}
             <div className="lg:col-span-2 space-y-6">
-              {days.map((day) => {
-                const dayTasks = tasks.filter(t => t.day === day);
+              {DAYS.map((day) => {
+                const dayTasks = getUniqueTasksForDay(day);
                 if (dayTasks.length === 0 && day !== selectedDay) return null;
 
                 return (
@@ -375,7 +551,7 @@ export default function Planner({ childId, ownerId }: PlannerProps) {
                             >
                               {task.completed ? <CheckCircle2 size={24} /> : <Circle size={24} />}
                             </button>
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 <div className={cn(
                                   "p-1.5 rounded-lg",
@@ -390,7 +566,10 @@ export default function Planner({ childId, ownerId }: PlannerProps) {
                                   {task.subject}
                                 </h5>
                               </div>
-                              <p className="text-stone-500 text-sm mt-1">{task.description}</p>
+                              {task.description && (
+                                <p className="text-stone-500 text-sm mt-1">{task.description}</p>
+                              )}
+                              <TaskBadges task={task} />
                             </div>
                             <button
                               onClick={() => deleteTask(task.id)}
@@ -411,31 +590,31 @@ export default function Planner({ childId, ownerId }: PlannerProps) {
           <div className="bg-white rounded-3xl p-6 shadow-sm border border-black/5 overflow-x-auto">
             <div className="min-w-[1000px]">
               <div className="grid grid-cols-7 gap-4 mb-6">
-                {days.map(day => (
+                {DAYS.map(day => (
                   <div key={day} className="text-center">
                     <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">{day.slice(0, 3)}</span>
                   </div>
                 ))}
               </div>
               <div className="grid grid-cols-7 gap-4 min-h-[400px]">
-                {days.map(day => {
-                  const dayTasks = tasks.filter(t => t.day === day);
+                {DAYS.map(day => {
+                  const dayTasks = getUniqueTasksForDay(day);
                   return (
-                    <div 
-                      key={day} 
+                    <div
+                      key={day}
                       onDragOver={handleDragOver}
                       onDrop={(e) => handleDrop(e, day)}
                       className="bg-stone-50/50 rounded-2xl p-3 border border-black/5 flex flex-col gap-2 min-h-[150px] transition-colors hover:bg-emerald-50/30"
                     >
                       {dayTasks.map(task => (
-                        <div 
+                        <div
                           key={task.id}
                           draggable
                           onDragStart={(e) => handleDragStart(e, task.id)}
                           className={cn(
                             "p-3 rounded-xl text-xs shadow-sm border transition-all cursor-grab active:cursor-grabbing",
-                            task.completed 
-                              ? "bg-emerald-50 border-emerald-100 text-emerald-700 opacity-60" 
+                            task.completed
+                              ? "bg-emerald-50 border-emerald-100 text-emerald-700 opacity-60"
                               : "bg-white border-black/5 text-stone-700"
                           )}
                         >
@@ -446,8 +625,18 @@ export default function Planner({ childId, ownerId }: PlannerProps) {
                             <div className="font-bold truncate">{task.subject}</div>
                           </div>
                           <div className="text-[10px] line-clamp-2 opacity-70">{task.description}</div>
+                          {task.minutesPerDay && (
+                            <div className="mt-1 text-[9px] text-emerald-600 flex items-center gap-0.5">
+                              <Clock size={8} /> {task.minutesPerDay} min
+                            </div>
+                          )}
+                          {task.dueDay && task.dueDay !== day && (
+                            <div className="mt-0.5 text-[9px] text-amber-600 flex items-center gap-0.5">
+                              <CalendarCheck size={8} /> Inl: {task.dueDay.slice(0, 3)}
+                            </div>
+                          )}
                           <div className="mt-2 flex items-center justify-between">
-                            <button 
+                            <button
                               onClick={() => toggleTask(task)}
                               className={cn(
                                 "p-1 rounded-full transition-colors",
@@ -456,7 +645,7 @@ export default function Planner({ childId, ownerId }: PlannerProps) {
                             >
                               {task.completed ? <CheckCircle2 size={10} /> : <Circle size={10} />}
                             </button>
-                            <button 
+                            <button
                               onClick={() => deleteTask(task.id)}
                               className="p-1 text-stone-300 hover:text-red-500"
                             >
