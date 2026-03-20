@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, CheckCircle2, Circle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, LayoutList, Calendar, Calculator, BookOpen, Languages, Beaker, Globe, Book, Clock, CalendarCheck } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Trash2, CheckCircle2, Circle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, LayoutList, Calendar, Calculator, BookOpen, Languages, Beaker, Globe, Book, Clock, CalendarCheck, Camera } from 'lucide-react';
 import { db, auth, OperationType, handleFirestoreError } from '../firebase';
 import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc, where } from 'firebase/firestore';
 import { format, startOfWeek, addDays, getWeek, getYear, addWeeks, subWeeks } from 'date-fns';
@@ -10,11 +10,14 @@ import type { Task } from '../types';
 interface PlannerProps {
   childId: string;
   ownerId: string;
+  prefill?: { subject: string; description: string } | null;
+  onPrefillUsed?: () => void;
 }
 
 const DAYS = ['måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag', 'söndag'];
 
-export default function Planner({ childId, ownerId }: PlannerProps) {
+export default function Planner({ childId, ownerId, prefill, onPrefillUsed }: PlannerProps) {
+  const plannerCameraRef = useRef<HTMLInputElement>(null);
   const [viewDate, setViewDate] = useState(new Date());
   const [tasks, setTasks] = useState<Task[]>([]);
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
@@ -28,6 +31,16 @@ export default function Planner({ childId, ownerId }: PlannerProps) {
   const [newWorkDays, setNewWorkDays] = useState<string[]>([]);
   const [newDueDay, setNewDueDay] = useState('');
   const [newMinutesPerDay, setNewMinutesPerDay] = useState<number | ''>('');
+
+  // Handle prefill from AI chat
+  useEffect(() => {
+    if (prefill) {
+      setNewSubject(prefill.subject);
+      setNewDesc(prefill.description);
+      setShowAddModal(true);
+      onPrefillUsed?.();
+    }
+  }, [prefill]);
 
   const viewWeek = getWeek(viewDate, { weekStartsOn: 1, firstWeekContainsDate: 4 });
   const viewYear = getYear(viewDate);
@@ -61,6 +74,7 @@ export default function Planner({ childId, ownerId }: PlannerProps) {
     setNewWorkDays([]);
     setNewDueDay('');
     setNewMinutesPerDay('');
+    setTaskImage(null);
   };
 
   const addTask = async (e: React.FormEvent) => {
@@ -81,6 +95,9 @@ export default function Planner({ childId, ownerId }: PlannerProps) {
 
       if (newMinutesPerDay) {
         taskData.minutesPerDay = Number(newMinutesPerDay);
+      }
+      if (taskImage) {
+        taskData.imageUrl = taskImage;
       }
 
       if (newDateType === 'due') {
@@ -220,8 +237,42 @@ export default function Planner({ childId, ownerId }: PlannerProps) {
     </div>
   );
 
+  const [taskImage, setTaskImage] = useState<string | null>(null);
+
+  const handlePlannerCamera = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => setTaskImage(reader.result as string);
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
   const renderFormFields = (inModal = false) => (
     <>
+      {/* Camera button */}
+      <button
+        type="button"
+        onClick={() => plannerCameraRef.current?.click()}
+        className="w-full flex items-center justify-center gap-2 py-3 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl font-medium hover:bg-amber-100 transition-all"
+      >
+        <Camera size={18} />
+        📸 Fota läxan
+      </button>
+      <input
+        type="file"
+        ref={plannerCameraRef}
+        onChange={handlePlannerCamera}
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+      />
+      {taskImage && (
+        <div className="relative">
+          <img src={taskImage} alt="Läxbild" className="w-full max-h-40 object-cover rounded-xl border border-black/5" />
+          <button type="button" onClick={() => setTaskImage(null)} className="absolute top-1 right-1 p-1 bg-white/90 rounded-full text-stone-500 hover:text-red-500">✕</button>
+        </div>
+      )}
       <div>
         <label className="block text-xs font-medium text-stone-400 uppercase tracking-widest mb-1">Ämne</label>
         <input

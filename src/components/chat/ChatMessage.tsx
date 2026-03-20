@@ -1,4 +1,4 @@
-import { User, Bot, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap } from 'lucide-react';
+import { User, Bot, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '../../utils/cn';
 import type { Message } from '../../types';
@@ -11,6 +11,8 @@ interface ChatMessageProps {
   onSaveToLibrary: (msg: Message) => void;
   onGenerateImage: (messageId: string, content: string) => void;
   onAskCurriculum?: (content: string) => void;
+  onAddToPlanner?: (content: string) => void;
+  hasImage?: boolean;
 }
 
 export default function ChatMessage({
@@ -21,7 +23,28 @@ export default function ChatMessage({
   onSaveToLibrary,
   onGenerateImage,
   onAskCurriculum,
+  onAddToPlanner,
+  hasImage,
 }: ChatMessageProps) {
+  const handlePrint = (content: string) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    printWindow.document.write(`<!DOCTYPE html><html lang="sv"><head><meta charset="utf-8"><title>Läxhjälpen — Facit</title><style>
+      body { font-family: Georgia, serif; max-width: 700px; margin: 40px auto; padding: 20px; color: #1a1a1a; line-height: 1.7; }
+      h1 { font-size: 18px; color: #059669; border-bottom: 2px solid #059669; padding-bottom: 8px; }
+      h2, h3 { color: #333; margin-top: 20px; }
+      ul, ol { padding-left: 24px; }
+      li { margin-bottom: 6px; }
+      .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #ddd; font-size: 12px; color: #999; text-align: center; }
+      @media print { body { margin: 20px; } }
+    </style></head><body>
+      <h1>📚 Läxhjälpen — Facit</h1>
+      <div>${content.replace(/\n/g, '<br>')}</div>
+      <div class="footer">Utskrivet från Läxhjälpen — ${new Date().toLocaleDateString('sv-SE')}</div>
+    </body></html>`);
+    printWindow.document.close();
+    printWindow.print();
+  };
   return (
     <div
       className={cn(
@@ -101,6 +124,22 @@ export default function ChatMessage({
               >
                 <GraduationCap size={12} />
                 Koppling till läroplanen
+              </button>
+            )}
+            <button
+              onClick={() => handlePrint(msg.content)}
+              className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-purple-600 transition-colors px-2 py-1 rounded-md hover:bg-purple-50"
+            >
+              <Printer size={12} />
+              Skriv ut svaret
+            </button>
+            {onAddToPlanner && hasImage && (
+              <button
+                onClick={() => onAddToPlanner(msg.content)}
+                className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-amber-600 transition-colors px-2 py-1 rounded-md hover:bg-amber-50"
+              >
+                <CalendarPlus size={12} />
+                Lägg till i planeringen
               </button>
             )}
           </div>

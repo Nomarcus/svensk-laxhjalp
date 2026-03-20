@@ -14,9 +14,10 @@ interface ChatProps {
   childId: string;
   childName: string;
   ownerId: string;
+  onAddToPlanner?: (subject: string, description: string) => void;
 }
 
-export default function Chat({ childId, childName, ownerId }: ChatProps) {
+export default function Chat({ childId, childName, ownerId, onAddToPlanner }: ChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -249,20 +250,33 @@ export default function Chat({ childId, childName, ownerId }: ChatProps) {
         {messages.length === 0 && !loading ? (
           <ChatEmptyState childName={childName} onSendStarter={sendMessage} />
         ) : (
-          messages.map((msg) => (
-            <ChatMessage
-              key={msg.id}
-              msg={msg}
-              generatingImageId={generatingImageId}
-              savedMessageIds={savedMessageIds}
-              onShare={handleShare}
-              onSaveToLibrary={saveToLibrary}
-              onGenerateImage={handleGenerateImage}
-              onAskCurriculum={(content) => {
-                sendMessage(`Förklara hur det du just berättade om kopplas till den svenska läroplanen (Lgr22). Vilka centrala innehåll och kunskapskrav berörs? Ge konkreta kopplingar så jag som förälder förstår varför mitt barn lär sig detta.\n\nDin förklaring var:\n${content.slice(0, 500)}`);
-              }}
-            />
-          ))
+          messages.map((msg, idx) => {
+            // Check if the user message before this AI response had an image
+            const prevMsg = idx > 0 ? messages[idx - 1] : null;
+            const hasImage = msg.role === 'model' && prevMsg?.role === 'user' && (prevMsg.attachments?.length ?? 0) > 0;
+
+            return (
+              <ChatMessage
+                key={msg.id}
+                msg={msg}
+                generatingImageId={generatingImageId}
+                savedMessageIds={savedMessageIds}
+                onShare={handleShare}
+                onSaveToLibrary={saveToLibrary}
+                onGenerateImage={handleGenerateImage}
+                onAskCurriculum={(content) => {
+                  sendMessage(`Förklara hur det du just berättade om kopplas till den svenska läroplanen (Lgr22). Vilka centrala innehåll och kunskapskrav berörs? Ge konkreta kopplingar så jag som förälder förstår varför mitt barn lär sig detta.\n\nDin förklaring var:\n${content.slice(0, 500)}`);
+                }}
+                hasImage={hasImage}
+                onAddToPlanner={onAddToPlanner ? (content) => {
+                  // Extract subject from first line of AI response
+                  const firstLine = content.split('\n')[0].replace(/[#*]/g, '').trim();
+                  const subject = firstLine.length > 50 ? firstLine.slice(0, 50) : firstLine;
+                  onAddToPlanner(subject, content.slice(0, 300));
+                } : undefined}
+              />
+            );
+          })
         )}
 
         {loading && (

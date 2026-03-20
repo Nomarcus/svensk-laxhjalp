@@ -24,6 +24,7 @@ export default function App() {
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [showChildManager, setShowChildManager] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [plannerPrefill, setPlannerPrefill] = useState<{ subject: string; description: string } | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -194,9 +195,9 @@ export default function App() {
         ) : (
           <>
             {activeTab === 'chat' ? (
-              <Chat childId={selectedChildId!} childName={selectedChild?.name || ''} ownerId={selectedChild?.ownerId || user.uid} />
+              <Chat childId={selectedChildId!} childName={selectedChild?.name || ''} ownerId={selectedChild?.ownerId || user.uid} onAddToPlanner={(subject, description) => { setPlannerPrefill({ subject, description }); setActiveTab('planner'); }} />
             ) : activeTab === 'planner' ? (
-              <Planner childId={selectedChildId!} ownerId={selectedChild?.ownerId || user.uid} />
+              <Planner childId={selectedChildId!} ownerId={selectedChild?.ownerId || user.uid} prefill={plannerPrefill} onPrefillUsed={() => setPlannerPrefill(null)} />
             ) : activeTab === 'library' ? (
               <Library childId={selectedChildId!} ownerId={selectedChild?.ownerId || user.uid} />
             ) : (
