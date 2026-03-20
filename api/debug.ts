@@ -1,4 +1,4 @@
-import { verifyAuth } from './lib/auth';
+import { verifyAuth } from '../lib/auth';
 import { GoogleGenAI } from '@google/genai';
 
 export default async function handler(_req: any, res: any) {

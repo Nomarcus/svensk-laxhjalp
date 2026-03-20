@@ -1,7 +1,7 @@
 
 import type Stripe from 'stripe';
-import { getStripe } from '../lib/stripe';
-import { getDb } from '../lib/firebase';
+import { getStripe } from '../../lib/stripe';
+import { getDb } from '../../lib/firebase';
 
 export const config = {
   api: {

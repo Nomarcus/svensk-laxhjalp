@@ -1,7 +1,7 @@
 
 import { GoogleGenAI } from '@google/genai';
-import { verifyAuth } from './lib/auth';
-import { checkSubscription } from './lib/subscription';
+import { verifyAuth } from '../lib/auth';
+import { checkSubscription } from '../lib/subscription';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
