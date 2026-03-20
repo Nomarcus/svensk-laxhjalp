@@ -241,6 +241,45 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
   const [taskImage, setTaskImage] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
+  // Edit state for task detail modal
+  const [editDueDay, setEditDueDay] = useState('');
+  const [editWorkDays, setEditWorkDays] = useState<string[]>([]);
+  const [editDateType, setEditDateType] = useState<'due' | 'work'>('due');
+
+  const openTaskDetail = (task: Task) => {
+    setSelectedTask(task);
+    setEditDueDay(task.dueDay || '');
+    setEditWorkDays(task.workDays || []);
+    setEditDateType(task.dateType || 'due');
+  };
+
+  const saveTaskEdits = async () => {
+    if (!selectedTask || !auth.currentUser || !childId) return;
+    try {
+      const taskRef = doc(db, 'users', ownerId, 'children', childId, 'tasks', selectedTask.id);
+      await updateDoc(taskRef, {
+        dueDay: editDueDay,
+        workDays: editWorkDays,
+        dateType: editDateType,
+        day: editDateType === 'due' ? editDueDay : (editWorkDays[0] || selectedTask.day),
+      });
+      setSelectedTask(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `tasks/${selectedTask.id}`);
+    }
+  };
+
+  const toggleEditWorkDay = (day: string) => {
+    setEditWorkDays(prev =>
+      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+    );
+  };
+
+  // Check if a task's due day matches a specific calendar day
+  const isDueOnDay = (task: Task, day: string) => {
+    return task.dueDay === day;
+  };
+
   const handlePlannerCamera = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -590,7 +629,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                         dayTasks.map((task) => (
                           <div
                             key={task.id}
-                            onClick={() => setSelectedTask(task)}
+                            onClick={() => openTaskDetail(task)}
                             className={cn(
                               "bg-white rounded-2xl p-4 shadow-sm border border-black/5 flex items-start gap-4 transition-all group cursor-pointer hover:shadow-md",
                               task.completed && "opacity-60"
@@ -666,54 +705,66 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                       onDrop={(e) => handleDrop(e, day)}
                       className="bg-stone-50/50 rounded-2xl p-3 border border-black/5 flex flex-col gap-2 min-h-[150px] transition-colors hover:bg-emerald-50/30"
                     >
-                      {dayTasks.map(task => (
-                        <div
-                          key={task.id}
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, task.id)}
-                          className={cn(
-                            "p-3 rounded-xl text-xs shadow-sm border transition-all cursor-grab active:cursor-grabbing",
-                            task.completed
-                              ? "bg-emerald-50 border-emerald-100 text-emerald-700 opacity-60"
-                              : "bg-white border-black/5 text-stone-700"
-                          )}
-                        >
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <div className="opacity-50">
-                              {getSubjectIcon(task.subject)}
+                      {dayTasks.map(task => {
+                        const isDeadline = isDueOnDay(task, day);
+                        return (
+                          <div
+                            key={task.id}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, task.id)}
+                            onClick={() => openTaskDetail(task)}
+                            className={cn(
+                              "p-3 rounded-xl text-xs shadow-sm border transition-all cursor-pointer hover:shadow-md",
+                              task.completed
+                                ? "bg-emerald-50 border-emerald-100 text-emerald-700 opacity-60"
+                                : isDeadline
+                                  ? "bg-red-50 border-red-200 text-stone-700 ring-2 ring-red-300/50"
+                                  : "bg-white border-black/5 text-stone-700"
+                            )}
+                          >
+                            {isDeadline && !task.completed && (
+                              <div className="flex items-center gap-1 mb-1.5 text-[9px] font-bold text-red-600 uppercase tracking-wider">
+                                <CalendarCheck size={9} />
+                                Deadline
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <div className="opacity-50">
+                                {getSubjectIcon(task.subject)}
+                              </div>
+                              <div className="font-bold truncate">{task.subject}</div>
                             </div>
-                            <div className="font-bold truncate">{task.subject}</div>
+                            <div className="text-[10px] line-clamp-2 opacity-70">{task.description}</div>
+                            {task.minutesPerDay && (
+                              <div className="mt-1 text-[9px] text-emerald-600 flex items-center gap-0.5">
+                                <Clock size={8} /> {task.minutesPerDay} min
+                              </div>
+                            )}
+                            {task.dueDay && task.dueDay !== day && (
+                              <div className="mt-0.5 text-[9px] text-amber-600 flex items-center gap-0.5">
+                                <CalendarCheck size={8} /> Inl: {task.dueDay.slice(0, 3)}
+                              </div>
+                            )}
+                            <div className="mt-2 flex items-center justify-between">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); toggleTask(task); }}
+                                className={cn(
+                                  "p-1 rounded-full transition-colors",
+                                  task.completed ? "bg-emerald-200" : "bg-stone-100 hover:bg-emerald-100"
+                                )}
+                              >
+                                {task.completed ? <CheckCircle2 size={10} /> : <Circle size={10} />}
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
+                                className="p-1 text-stone-300 hover:text-red-500"
+                              >
+                                <Trash2 size={10} />
+                              </button>
+                            </div>
                           </div>
-                          <div className="text-[10px] line-clamp-2 opacity-70">{task.description}</div>
-                          {task.minutesPerDay && (
-                            <div className="mt-1 text-[9px] text-emerald-600 flex items-center gap-0.5">
-                              <Clock size={8} /> {task.minutesPerDay} min
-                            </div>
-                          )}
-                          {task.dueDay && task.dueDay !== day && (
-                            <div className="mt-0.5 text-[9px] text-amber-600 flex items-center gap-0.5">
-                              <CalendarCheck size={8} /> Inl: {task.dueDay.slice(0, 3)}
-                            </div>
-                          )}
-                          <div className="mt-2 flex items-center justify-between">
-                            <button
-                              onClick={() => toggleTask(task)}
-                              className={cn(
-                                "p-1 rounded-full transition-colors",
-                                task.completed ? "bg-emerald-200" : "bg-stone-100 hover:bg-emerald-100"
-                              )}
-                            >
-                              {task.completed ? <CheckCircle2 size={10} /> : <Circle size={10} />}
-                            </button>
-                            <button
-                              onClick={() => deleteTask(task.id)}
-                              className="p-1 text-stone-300 hover:text-red-500"
-                            >
-                              <Trash2 size={10} />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                       <button
                         onClick={() => {
                           setSelectedDay(day);
@@ -760,7 +811,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
               </div>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-5">
               {/* Task image */}
               {selectedTask.imageUrl && (
                 <div>
@@ -777,8 +828,53 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                 </div>
               )}
 
-              {/* Badges */}
-              <TaskBadges task={selectedTask} />
+              {/* Editable: Inlämningsdag */}
+              <div>
+                <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">
+                  Inlämningsdag (deadline)
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {DAYS.map(day => (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => setEditDueDay(day)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border capitalize",
+                        editDueDay === day
+                          ? "bg-red-50 border-red-300 text-red-700 ring-1 ring-red-300"
+                          : "bg-stone-50 border-stone-100 text-stone-400 hover:bg-stone-100"
+                      )}
+                    >
+                      {day.slice(0, 3)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Editable: Arbetsdagar */}
+              <div>
+                <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">
+                  Arbetsdagar
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {DAYS.map(day => (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => toggleEditWorkDay(day)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border capitalize",
+                        editWorkDays.includes(day)
+                          ? "bg-blue-50 border-blue-200 text-blue-700"
+                          : "bg-stone-50 border-stone-100 text-stone-400 hover:bg-stone-100"
+                      )}
+                    >
+                      {day.slice(0, 3)}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {/* AI Notes */}
               {selectedTask.aiNotes && selectedTask.aiNotes.length > 0 && (
@@ -796,6 +892,17 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
 
               {/* Actions */}
               <div className="flex flex-col gap-2 pt-2">
+                {/* Save edits button - only show if something changed */}
+                {(editDueDay !== (selectedTask.dueDay || '') || JSON.stringify(editWorkDays) !== JSON.stringify(selectedTask.workDays || [])) && (
+                  <button
+                    onClick={saveTaskEdits}
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 text-white rounded-2xl font-medium shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all"
+                  >
+                    <CalendarCheck size={18} />
+                    Spara ändringar
+                  </button>
+                )}
+
                 {onOpenAiForTask && (
                   <button
                     onClick={() => {
