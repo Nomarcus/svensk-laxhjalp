@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Send, Image as ImageIcon, X } from 'lucide-react';
+import { Send, Image as ImageIcon, Camera, X } from 'lucide-react';
 import { compressImage } from '../../utils/image';
 
 interface ChatInputProps {
@@ -13,6 +13,7 @@ interface ChatInputProps {
 
 export default function ChatInput({ input, setInput, image, setImage, loading, onSubmit }: ChatInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const processFile = async (file: File) => {
     if (!file.type.startsWith('image/')) return;
@@ -52,15 +53,32 @@ export default function ChatInput({ input, setInput, image, setImage, loading, o
         <div className="relative flex items-end gap-2 bg-white border border-black/10 rounded-2xl p-2 shadow-sm focus-within:border-emerald-500/50 transition-all">
           <button
             type="button"
+            onClick={() => cameraInputRef.current?.click()}
+            className="p-2 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-colors"
+            title="Fota läxan"
+          >
+            <Camera size={20} />
+          </button>
+          <button
+            type="button"
             onClick={() => fileInputRef.current?.click()}
             className="p-2 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors"
+            title="Välj bild"
           >
             <ImageIcon size={20} />
           </button>
           <input
             type="file"
+            ref={cameraInputRef}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) processFile(f); e.target.value = ''; }}
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+          />
+          <input
+            type="file"
             ref={fileInputRef}
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) processFile(f); }}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) processFile(f); e.target.value = ''; }}
             accept="image/*"
             className="hidden"
           />
