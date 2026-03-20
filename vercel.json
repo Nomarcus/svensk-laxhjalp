@@ -3,6 +3,11 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "regions": ["arn1"],
+  "functions": {
+    "api/**/*.ts": {
+      "maxDuration": 60
+    }
+  },
   "rewrites": [
     { "source": "/webhook/stripe", "destination": "/api/webhook/stripe" }
   ],
