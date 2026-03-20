@@ -1,9 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import Stripe from 'stripe';
+import type Stripe from 'stripe';
 import { getStripe } from '../_lib/stripe';
-import { db } from '../_lib/firebase';
+import { getDb } from '../_lib/firebase';
 
-// Disable body parsing — Stripe needs the raw body for signature verification
 export const config = {
   api: {
     bodyParser: false,
@@ -20,10 +19,7 @@ async function getRawBody(req: VercelRequest): Promise<Buffer> {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
-  }
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const sig = req.headers['stripe-signature'];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -33,6 +29,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
+  const db = await getDb();
   let event: Stripe.Event;
   try {
     const rawBody = await getRawBody(req);
@@ -49,7 +46,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const session = event.data.object as Stripe.Checkout.Session;
         const firebaseUID = session.metadata?.firebaseUID;
         if (!firebaseUID) break;
-
         if (session.subscription) {
           const subscription = await getStripe().subscriptions.retrieve(session.subscription as string);
           await db.doc(`users/${firebaseUID}`).set({
@@ -63,19 +59,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
         break;
       }
-
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
         const firebaseUID = subscription.metadata?.firebaseUID;
         if (!firebaseUID) break;
-
-        const statusMap: Record<string, string> = {
-          active: 'active',
-          past_due: 'past_due',
-          canceled: 'canceled',
-          unpaid: 'past_due',
-        };
-
+        const statusMap: Record<string, string> = { active: 'active', past_due: 'past_due', canceled: 'canceled', unpaid: 'past_due' };
         await db.doc(`users/${firebaseUID}`).set({
           tier: subscription.status === 'active' ? 'pro' : 'free',
           subscriptionStatus: statusMap[subscription.status] || 'none',
@@ -84,41 +72,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }, { merge: true });
         break;
       }
-
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
         const firebaseUID = subscription.metadata?.firebaseUID;
         if (!firebaseUID) break;
-
         await db.doc(`users/${firebaseUID}`).set({
-          tier: 'free',
-          subscriptionStatus: 'none',
-          stripeSubscriptionId: null,
-          currentPeriodEnd: null,
-          cancelAtPeriodEnd: false,
+          tier: 'free', subscriptionStatus: 'none', stripeSubscriptionId: null, currentPeriodEnd: null, cancelAtPeriodEnd: false,
         }, { merge: true });
         break;
       }
-
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
         const customerId = invoice.customer as string;
-
-        const snapshot = await db
-          .collection('users')
-          .where('stripeCustomerId', '==', customerId)
-          .limit(1)
-          .get();
-
+        const snapshot = await db.collection('users').where('stripeCustomerId', '==', customerId).limit(1).get();
         if (!snapshot.empty) {
-          await snapshot.docs[0].ref.set({
-            subscriptionStatus: 'past_due',
-          }, { merge: true });
+          await snapshot.docs[0].ref.set({ subscriptionStatus: 'past_due' }, { merge: true });
         }
         break;
       }
     }
-
     res.json({ received: true });
   } catch (error: any) {
     console.error('Webhook handler error:', error.message);

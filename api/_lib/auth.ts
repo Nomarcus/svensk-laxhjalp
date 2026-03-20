@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { authAdmin } from './firebase';
+import { getAuthAdmin } from './firebase';
 
 export interface AuthUser {
   uid: string;
@@ -18,6 +18,7 @@ export async function verifyAuth(
 
   const token = authHeader.split('Bearer ')[1];
   try {
+    const authAdmin = await getAuthAdmin();
     const decoded = await authAdmin.verifyIdToken(token);
     return { uid: decoded.uid, email: decoded.email };
   } catch {

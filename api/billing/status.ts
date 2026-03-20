@@ -1,17 +1,15 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { verifyAuth } from '../_lib/auth';
-import { db } from '../_lib/firebase';
+import { getDb } from '../_lib/firebase';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'GET') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
-  }
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   const user = await verifyAuth(req, res);
   if (!user) return;
 
   try {
+    const db = await getDb();
     const userDoc = await db.doc(`users/${user.uid}`).get();
     const data = userDoc.data() || {};
 
@@ -24,10 +22,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       status: data.subscriptionStatus || 'none',
       currentPeriodEnd: data.currentPeriodEnd || null,
       cancelAtPeriodEnd: data.cancelAtPeriodEnd || false,
-      usage: {
-        chatCount: usage.chatCount || 0,
-        imageCount: usage.imageCount || 0,
-      },
+      usage: { chatCount: usage.chatCount || 0, imageCount: usage.imageCount || 0 },
     });
   } catch (error: any) {
     console.error('Billing status error:', error.message);
