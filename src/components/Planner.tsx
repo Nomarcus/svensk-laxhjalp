@@ -74,7 +74,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
     setNewDesc('');
     setNewDateType('due');
     setNewWorkDays([]);
-    setNewDueDay('');
+    setNewDueDay(selectedDay);
     setNewMinutesPerDay('');
     setTaskImage(null);
   };
@@ -102,15 +102,8 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
         taskData.imageUrl = taskImage;
       }
 
-      if (newDateType === 'due') {
-        // selectedDay = inlämningsdag, workDays = vilka dagar barnet ska jobba
-        taskData.dueDay = selectedDay;
-        taskData.workDays = newWorkDays.length > 0 ? newWorkDays : [];
-      } else {
-        // selectedDay = arbetsdag, dueDay = när ska det lämnas in
-        taskData.dueDay = newDueDay || '';
-        taskData.workDays = [selectedDay];
-      }
+      taskData.dueDay = newDueDay || selectedDay;
+      taskData.workDays = newWorkDays.length > 0 ? newWorkDays : [];
 
       await addDoc(collection(db, 'users', ownerId, 'children', childId, 'tasks'), taskData);
 
@@ -346,90 +339,53 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
         />
       </div>
 
-      {/* Date type selector */}
+      {/* Inlämningsdag (single select) */}
       <div>
         <label className="block text-xs font-medium text-stone-400 uppercase tracking-widest mb-2">
-          Vad betyder {selectedDay}?
+          Inlämningsdag
         </label>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setNewDateType('due')}
-            className={cn(
-              "flex-1 py-2.5 px-3 rounded-xl text-sm font-medium transition-all border",
-              newDateType === 'due'
-                ? "bg-amber-50 border-amber-200 text-amber-700"
-                : "bg-stone-50 border-stone-100 text-stone-400 hover:bg-stone-100"
-            )}
-          >
-            Inlämningsdag
-          </button>
-          <button
-            type="button"
-            onClick={() => setNewDateType('work')}
-            className={cn(
-              "flex-1 py-2.5 px-3 rounded-xl text-sm font-medium transition-all border",
-              newDateType === 'work'
-                ? "bg-blue-50 border-blue-200 text-blue-700"
-                : "bg-stone-50 border-stone-100 text-stone-400 hover:bg-stone-100"
-            )}
-          >
-            Arbetsdag
-          </button>
+        <div className="flex flex-wrap gap-1.5">
+          {DAYS.map(day => (
+            <button
+              key={day}
+              type="button"
+              onClick={() => setNewDueDay(day)}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border capitalize",
+                newDueDay === day
+                  ? "bg-amber-50 border-amber-200 text-amber-700"
+                  : "bg-stone-50 border-stone-100 text-stone-400 hover:bg-stone-100",
+              )}
+            >
+              {day.slice(0, 3)}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Work days picker (multi select) when dateType is 'due' — selectedDay is the deadline, pick which days to work */}
-      {newDateType === 'due' && (
-        <div>
-          <label className="block text-xs font-medium text-stone-400 uppercase tracking-widest mb-2">
-            Vilka dagar ska barnet jobba med läxan?
-          </label>
-          <div className="flex flex-wrap gap-1.5">
-            {DAYS.map(day => (
-              <button
-                key={day}
-                type="button"
-                onClick={() => toggleWorkDay(day)}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border capitalize",
-                  newWorkDays.includes(day)
-                    ? "bg-blue-50 border-blue-200 text-blue-700"
-                    : "bg-stone-50 border-stone-100 text-stone-400 hover:bg-stone-100"
-                )}
-              >
-                {day.slice(0, 3)}
-              </button>
-            ))}
-          </div>
+      {/* Arbetsdagar (multi select) */}
+      <div>
+        <label className="block text-xs font-medium text-stone-400 uppercase tracking-widest mb-2">
+          Vilka dagar ska barnet jobba med läxan?
+        </label>
+        <div className="flex flex-wrap gap-1.5">
+          {DAYS.map(day => (
+            <button
+              key={day}
+              type="button"
+              onClick={() => toggleWorkDay(day)}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border capitalize",
+                newWorkDays.includes(day)
+                  ? "bg-blue-50 border-blue-200 text-blue-700"
+                  : "bg-stone-50 border-stone-100 text-stone-400 hover:bg-stone-100"
+              )}
+            >
+              {day.slice(0, 3)}
+            </button>
+          ))}
         </div>
-      )}
-
-      {/* Due day picker (single select) when dateType is 'work' — selectedDay is a work day, pick the deadline */}
-      {newDateType === 'work' && (
-        <div>
-          <label className="block text-xs font-medium text-stone-400 uppercase tracking-widest mb-2">
-            Vilken dag ska det lämnas in?
-          </label>
-          <div className="flex flex-wrap gap-1.5">
-            {DAYS.map(day => (
-              <button
-                key={day}
-                type="button"
-                onClick={() => setNewDueDay(day)}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border capitalize",
-                  newDueDay === day
-                    ? "bg-amber-50 border-amber-200 text-amber-700"
-                    : "bg-stone-50 border-stone-100 text-stone-400 hover:bg-stone-100",
-                )}
-              >
-                {day.slice(0, 3)}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      </div>
 
       {/* Minutes per day */}
       <div>
