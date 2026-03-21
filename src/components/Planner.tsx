@@ -188,13 +188,15 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
   const totalCount = tasks.length;
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
-  // Get all tasks relevant to a specific day (either as work day or due day)
+  // Get all tasks relevant to a specific day (work day, primary day, or due day)
   const getTasksForDay = (day: string) => {
     return tasks.filter(t => {
       // Direct match (the "day" field, backwards compatible)
       if (t.day === day) return true;
       // Also show if this day is in workDays
       if (t.workDays?.includes(day)) return true;
+      // Also show on the due/deadline day
+      if (t.dueDay && t.dueDay === day) return true;
       return false;
     });
   };
@@ -628,9 +630,9 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                       {day}
                       <div className="h-px flex-1 bg-black/5" />
                     </h4>
-                    <div className="space-y-3">
+                    <div className="space-y-1.5">
                       {dayTasks.length === 0 ? (
-                        <div className="bg-white/50 border border-dashed border-black/10 rounded-2xl p-8 text-center">
+                        <div className="bg-white/50 border border-dashed border-black/10 rounded-xl p-6 text-center">
                           <p className="text-sm text-stone-400 italic">Inga läxor inlagda för {day}.</p>
                         </div>
                       ) : (
@@ -639,51 +641,65 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                             key={task.id}
                             onClick={() => openTaskDetail(task)}
                             className={cn(
-                              "bg-white rounded-2xl p-4 shadow-sm border border-black/5 flex items-start gap-4 transition-all group cursor-pointer hover:shadow-md",
+                              "bg-white rounded-xl px-3 py-2 shadow-sm border border-black/5 flex items-center gap-3 transition-all group cursor-pointer hover:shadow-md",
                               task.completed && "opacity-60"
                             )}
                           >
                             <button
                               onClick={(e) => { e.stopPropagation(); toggleTask(task); }}
                               className={cn(
-                                "mt-1 transition-colors",
+                                "shrink-0 transition-colors",
                                 task.completed ? "text-emerald-500" : "text-stone-300 hover:text-emerald-500"
                               )}
                             >
-                              {task.completed ? <CheckCircle2 size={24} /> : <Circle size={24} />}
+                              {task.completed ? <CheckCircle2 size={20} /> : <Circle size={20} />}
                             </button>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <div className={cn(
-                                  "p-1.5 rounded-lg",
-                                  task.completed ? "bg-stone-100 text-stone-400" : "bg-emerald-50 text-emerald-600"
-                                )}>
-                                  {getSubjectIcon(task.subject)}
-                                </div>
-                                <h5 className={cn(
-                                  "font-medium text-lg",
-                                  task.completed && "line-through text-stone-400"
-                                )}>
-                                  {task.subject}
-                                </h5>
-                                {task.imageUrl && (
-                                  <ImageIcon size={14} className="text-amber-500" />
-                                )}
-                                {task.linkedChatSessionId && (
-                                  <MessageSquare size={14} className="text-emerald-500" />
-                                )}
-                              </div>
-                              {task.description && (
-                                <p className="text-stone-500 text-sm mt-1 line-clamp-2">{task.description}</p>
-                              )}
-                              <TaskBadges task={task} />
+                            <div className={cn(
+                              "shrink-0 p-1 rounded-lg",
+                              task.completed ? "bg-stone-100 text-stone-400" : "bg-emerald-50 text-emerald-600"
+                            )}>
+                              {getSubjectIcon(task.subject)}
                             </div>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
-                              className="p-2 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-                            >
-                              <Trash2 size={18} />
-                            </button>
+                            <span className={cn(
+                              "font-medium text-sm shrink-0",
+                              task.completed && "line-through text-stone-400"
+                            )}>
+                              {task.subject}
+                            </span>
+                            {task.description && (
+                              <span className="text-stone-400 text-sm truncate min-w-0">
+                                {task.description}
+                              </span>
+                            )}
+                            <div className="flex items-center gap-1.5 ml-auto shrink-0">
+                              {task.imageUrl && (
+                                <ImageIcon size={14} className="text-amber-500" />
+                              )}
+                              {task.linkedChatSessionId && (
+                                <MessageSquare size={14} className="text-emerald-500" />
+                              )}
+                              {task.dateType === 'due' && task.dueDay && task.day !== task.dueDay && (
+                                <span className="text-[10px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                  {task.dueDay.slice(0, 3)}
+                                </span>
+                              )}
+                              {task.dateType === 'work' && task.dueDay && (
+                                <span className="text-[10px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                  Inl: {task.dueDay.slice(0, 3)}
+                                </span>
+                              )}
+                              {task.minutesPerDay && (
+                                <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                  {task.minutesPerDay}min
+                                </span>
+                              )}
+                              <button
+                                onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
+                                className="p-1 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
                           </div>
                         ))
                       )}
