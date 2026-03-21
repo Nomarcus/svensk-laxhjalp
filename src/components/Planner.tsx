@@ -5,6 +5,7 @@ import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc, where
 import { format, startOfWeek, addDays, getWeek, getYear, addWeeks, subWeeks } from 'date-fns';
 import { sv } from 'date-fns/locale';
 import { cn } from '../utils/cn';
+import { compressImage } from '../utils/image';
 import type { Task } from '../types';
 
 interface PlannerProps {
@@ -284,7 +285,14 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onloadend = () => setTaskImage(reader.result as string);
+    reader.onloadend = async () => {
+      try {
+        const compressed = await compressImage(reader.result as string, 800, 800, 0.7);
+        setTaskImage(compressed);
+      } catch {
+        setTaskImage(reader.result as string);
+      }
+    };
     reader.readAsDataURL(file);
     e.target.value = '';
   };

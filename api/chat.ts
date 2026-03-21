@@ -1,7 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 
 const TEXT_MODEL = process.env.AI_TEXT_MODEL || 'gemini-2.5-flash-lite';
-const MAX_HISTORY_PAIRS = 10;
+const MAX_HISTORY_PAIRS = 8;
 
 const SYSTEM_INSTRUCTION = `
 Du är en pedagogisk assistent specialiserad på den svenska skolan, riktad till föräldrar.
@@ -107,7 +107,7 @@ export default async function handler(req: any, res: any) {
           ],
         },
       ],
-      config: { systemInstruction: SYSTEM_INSTRUCTION },
+      config: { systemInstruction: SYSTEM_INSTRUCTION, maxOutputTokens: 1024 },
     });
 
     res.json({ text: response.text, usage: response.usageMetadata });
