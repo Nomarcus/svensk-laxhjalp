@@ -26,7 +26,7 @@ export default function Info() {
   ];
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-[#F5F5F0]">
+    <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 bg-[#F5F5F0]">
       <div className="max-w-3xl mx-auto space-y-12 py-8">
         <header className="text-center space-y-4">
           <div className="inline-flex p-3 bg-emerald-100 rounded-2xl text-emerald-600 mb-2">

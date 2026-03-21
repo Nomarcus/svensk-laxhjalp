@@ -426,7 +426,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
   );
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-[#F5F5F0]">
+    <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 bg-[#F5F5F0]">
       <div className="max-w-4xl mx-auto space-y-8">
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div className="flex items-center justify-between w-full md:w-auto">
