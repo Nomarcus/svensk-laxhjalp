@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, MessageSquare, Calendar, BookOpen, User as UserIcon, ChevronDown, Settings, Info, Library, Crown, Download } from 'lucide-react';
+import { LogOut, MessageSquare, Calendar, BookOpen, User as UserIcon, ChevronDown, Settings, Info, Library, Crown, Download, Users } from 'lucide-react';
 import { logout, User } from '../firebase';
 import { cn } from '../utils/cn';
 import type { Child, SubscriptionTier } from '../types';
@@ -31,6 +31,8 @@ export default function Layout({
 }: LayoutProps) {
   const [showChildSelect, setShowChildSelect] = React.useState(false);
   const selectedChild = childrenList.find(c => c.id === selectedChildId);
+  const isSharedChild = (child: Child) => child.ownerId !== user.uid;
+  const hasSharing = (child: Child) => (child.sharedWith?.length || 0) > 0;
 
   return (
     <div className="min-h-screen bg-[#F5F5F0] flex flex-col md:flex-row font-sans text-stone-900">
@@ -59,9 +61,14 @@ export default function Layout({
                 </div>
                 <div className="text-left min-w-0">
                   <p className="text-xs text-stone-400 font-medium uppercase tracking-wider">Barn</p>
-                  <p className="text-sm font-semibold truncate">
-                    {selectedChild ? selectedChild.name : 'Välj barn...'}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-semibold truncate">
+                      {selectedChild ? selectedChild.name : 'Välj barn...'}
+                    </p>
+                    {selectedChild && (isSharedChild(selectedChild) || hasSharing(selectedChild)) && (
+                      <Users size={12} className="text-blue-500 shrink-0" />
+                    )}
+                  </div>
                 </div>
               </div>
               <ChevronDown size={16} className={cn("text-stone-400 transition-transform", showChildSelect && "rotate-180")} />
@@ -87,7 +94,13 @@ export default function Layout({
                     )}>
                       {child.name[0]}
                     </div>
-                    <span>{child.name}</span>
+                    <span className="flex-1">{child.name}</span>
+                    {isSharedChild(child) && (
+                      <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full">Delad med dig</span>
+                    )}
+                    {!isSharedChild(child) && hasSharing(child) && (
+                      <Users size={12} className="text-blue-400" />
+                    )}
                   </button>
                 ))}
                 <div className="h-px bg-stone-100 my-2 mx-4" />

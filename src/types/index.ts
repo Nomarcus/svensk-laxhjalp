@@ -5,6 +5,7 @@ export interface Child {
   name: string;
   grade?: string;
   ownerId: string;
+  sharedWith?: string[];
 }
 
 export interface Message {

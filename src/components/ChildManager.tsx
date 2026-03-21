@@ -136,16 +136,23 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
                       {child.grade && <p className="text-xs text-stone-500">{child.grade}</p>}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1">
                     <button
                       onClick={() => setSharingChildId(sharingChildId === child.id ? null : child.id)}
                       className={cn(
-                        "p-2 rounded-xl transition-all",
-                        sharingChildId === child.id ? "bg-emerald-100 text-emerald-600" : "text-stone-400 hover:text-emerald-600 hover:bg-emerald-50"
+                        "p-2 rounded-xl transition-all flex items-center gap-1",
+                        sharingChildId === child.id
+                          ? "bg-blue-100 text-blue-600"
+                          : child.sharedWith?.length
+                            ? "bg-blue-50 text-blue-500"
+                            : "text-stone-400 hover:text-blue-600 hover:bg-blue-50"
                       )}
                       title="Dela med förälder"
                     >
-                      <Share2 size={18} />
+                      <Share2 size={16} />
+                      {(child.sharedWith?.length || 0) > 0 && (
+                        <span className="text-[10px] font-bold">{child.sharedWith!.length}</span>
+                      )}
                     </button>
                     <button
                       onClick={() => deleteChild(child.id)}
@@ -158,44 +165,60 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
                 </div>
 
                 {sharingChildId === child.id && (
-                  <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 space-y-4 animate-in slide-in-from-top-2">
-                    <div className="flex items-center gap-2 text-emerald-800 font-medium text-sm">
-                      <Share2 size={16} /> Dela med annan förälder
+                  <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 space-y-4 animate-in slide-in-from-top-2">
+                    <div>
+                      <div className="flex items-center gap-2 text-blue-800 font-medium text-sm">
+                        <Share2 size={16} /> Dela med annan förälder
+                      </div>
+                      <p className="text-xs text-blue-600/70 mt-1">
+                        Den andra föräldern får tillgång till läxplanering, AI-chatt och allt material.
+                      </p>
                     </div>
-                    
-                    <div className="space-y-2">
-                      {child.sharedWith?.map(email => (
-                        <div key={email} className="flex items-center justify-between bg-white px-3 py-2 rounded-xl text-sm border border-emerald-100">
-                          <span className="text-stone-600">{email}</span>
-                          <button 
-                            onClick={() => removeShare(child.id, email)}
-                            className="text-stone-400 hover:text-red-500 transition-colors"
-                          >
-                            <X size={14} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+
+                    {(child.sharedWith?.length || 0) > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-medium text-blue-400 uppercase tracking-widest">Delas med</p>
+                        {child.sharedWith?.map(email => (
+                          <div key={email} className="flex items-center justify-between bg-white px-3 py-2 rounded-xl text-sm border border-blue-100">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                                <Mail size={12} className="text-blue-600" />
+                              </div>
+                              <span className="text-stone-600">{email}</span>
+                            </div>
+                            <button
+                              onClick={() => removeShare(child.id, email)}
+                              className="text-stone-400 hover:text-red-500 transition-colors"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
                     <form onSubmit={addShare} className="flex gap-2">
                       <div className="relative flex-1">
                         <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
                         <input
                           type="email"
-                          placeholder="Förälderns e-post"
+                          placeholder="Förälderns e-postadress"
                           value={newShareEmail}
                           onChange={(e) => setNewShareEmail(e.target.value)}
-                          className="w-full bg-white border-emerald-100 rounded-xl pl-9 pr-4 py-2 text-sm focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                          className="w-full bg-white border border-blue-100 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500/20 transition-all"
                         />
                       </div>
                       <button
                         type="submit"
                         disabled={!newShareEmail.trim()}
-                        className="p-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-all"
+                        className="px-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all text-sm font-medium"
                       >
-                        <Plus size={18} />
+                        Bjud in
                       </button>
                     </form>
+                    <p className="text-[10px] text-blue-500/60">
+                      Föräldern måste skapa ett konto med samma e-postadress för att se barnet.
+                    </p>
                   </div>
                 )}
               </div>
