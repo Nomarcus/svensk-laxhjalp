@@ -47,7 +47,7 @@ export interface Task {
   aiNotes?: string[];
 }
 
-export type SubscriptionTier = 'free' | 'pro';
+export type SubscriptionTier = 'free' | 'plus' | 'pro';
 export type SubscriptionStatus = 'active' | 'canceled' | 'past_due' | 'none';
 
 export interface UserSubscription {

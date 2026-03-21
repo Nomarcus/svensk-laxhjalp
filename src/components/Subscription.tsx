@@ -66,7 +66,9 @@ export default function Subscription({ subscription }: SubscriptionProps) {
     }
   };
 
-  const isPro = subscription.tier === 'pro';
+  const isPaid = subscription.tier === 'plus' || subscription.tier === 'pro';
+  const tierLabel = subscription.tier === 'pro' ? 'Pro' : subscription.tier === 'plus' ? 'Plus' : 'Gratis';
+  const tierColor = subscription.tier === 'pro' ? 'bg-amber-100 text-amber-600' : subscription.tier === 'plus' ? 'bg-blue-100 text-blue-600' : 'bg-stone-100 text-stone-500';
   const periodEnd = subscription.currentPeriodEnd
     ? new Date(typeof subscription.currentPeriodEnd === 'string'
         ? subscription.currentPeriodEnd
@@ -86,13 +88,13 @@ export default function Subscription({ subscription }: SubscriptionProps) {
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-black/5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isPro ? 'bg-amber-100 text-amber-600' : 'bg-stone-100 text-stone-500'}`}>
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${tierColor}`}>
                 <Crown size={24} />
               </div>
               <div>
-                <h3 className="font-medium text-lg">{isPro ? 'Pro' : 'Gratis'}</h3>
+                <h3 className="font-medium text-lg">{tierLabel}</h3>
                 <p className="text-sm text-stone-400">
-                  {isPro
+                  {isPaid
                     ? subscription.cancelAtPeriodEnd
                       ? 'Avslutas efter nuvarande period'
                       : 'Aktivt abonnemang'
@@ -101,7 +103,7 @@ export default function Subscription({ subscription }: SubscriptionProps) {
                 </p>
               </div>
             </div>
-            {isPro && (
+            {isPaid && (
               <button
                 onClick={openPortal}
                 disabled={portalLoading}
@@ -113,7 +115,7 @@ export default function Subscription({ subscription }: SubscriptionProps) {
             )}
           </div>
 
-          {isPro && periodEnd && (
+          {isPaid && periodEnd && (
             <div className="mt-4 pt-4 border-t border-black/5 flex items-center gap-2 text-sm text-stone-500">
               <Clock size={14} />
               {subscription.cancelAtPeriodEnd
@@ -125,7 +127,7 @@ export default function Subscription({ subscription }: SubscriptionProps) {
         </div>
 
         {/* Usage (free tier) */}
-        {!isPro && (
+        {!isPaid && (
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-black/5">
             <h3 className="font-medium mb-4 flex items-center gap-2">
               <Clock size={18} className="text-emerald-600" />
@@ -139,12 +141,12 @@ export default function Subscription({ subscription }: SubscriptionProps) {
                 </div>
                 <div className="flex items-end gap-1">
                   <span className="text-2xl font-bold text-stone-800">{usage.chatCount}</span>
-                  <span className="text-sm text-stone-400 mb-0.5">/ 3</span>
+                  <span className="text-sm text-stone-400 mb-0.5">/ 5</span>
                 </div>
                 <div className="mt-2 h-2 bg-stone-200 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-emerald-500 transition-all"
-                    style={{ width: `${Math.min((usage.chatCount / 3) * 100, 100)}%` }}
+                    style={{ width: `${Math.min((usage.chatCount / 5) * 100, 100)}%` }}
                   />
                 </div>
               </div>
@@ -155,12 +157,12 @@ export default function Subscription({ subscription }: SubscriptionProps) {
                 </div>
                 <div className="flex items-end gap-1">
                   <span className="text-2xl font-bold text-stone-800">{usage.imageCount}</span>
-                  <span className="text-sm text-stone-400 mb-0.5">/ 1</span>
+                  <span className="text-sm text-stone-400 mb-0.5">/ 2</span>
                 </div>
                 <div className="mt-2 h-2 bg-stone-200 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-blue-500 transition-all"
-                    style={{ width: `${Math.min((usage.imageCount / 1) * 100, 100)}%` }}
+                    style={{ width: `${Math.min((usage.imageCount / 2) * 100, 100)}%` }}
                   />
                 </div>
               </div>
@@ -171,7 +173,7 @@ export default function Subscription({ subscription }: SubscriptionProps) {
         {/* Pricing cards */}
         <div>
           <h3 className="font-medium text-lg mb-4 text-center">
-            {isPro ? 'Din plan' : 'Uppgradera för obegränsad användning'}
+            {isPaid ? 'Alla planer' : 'Uppgradera för mer användning'}
           </h3>
           <PricingCard currentTier={subscription.tier} />
         </div>
