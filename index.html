@@ -3,18 +3,194 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="description" content="AI-driven läxhjälp för svenska föräldrar. Hjälp ditt barn med skoluppgifter på ett pedagogiskt sätt." />
+
+    <!-- SEO: Title & Description -->
+    <title>Föräldrahjälpen — AI-driven läxhjälp för svenska föräldrar | Lgr22</title>
+    <meta name="description" content="Gratis AI-läxhjälp för föräldrar med barn i grundskolan. Fota läxan, få pedagogiska förklaringar kopplade till svenska läroplanen (Lgr22). Läxplanering, bildanalys och resursbibliotek." />
+
+    <!-- SEO: Author & Freshness -->
+    <meta name="author" content="Föräldrahjälpen" />
+    <meta property="article:published_time" content="2026-01-15T08:00:00Z" />
+    <meta property="article:modified_time" content="2026-03-21T10:00:00Z" />
+
+    <!-- SEO: Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Föräldrahjälpen — AI-driven läxhjälp för svenska föräldrar" />
+    <meta property="og:description" content="Fota läxan och få den förklarad med AI. Pedagogisk hjälp kopplad till svenska läroplanen (Lgr22) för föräldrar med barn i åk 1-9." />
+    <meta property="og:url" content="https://foraldrahjalpen.se/" />
+    <meta property="og:site_name" content="Föräldrahjälpen" />
+    <meta property="og:locale" content="sv_SE" />
+
+    <!-- SEO: Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Föräldrahjälpen — AI-driven läxhjälp" />
+    <meta name="twitter:description" content="Fota läxan och få pedagogiska förklaringar kopplade till Lgr22. Gratis att börja." />
+
+    <!-- SEO: Canonical -->
+    <link rel="canonical" href="https://foraldrahjalpen.se/" />
+
+    <!-- SEO: Additional keywords & robots -->
+    <meta name="keywords" content="läxhjälp, läxhjälp föräldrar, AI läxhjälp, svensk läxhjälp, hjälp med läxor, Lgr22, grundskolan, skolhjälp, läxplanering, fota läxan" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- PWA -->
     <meta name="theme-color" content="#059669" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Läxhjälpen" />
+    <meta name="apple-mobile-web-app-title" content="Föräldrahjälpen" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
-    <title>Svensk Läxhjälp för Föräldrar</title>
+
+    <!-- JSON-LD: Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Föräldrahjälpen",
+      "url": "https://foraldrahjalpen.se",
+      "description": "AI-driven läxhjälp för svenska föräldrar med barn i grundskolan. Pedagogiska förklaringar kopplade till läroplanen Lgr22.",
+      "foundingDate": "2026",
+      "areaServed": {
+        "@type": "Country",
+        "name": "Sweden"
+      }
+    }
+    </script>
+
+    <!-- JSON-LD: SoftwareApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Föräldrahjälpen",
+      "applicationCategory": "EducationalApplication",
+      "operatingSystem": "Web, Android, iOS",
+      "description": "AI-driven läxhjälp som hjälper svenska föräldrar förklara skoluppgifter för sina barn. Stöder alla ämnen i grundskolan åk 1-9 och kopplar till läroplanen Lgr22.",
+      "url": "https://foraldrahjalpen.se",
+      "inLanguage": "sv",
+      "offers": [
+        {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "SEK",
+          "name": "Gratis",
+          "description": "3 AI-frågor per dag, 1 bildanalys, läxplanering"
+        },
+        {
+          "@type": "Offer",
+          "price": "29",
+          "priceCurrency": "SEK",
+          "name": "Plus",
+          "description": "15 AI-frågor per dag, 5 bildanalyser, AI-illustrationer, resursbibliotek"
+        },
+        {
+          "@type": "Offer",
+          "price": "59",
+          "priceCurrency": "SEK",
+          "name": "Pro",
+          "description": "Obegränsade AI-frågor, dela kalender med föräldrar, prioriterad svarstid"
+        }
+      ],
+      "featureList": [
+        "AI-driven läxhjälp kopplad till Lgr22",
+        "Fota läxan och få den förklarad",
+        "Läxplanering med veckokalender",
+        "Dela kalender mellan föräldrar",
+        "AI-genererade pedagogiska illustrationer",
+        "Resursbibliotek med sparade förklaringar",
+        "Facit-funktion för föräldrar",
+        "PWA-app för mobil och dator"
+      ]
+    }
+    </script>
+
+    <!-- JSON-LD: FAQPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Vad är Föräldrahjälpen?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Föräldrahjälpen är en AI-driven läxhjälp-app för svenska föräldrar med barn i grundskolan (åk 1-9). Du kan ställa frågor om läxor, fota en uppgift och få den förklarad, eller använda läxplaneringen för att organisera veckans skolarbete. Alla svar kopplas till den svenska läroplanen Lgr22."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Hur fungerar AI-läxhjälpen?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Du skriver eller fotar en läxuppgift, och AI:n förklarar den pedagogiskt steg för steg. Förklaringarna är anpassade efter barnets årskurs och kopplade till Lgr22. AI:n hjälper föräldern förstå uppgiften — det är inte fusk, utan ett verktyg som gör det lättare att stötta sitt barn."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Är Föräldrahjälpen gratis?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Ja, grundversionen är helt gratis med 3 AI-frågor och 1 bildanalys per dag. För mer användning finns Plus (29 kr/mån) med 15 frågor per dag, och Pro (59 kr/mån) med obegränsad användning och möjlighet att dela kalendern med en annan förälder."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Vilka ämnen stöds?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Alla ämnen i den svenska grundskolan stöds: matematik, svenska, engelska, NO (biologi, fysik, kemi), SO (historia, geografi, samhällskunskap, religion) och moderna språk. AI:n anpassar förklaringarna efter barnets årskurs (åk 1-9)."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Kan man dela läxplaneringen med en annan förälder?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Ja, med Pro-abonnemanget kan du dela läxkalender och all information med en annan förälder. Perfekt för separerade föräldrar eller för att båda föräldrarna ska ha koll på barnets läxor och deadlines."
+          }
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- SEO: Crawlable content for search engines (SPA fallback) -->
+    <noscript>
+      <div>
+        <h1>Föräldrahjälpen — AI-driven läxhjälp för svenska föräldrar</h1>
+        <p>Föräldrahjälpen är en gratis AI-driven app som hjälper svenska föräldrar med barn i grundskolan (åk 1-9) att förstå och förklara läxor. Fota läxan med mobilen och få pedagogiska förklaringar kopplade till den svenska läroplanen Lgr22.</p>
+
+        <h2>Hur fungerar AI-läxhjälpen?</h2>
+        <p>Skriv en fråga eller fota en läxa — AI:n förklarar uppgiften steg för steg, anpassat efter barnets årskurs. Alla förklaringar kopplas till Lgr22 så du som förälder förstår varför barnet lär sig just detta.</p>
+
+        <h2>Vilka funktioner ingår?</h2>
+        <ul>
+          <li>AI-assistent som förklarar alla skolämnen pedagogiskt</li>
+          <li>Fota läxan med mobilen och få den analyserad</li>
+          <li>Veckoplanering med kalender, deadlines och arbetsdagar</li>
+          <li>Dela läxplaneringen mellan föräldrar</li>
+          <li>AI-genererade illustrationer som gör lärandet visuellt</li>
+          <li>Resursbibliotek för sparade förklaringar</li>
+          <li>Facit-funktion så föräldern kan verifiera svar</li>
+        </ul>
+
+        <h2>Vad kostar Föräldrahjälpen?</h2>
+        <p>Grundversionen är gratis med 3 AI-frågor per dag. Plus kostar 29 kr/mån och ger 15 frågor per dag. Pro kostar 59 kr/mån med obegränsad användning och delning mellan föräldrar.</p>
+
+        <h2>Vilka ämnen stöds?</h2>
+        <p>Alla ämnen i den svenska grundskolan: matematik, svenska, engelska, NO (biologi, fysik, kemi), SO (historia, geografi, samhällskunskap, religion) och moderna språk. Anpassat för åk 1-9.</p>
+
+        <h2>Varför behöver föräldrar läxhjälp?</h2>
+        <p>Många föräldrar känner sig osäkra på att hjälpa med läxor, särskilt när kursplanen har ändrats sedan de själva gick i skolan. Föräldrahjälpen ger tryggheten att kunna stötta sitt barn pedagogiskt, oavsett egen utbildningsbakgrund.</p>
+
+        <h2>Hur kopplas svaren till läroplanen?</h2>
+        <p>Varje AI-svar avslutas med en koppling till Lgr22 — den svenska läroplanen. Du får veta vilket centralt innehåll som berörs, varför barnet lär sig detta, och vilken förmåga som tränas. Skrivet så att alla föräldrar förstår.</p>
+      </div>
+    </noscript>
   </body>
 </html>
