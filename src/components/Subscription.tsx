@@ -141,12 +141,12 @@ export default function Subscription({ subscription }: SubscriptionProps) {
                 </div>
                 <div className="flex items-end gap-1">
                   <span className="text-2xl font-bold text-stone-800">{usage.chatCount}</span>
-                  <span className="text-sm text-stone-400 mb-0.5">/ 5</span>
+                  <span className="text-sm text-stone-400 mb-0.5">/ 3</span>
                 </div>
                 <div className="mt-2 h-2 bg-stone-200 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-emerald-500 transition-all"
-                    style={{ width: `${Math.min((usage.chatCount / 5) * 100, 100)}%` }}
+                    style={{ width: `${Math.min((usage.chatCount / 3) * 100, 100)}%` }}
                   />
                 </div>
               </div>
@@ -157,12 +157,12 @@ export default function Subscription({ subscription }: SubscriptionProps) {
                 </div>
                 <div className="flex items-end gap-1">
                   <span className="text-2xl font-bold text-stone-800">{usage.imageCount}</span>
-                  <span className="text-sm text-stone-400 mb-0.5">/ 2</span>
+                  <span className="text-sm text-stone-400 mb-0.5">/ 1</span>
                 </div>
                 <div className="mt-2 h-2 bg-stone-200 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-blue-500 transition-all"
-                    style={{ width: `${Math.min((usage.imageCount / 2) * 100, 100)}%` }}
+                    style={{ width: `${Math.min((usage.imageCount / 1) * 100, 100)}%` }}
                   />
                 </div>
               </div>
