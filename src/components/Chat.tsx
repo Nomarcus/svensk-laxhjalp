@@ -320,6 +320,9 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
                 onAskCurriculum={(content) => {
                   sendMessage(`Förklara hur det du just berättade om kopplas till den svenska läroplanen (Lgr22). Vilka centrala innehåll och kunskapskrav berörs? Ge konkreta kopplingar så jag som förälder förstår varför mitt barn lär sig detta.\n\nDin förklaring var:\n${content.slice(0, 500)}`);
                 }}
+                onAskFacit={(content) => {
+                  sendMessage(`Ge mig ett komplett facit med alla svar utskrivna för uppgiften du just förklarade. Skriv tydligt varje fråga/deluppgift följt av det korrekta svaret. Detta är till föräldern — inte till eleven. Formatera det snyggt med numrering.\n\nDin förklaring var:\n${content.slice(0, 500)}`);
+                }}
                 hasImage={hasImage}
                 onAddToPlanner={tasks.length > 0 ? (content) => {
                   setTaskPickerContent(content);

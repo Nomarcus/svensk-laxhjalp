@@ -108,7 +108,7 @@ export default async function handler(req: any, res: any) {
           ],
         },
       ],
-      config: { systemInstruction: SYSTEM_INSTRUCTION, maxOutputTokens: 1024 },
+      config: { systemInstruction: SYSTEM_INSTRUCTION },
     });
 
     res.json({ text: response.text, usage: response.usageMetadata });

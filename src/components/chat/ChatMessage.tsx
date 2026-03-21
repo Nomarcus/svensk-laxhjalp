@@ -1,4 +1,4 @@
-import { User, Bot, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus } from 'lucide-react';
+import { User, Bot, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '../../utils/cn';
 import type { Message } from '../../types';
@@ -11,6 +11,7 @@ interface ChatMessageProps {
   onSaveToLibrary: (msg: Message) => void;
   onGenerateImage: (messageId: string, content: string) => void;
   onAskCurriculum?: (content: string) => void;
+  onAskFacit?: (content: string) => void;
   onAddToPlanner?: (content: string) => void;
   hasImage?: boolean;
 }
@@ -23,6 +24,7 @@ export default function ChatMessage({
   onSaveToLibrary,
   onGenerateImage,
   onAskCurriculum,
+  onAskFacit,
   onAddToPlanner,
   hasImage,
 }: ChatMessageProps) {
@@ -124,6 +126,15 @@ export default function ChatMessage({
               >
                 <GraduationCap size={12} />
                 Koppling till läroplanen
+              </button>
+            )}
+            {onAskFacit && (
+              <button
+                onClick={() => onAskFacit(msg.content)}
+                className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-red-600 transition-colors px-2 py-1 rounded-md hover:bg-red-50"
+              >
+                <ClipboardList size={12} />
+                Visa facit
               </button>
             )}
             <button
