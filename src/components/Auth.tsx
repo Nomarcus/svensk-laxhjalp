@@ -281,13 +281,13 @@ export default function Auth({ onShowPrivacy }: AuthProps) {
   return (
     <div className="min-h-screen bg-[#F5F5F0] font-sans">
       {/* Hero section with login */}
-      <div className="flex flex-col lg:flex-row lg:items-start lg:pt-[2vh]">
+      <div className="flex flex-col lg:flex-row min-h-screen">
         {/* Left side: Marketing hero */}
-        <div className="flex-1 flex flex-col justify-center lg:justify-start lg:pt-2 p-3 md:p-6 lg:p-8">
-          <div className="max-w-xl mx-auto lg:mx-0 w-full">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-200">
-                <BookOpen size={20} />
+        <div className="flex-1 lg:w-1/2 flex flex-col justify-center p-6 md:p-10 lg:p-14 xl:p-20">
+          <div className="max-w-lg mx-auto w-full">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-11 h-11 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-200">
+                <BookOpen size={22} />
               </div>
               <span className="text-lg font-serif italic text-stone-900">Föräldrahjälpen</span>
             </div>
@@ -333,8 +333,8 @@ export default function Auth({ onShowPrivacy }: AuthProps) {
         </div>
 
         {/* Right side: Login card */}
-        <div className="lg:w-[400px] flex items-start justify-center pt-1 lg:pt-2 p-3 md:p-6">
-          <div className="w-full max-w-md bg-white rounded-[24px] p-6 shadow-sm border border-black/5 text-center relative overflow-hidden">
+        <div className="flex-1 lg:w-1/2 flex items-center justify-center p-6 md:p-10 lg:p-14 xl:p-20 bg-white/50">
+          <div className="w-full max-w-md bg-white rounded-[28px] p-8 shadow-lg border border-black/5 text-center relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1.5 bg-emerald-600" />
 
             <h2 className="text-xl font-serif italic text-stone-900 mb-1 mt-1">Kom igång</h2>
