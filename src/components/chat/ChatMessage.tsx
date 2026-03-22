@@ -161,7 +161,7 @@ export default function ChatMessage({
                 className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-teal-600 transition-colors px-2 py-1 rounded-md hover:bg-teal-50 disabled:opacity-50"
               >
                 {creatingAutoTask ? <Loader2 size={12} className="animate-spin" /> : <ScanLine size={12} />}
-                {creatingAutoTask ? 'Skapar läxa...' : 'Skapa läxa från fotot'}
+                {creatingAutoTask ? 'Skapar läxa...' : 'Skapa läxa med AI'}
               </button>
             )}
             <button
