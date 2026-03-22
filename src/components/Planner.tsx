@@ -472,7 +472,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                 title={hideCompleted ? "Visa klarmarkerade" : "Dölj klarmarkerade"}
               >
                 {hideCompleted ? <EyeOff size={16} /> : <Eye size={16} />}
-                <span className="hidden sm:inline">{hideCompleted ? 'Dolda' : 'Visa alla'}</span>
+                <span className="hidden sm:inline">{hideCompleted ? 'Visa klarmarkerade' : 'Dölj klarmarkerade'}</span>
               </button>
               <div className="flex bg-white rounded-xl p-1 shadow-sm border border-black/5">
                 <button
