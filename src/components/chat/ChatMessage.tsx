@@ -1,4 +1,4 @@
-import { User, Bot, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList } from 'lucide-react';
+import { User, Bot, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '../../utils/cn';
 import type { Message } from '../../types';
@@ -13,6 +13,7 @@ interface ChatMessageProps {
   onAskCurriculum?: (content: string) => void;
   onAskFacit?: (content: string) => void;
   onAddToPlanner?: (content: string) => void;
+  onCreateTask?: (content: string) => void;
   hasImage?: boolean;
 }
 
@@ -26,6 +27,7 @@ export default function ChatMessage({
   onAskCurriculum,
   onAskFacit,
   onAddToPlanner,
+  onCreateTask,
   hasImage,
 }: ChatMessageProps) {
   const handlePrint = (content: string) => {
@@ -151,6 +153,15 @@ export default function ChatMessage({
               >
                 <CalendarPlus size={12} />
                 Lägg till i planeringen
+              </button>
+            )}
+            {onCreateTask && (
+              <button
+                onClick={() => onCreateTask(msg.content)}
+                className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-emerald-600 transition-colors px-2 py-1 rounded-md hover:bg-emerald-50"
+              >
+                <PlusCircle size={12} />
+                Skapa läxa
               </button>
             )}
           </div>

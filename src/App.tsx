@@ -14,6 +14,7 @@ import type { Child, UserSubscription, Task } from './types';
 import InstallPrompt, { InstallGuide } from './components/InstallPrompt';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import Subscription from './components/Subscription';
+import CookieConsent from './components/CookieConsent';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -211,7 +212,7 @@ export default function App() {
         ) : (
           <>
             {activeTab === 'chat' ? (
-              <Chat childId={selectedChildId!} childName={selectedChild?.name || ''} ownerId={selectedChild?.ownerId || user.uid} tasks={allTasks} taskContext={chatFromTask} onTaskContextUsed={() => setChatFromTask(null)} />
+              <Chat childId={selectedChildId!} childName={selectedChild?.name || ''} ownerId={selectedChild?.ownerId || user.uid} tasks={allTasks} taskContext={chatFromTask} onTaskContextUsed={() => setChatFromTask(null)} onCreateTask={(subject, description) => { setPlannerPrefill({ subject, description }); setActiveTab('planner'); }} />
             ) : activeTab === 'planner' ? (
               <Planner childId={selectedChildId!} ownerId={selectedChild?.ownerId || user.uid} prefill={plannerPrefill} onPrefillUsed={() => setPlannerPrefill(null)} onOpenAiForTask={(taskId, subject, description, imageUrl) => { setChatFromTask({ taskId, subject, description, imageUrl }); setActiveTab('chat'); }} />
             ) : activeTab === 'library' ? (
@@ -229,6 +230,7 @@ export default function App() {
 
       <InstallPrompt />
       {showInstallGuide && <InstallGuide onClose={() => setShowInstallGuide(false)} />}
+      <CookieConsent />
     </ErrorBoundary>
   );
 }

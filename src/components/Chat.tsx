@@ -18,9 +18,10 @@ interface ChatProps {
   tasks?: Task[];
   taskContext?: { taskId: string; subject: string; description: string; imageUrl?: string } | null;
   onTaskContextUsed?: () => void;
+  onCreateTask?: (subject: string, description: string) => void;
 }
 
-export default function Chat({ childId, childName, ownerId, tasks = [], taskContext, onTaskContextUsed }: ChatProps) {
+export default function Chat({ childId, childName, ownerId, tasks = [], taskContext, onTaskContextUsed, onCreateTask }: ChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -326,6 +327,13 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
                 hasImage={hasImage}
                 onAddToPlanner={tasks.length > 0 ? (content) => {
                   setTaskPickerContent(content);
+                } : undefined}
+                onCreateTask={onCreateTask ? (content) => {
+                  // Extract a subject from the first line, default to 'Allmänt'
+                  const firstLine = content.split('\n')[0].replace(/[#*]/g, '').trim();
+                  const subject = firstLine.length > 3 && firstLine.length < 60 ? firstLine : 'Allmänt';
+                  const description = content.length > 300 ? content.slice(0, 300) + '...' : content;
+                  onCreateTask(subject, description);
                 } : undefined}
               />
             );
