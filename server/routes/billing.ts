@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import Stripe from 'stripe';
-import admin from 'firebase-admin';
+import { getSupabaseAdmin } from '../../src/lib/supabase-server';
 import { AuthenticatedRequest } from '../middleware/auth';
 
 const router = Router();
@@ -16,12 +16,11 @@ function getStripe(): Stripe {
   return _stripe;
 }
 
-const CLIENT_URL = process.env.CLIENT_URL || 'https://lead-agent-489101.web.app';
+const CLIENT_URL = process.env.CLIENT_URL || 'https://svensk-laxhjalp.vercel.app';
 
 // POST /api/billing/create-checkout-session
 router.post('/billing/create-checkout-session', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { priceId } = req.body;
     const uid = req.uid;
     const email = req.email;
 
@@ -40,28 +39,24 @@ router.post('/billing/create-checkout-session', async (req: AuthenticatedRequest
       monthly: process.env.STRIPE_PRICE_ID_MONTHLY,
       yearly: process.env.STRIPE_PRICE_ID_YEARLY,
     };
-    const stripePriceId = priceMap[priceId] || priceId;
+    const stripePriceId = priceMap[req.body.priceId] || req.body.priceId;
 
     if (!stripePriceId) {
       res.status(400).json({ error: 'Ogiltigt pris-ID.' });
       return;
     }
 
-    // Look up or create Stripe customer
-    const userDoc = await admin.firestore().doc(`users/${uid}`).get();
-    const userData = userDoc.data();
-    let customerId = userData?.stripeCustomerId;
+    const supabase = getSupabaseAdmin();
+    const { data: userData } = await supabase.from('users').select('stripe_customer_id').eq('id', uid).single();
+    let customerId = userData?.stripe_customer_id;
 
     if (!customerId) {
       const customer = await getStripe().customers.create({
         email,
-        metadata: { firebaseUID: uid },
+        metadata: { uid },
       });
       customerId = customer.id;
-      await admin.firestore().doc(`users/${uid}`).set(
-        { stripeCustomerId: customerId },
-        { merge: true }
-      );
+      await supabase.from('users').update({ stripe_customer_id: customerId }).eq('id', uid);
     }
 
     const session = await getStripe().checkout.sessions.create({
@@ -70,9 +65,9 @@ router.post('/billing/create-checkout-session', async (req: AuthenticatedRequest
       line_items: [{ price: stripePriceId, quantity: 1 }],
       success_url: `${CLIENT_URL}?subscription=success`,
       cancel_url: `${CLIENT_URL}?subscription=canceled`,
-      metadata: { firebaseUID: uid },
+      metadata: { uid },
       subscription_data: {
-        metadata: { firebaseUID: uid },
+        metadata: { uid },
       },
       locale: 'sv',
     });
@@ -93,8 +88,9 @@ router.post('/billing/create-portal-session', async (req: AuthenticatedRequest, 
       return;
     }
 
-    const userDoc = await admin.firestore().doc(`users/${uid}`).get();
-    const customerId = userDoc.data()?.stripeCustomerId;
+    const supabase = getSupabaseAdmin();
+    const { data: userData } = await supabase.from('users').select('stripe_customer_id').eq('id', uid).single();
+    const customerId = userData?.stripe_customer_id;
 
     if (!customerId) {
       res.status(400).json({ error: 'Inget aktivt abonnemang hittades.' });
@@ -122,22 +118,20 @@ router.get('/billing/status', async (req: AuthenticatedRequest, res: Response) =
       return;
     }
 
-    const userDoc = await admin.firestore().doc(`users/${uid}`).get();
-    const data = userDoc.data() || {};
+    const supabase = getSupabaseAdmin();
+    const { data: userData } = await supabase.from('users').select('tier, subscription_status, current_period_end, cancel_at_period_end').eq('id', uid).single();
 
-    // Get today's usage
     const today = new Date().toISOString().split('T')[0];
-    const usageDoc = await admin.firestore().doc(`users/${uid}/usage/${today}`).get();
-    const usage = usageDoc.data() || { chatCount: 0, imageCount: 0 };
+    const { data: usageData } = await supabase.from('daily_usage').select('chat_count, image_count').eq('user_id', uid).eq('date', today).single();
 
     res.json({
-      tier: data.tier || 'free',
-      status: data.subscriptionStatus || 'none',
-      currentPeriodEnd: data.currentPeriodEnd || null,
-      cancelAtPeriodEnd: data.cancelAtPeriodEnd || false,
+      tier: userData?.tier || 'free',
+      status: userData?.subscription_status || 'none',
+      currentPeriodEnd: userData?.current_period_end || null,
+      cancelAtPeriodEnd: userData?.cancel_at_period_end || false,
       usage: {
-        chatCount: usage.chatCount || 0,
-        imageCount: usage.imageCount || 0,
+        chatCount: usageData?.chat_count || 0,
+        imageCount: usageData?.image_count || 0,
       },
     });
   } catch (error: any) {
@@ -165,31 +159,33 @@ export async function stripeWebhookHandler(req: Request, res: Response) {
     return;
   }
 
+  const supabase = getSupabaseAdmin();
+
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
-        const firebaseUID = session.metadata?.firebaseUID;
-        if (!firebaseUID) break;
+        const uid = session.metadata?.uid;
+        if (!uid) break;
 
         if (session.subscription) {
           const subscription = await getStripe().subscriptions.retrieve(session.subscription as string);
-          await admin.firestore().doc(`users/${firebaseUID}`).set({
+          await supabase.from('users').update({
             tier: 'pro',
-            subscriptionStatus: 'active',
-            stripeSubscriptionId: subscription.id,
-            stripeCustomerId: session.customer as string,
-            currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
-            cancelAtPeriodEnd: subscription.cancel_at_period_end,
-          }, { merge: true });
+            subscription_status: 'active',
+            stripe_subscription_id: subscription.id,
+            stripe_customer_id: session.customer as string,
+            current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+            cancel_at_period_end: (subscription as any).cancel_at_period_end,
+          }).eq('id', uid);
         }
         break;
       }
 
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
-        const firebaseUID = subscription.metadata?.firebaseUID;
-        if (!firebaseUID) break;
+        const uid = subscription.metadata?.uid;
+        if (!uid) break;
 
         const statusMap: Record<string, string> = {
           active: 'active',
@@ -198,27 +194,27 @@ export async function stripeWebhookHandler(req: Request, res: Response) {
           unpaid: 'past_due',
         };
 
-        await admin.firestore().doc(`users/${firebaseUID}`).set({
+        await supabase.from('users').update({
           tier: subscription.status === 'active' ? 'pro' : 'free',
-          subscriptionStatus: statusMap[subscription.status] || 'none',
-          currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
-          cancelAtPeriodEnd: subscription.cancel_at_period_end,
-        }, { merge: true });
+          subscription_status: statusMap[subscription.status] || 'none',
+          current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+          cancel_at_period_end: (subscription as any).cancel_at_period_end,
+        }).eq('id', uid);
         break;
       }
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
-        const firebaseUID = subscription.metadata?.firebaseUID;
-        if (!firebaseUID) break;
+        const uid = subscription.metadata?.uid;
+        if (!uid) break;
 
-        await admin.firestore().doc(`users/${firebaseUID}`).set({
+        await supabase.from('users').update({
           tier: 'free',
-          subscriptionStatus: 'none',
-          stripeSubscriptionId: null,
-          currentPeriodEnd: null,
-          cancelAtPeriodEnd: false,
-        }, { merge: true });
+          subscription_status: 'none',
+          stripe_subscription_id: null,
+          current_period_end: null,
+          cancel_at_period_end: false,
+        }).eq('id', uid);
         break;
       }
 
@@ -226,17 +222,9 @@ export async function stripeWebhookHandler(req: Request, res: Response) {
         const invoice = event.data.object as Stripe.Invoice;
         const customerId = invoice.customer as string;
 
-        // Find user by stripeCustomerId
-        const snapshot = await admin.firestore()
-          .collection('users')
-          .where('stripeCustomerId', '==', customerId)
-          .limit(1)
-          .get();
-
-        if (!snapshot.empty) {
-          await snapshot.docs[0].ref.set({
-            subscriptionStatus: 'past_due',
-          }, { merge: true });
+        const { data: users } = await supabase.from('users').select('id').eq('stripe_customer_id', customerId).limit(1);
+        if (users && users.length > 0) {
+          await supabase.from('users').update({ subscription_status: 'past_due' }).eq('id', users[0].id);
         }
         break;
       }

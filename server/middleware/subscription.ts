@@ -1,5 +1,5 @@
 import { Response, NextFunction } from 'express';
-import admin from 'firebase-admin';
+import { getSupabaseAdmin } from '../../src/lib/supabase-server';
 import { AuthenticatedRequest } from './auth';
 
 export interface SubscriptionRequest extends AuthenticatedRequest {
@@ -28,29 +28,27 @@ export async function subscriptionMiddleware(
   }
 
   try {
+    const supabase = getSupabaseAdmin();
+
     // Read user subscription tier
-    const userDoc = await admin.firestore().doc(`users/${req.uid}`).get();
-    const userData = userDoc.data() || {};
-    const tier = userData.tier || 'free';
-    const subscriptionStatus = userData.subscriptionStatus || 'none';
+    const { data: userData } = await supabase.from('users').select('tier, subscription_status').eq('id', req.uid).single();
+    const tier = userData?.tier || 'free';
+    const subscriptionStatus = userData?.subscription_status || 'none';
 
     req.tier = tier;
 
     // Pro users with active subscription pass through
     if (tier === 'pro' && (subscriptionStatus === 'active' || subscriptionStatus === 'canceled')) {
-      // canceled but still in period = still pro
       next();
       return;
     }
 
     // Free tier enforcement
     const today = new Date().toISOString().split('T')[0];
-    const usageRef = admin.firestore().doc(`users/${req.uid}/usage/${today}`);
-    const usageDoc = await usageRef.get();
-    const usage = usageDoc.data() || { chatCount: 0, imageCount: 0 };
+    const { data: usageData } = await supabase.from('daily_usage').select('chat_count, image_count').eq('user_id', req.uid).eq('date', today).single();
 
-    const chatCount = usage.chatCount || 0;
-    const imageCount = usage.imageCount || 0;
+    const chatCount = usageData?.chat_count || 0;
+    const imageCount = usageData?.image_count || 0;
 
     req.dailyChatCount = chatCount;
     req.dailyImageCount = imageCount;
@@ -75,11 +73,7 @@ export async function subscriptionMiddleware(
         });
         return;
       }
-      // Increment image count
-      await usageRef.set(
-        { imageCount: admin.firestore.FieldValue.increment(1), lastUpdated: new Date().toISOString() },
-        { merge: true }
-      );
+      await supabase.rpc('increment_usage', { p_user_id: req.uid, p_field: 'image' });
       next();
       return;
     }
@@ -95,11 +89,7 @@ export async function subscriptionMiddleware(
         });
         return;
       }
-      // Increment chat count
-      await usageRef.set(
-        { chatCount: admin.firestore.FieldValue.increment(1), lastUpdated: new Date().toISOString() },
-        { merge: true }
-      );
+      await supabase.rpc('increment_usage', { p_user_id: req.uid, p_field: 'chat' });
       next();
       return;
     }
@@ -108,7 +98,6 @@ export async function subscriptionMiddleware(
     next();
   } catch (error: any) {
     console.error('Subscription middleware error:', error.message);
-    // On error, allow request through (don't block users due to internal errors)
     next();
   }
 }

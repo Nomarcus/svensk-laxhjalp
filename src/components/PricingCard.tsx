@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Check, Crown, Zap, Star } from 'lucide-react';
-import { auth } from '../firebase';
+import { supabase } from '../supabase';
 import { cn } from '../utils/cn';
 import type { SubscriptionTier } from '../types';
 
@@ -15,14 +15,14 @@ export default function PricingCard({ currentTier, onUpgradeStart, onUpgradeEnd 
   const [loading, setLoading] = useState<string | null>(null);
 
   const handleUpgrade = async (tier: 'plus' | 'pro') => {
-    const user = auth.currentUser;
-    if (!user) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
 
     setLoading(tier);
     onUpgradeStart?.();
 
     try {
-      const token = await user.getIdToken();
+      const token = session.access_token;
       const res = await fetch(`/api/billing/create-checkout-session`, {
         method: 'POST',
         headers: {

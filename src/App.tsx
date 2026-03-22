@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { auth, onAuthStateChanged, User, db, OperationType, handleFirestoreError } from './firebase';
-import { doc, setDoc, serverTimestamp, collection, onSnapshot, query, orderBy, collectionGroup, where } from 'firebase/firestore';
+import { supabase, handleDbError, User } from './supabase';
 import Auth from './components/Auth';
 import Layout from './components/Layout';
 import Chat from './components/Chat';
@@ -30,39 +29,25 @@ export default function App() {
   const [chatFromTask, setChatFromTask] = useState<{ taskId: string; subject: string; description: string; imageUrl?: string } | null>(null);
   const [allTasks, setAllTasks] = useState<Task[]>([]);
 
+  // Auth state listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        // Sync user profile to Firestore (don't block on failure)
+    const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const currentUser = session?.user ?? null;
+
+      if (currentUser) {
+        // Sync user profile to Supabase
         try {
-          const userRef = doc(db, 'users', user.uid);
-          await setDoc(userRef, {
-            uid: user.uid,
-            displayName: user.displayName || null,
-            email: user.email || null,
-            photoURL: user.photoURL || null,
-            lastLogin: serverTimestamp()
-          }, { merge: true });
+          await supabase.from('users').upsert({
+            id: currentUser.id,
+            display_name: currentUser.user_metadata?.display_name || currentUser.user_metadata?.full_name || null,
+            email: currentUser.email || null,
+            photo_url: currentUser.user_metadata?.avatar_url || null,
+            last_login: new Date().toISOString(),
+          }, { onConflict: 'id' });
         } catch (err) {
           console.warn('Could not sync user profile:', err);
         }
-        setUser(user);
-
-        // Listen for subscription changes on user doc
-        const userDocRef = doc(db, 'users', user.uid);
-        onSnapshot(userDocRef, (snap) => {
-          const data = snap.data();
-          if (data) {
-            setSubscription({
-              tier: data.tier || 'free',
-              status: data.subscriptionStatus || 'none',
-              stripeCustomerId: data.stripeCustomerId,
-              stripeSubscriptionId: data.stripeSubscriptionId,
-              currentPeriodEnd: data.currentPeriodEnd || null,
-              cancelAtPeriodEnd: data.cancelAtPeriodEnd || false,
-            });
-          }
-        });
+        setUser(currentUser);
       } else {
         setUser(null);
         setChildren([]);
@@ -73,28 +58,56 @@ export default function App() {
 
       // Handle Stripe redirect query params
       const params = new URLSearchParams(window.location.search);
-      if (params.get('subscription') === 'success') {
-        window.history.replaceState({}, '', window.location.pathname);
-      } else if (params.get('subscription') === 'canceled') {
+      if (params.get('subscription') === 'success' || params.get('subscription') === 'canceled') {
         window.history.replaceState({}, '', window.location.pathname);
       }
     });
 
-    return () => unsubscribe();
+    return () => authSub.unsubscribe();
   }, []);
 
+  // Subscription listener
   useEffect(() => {
     if (!user) return;
 
-    // Fetch own children
-    const childrenRef = collection(db, 'users', user.uid, 'children');
-    const qOwn = query(childrenRef, orderBy('createdAt', 'asc'));
-    
-    // Fetch shared children
-    const qShared = query(
-      collectionGroup(db, 'children'), 
-      where('sharedWith', 'array-contains', user.email)
-    );
+    // Initial fetch
+    const fetchSub = async () => {
+      const { data } = await supabase.from('users').select('tier, subscription_status, stripe_customer_id, stripe_subscription_id, current_period_end, cancel_at_period_end').eq('id', user.id).single();
+      if (data) {
+        setSubscription({
+          tier: data.tier || 'free',
+          status: data.subscription_status || 'none',
+          stripe_customer_id: data.stripe_customer_id,
+          stripe_subscription_id: data.stripe_subscription_id,
+          current_period_end: data.current_period_end || null,
+          cancel_at_period_end: data.cancel_at_period_end || false,
+        });
+      }
+    };
+    fetchSub();
+
+    // Realtime subscription on user doc
+    const channel = supabase
+      .channel(`user-sub-${user.id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${user.id}` }, (payload) => {
+        const data = payload.new as any;
+        setSubscription({
+          tier: data.tier || 'free',
+          status: data.subscription_status || 'none',
+          stripe_customer_id: data.stripe_customer_id,
+          stripe_subscription_id: data.stripe_subscription_id,
+          current_period_end: data.current_period_end || null,
+          cancel_at_period_end: data.cancel_at_period_end || false,
+        });
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
+
+  // Children listener
+  useEffect(() => {
+    if (!user) return;
 
     let ownChildren: Child[] = [];
     let sharedChildren: Child[] = [];
@@ -107,7 +120,7 @@ export default function App() {
         }
       });
       setChildren(combined);
-      
+
       if (combined.length > 0) {
         if (!selectedChildId || !combined.find(c => c.id === selectedChildId)) {
           setSelectedChildId(combined[0].id);
@@ -117,45 +130,68 @@ export default function App() {
       }
     };
 
-    const unsubscribeOwn = onSnapshot(qOwn, (snapshot) => {
-      ownChildren = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ownerId: user.uid,
-        ...doc.data()
-      })) as Child[];
-      updateChildren();
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, 'children');
-    });
+    // Fetch own children
+    const fetchOwn = async () => {
+      const { data, error } = await supabase.from('children').select('*').eq('owner_id', user.id).order('created_at', { ascending: true });
+      if (!error && data) {
+        ownChildren = data as Child[];
+        updateChildren();
+      }
+    };
 
-    const unsubscribeShared = onSnapshot(qShared, (snapshot) => {
-      sharedChildren = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ownerId: doc.ref.parent.parent!.id,
-        ...doc.data()
-      })) as Child[];
-      updateChildren();
-    }, (error) => {
-      // Collection group queries might fail if index is missing, but we'll handle it
-      console.warn('Shared children fetch failed (index might be building):', error);
-    });
+    // Fetch shared children
+    const fetchShared = async () => {
+      if (!user.email) return;
+      const { data, error } = await supabase.from('children').select('*').contains('shared_with', [user.email]);
+      if (!error && data) {
+        sharedChildren = data as Child[];
+        updateChildren();
+      }
+    };
+
+    fetchOwn();
+    fetchShared();
+
+    // Realtime for own children
+    const ownChannel = supabase
+      .channel(`own-children-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'children', filter: `owner_id=eq.${user.id}` }, () => {
+        fetchOwn();
+      })
+      .subscribe();
+
+    // Realtime for shared children (refetch on any children change)
+    const sharedChannel = supabase
+      .channel(`shared-children-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'children' }, () => {
+        fetchShared();
+      })
+      .subscribe();
 
     return () => {
-      unsubscribeOwn();
-      unsubscribeShared();
+      supabase.removeChannel(ownChannel);
+      supabase.removeChannel(sharedChannel);
     };
   }, [user, selectedChildId]);
 
-  // Listen to all tasks for the selected child (for AI-planner linking)
+  // Listen to all tasks for the selected child
   useEffect(() => {
     if (!user || !selectedChildId) { setAllTasks([]); return; }
-    const selectedChild = children.find(c => c.id === selectedChildId);
-    const ownerId = selectedChild?.ownerId || user.uid;
-    const tasksRef = collection(db, 'users', ownerId, 'children', selectedChildId, 'tasks');
-    const unsub = onSnapshot(tasksRef, (snap) => {
-      setAllTasks(snap.docs.map(d => ({ id: d.id, ...d.data() })) as Task[]);
-    }, () => setAllTasks([]));
-    return () => unsub();
+
+    const fetchTasks = async () => {
+      const { data, error } = await supabase.from('tasks').select('*').eq('child_id', selectedChildId);
+      if (!error && data) setAllTasks(data as Task[]);
+    };
+    fetchTasks();
+
+    const channel = supabase
+      .channel(`all-tasks-${selectedChildId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `child_id=eq.${selectedChildId}` }, () => {
+        fetchTasks();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [user, selectedChildId, children]);
 
   if (loading) {
@@ -178,9 +214,9 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <Layout 
-        user={user} 
-        activeTab={activeTab} 
+      <Layout
+        user={user}
+        activeTab={activeTab}
         setActiveTab={setActiveTab}
         childrenList={children}
         selectedChildId={selectedChildId}
@@ -212,11 +248,11 @@ export default function App() {
         ) : (
           <>
             {activeTab === 'chat' ? (
-              <Chat childId={selectedChildId!} childName={selectedChild?.name || ''} ownerId={selectedChild?.ownerId || user.uid} tasks={allTasks} taskContext={chatFromTask} onTaskContextUsed={() => setChatFromTask(null)} onCreateTask={(subject, description) => { setPlannerPrefill({ subject, description }); setActiveTab('planner'); }} onCreateTaskFromPhoto={(data) => { setPlannerPrefill(data); setActiveTab('planner'); }} />
+              <Chat childId={selectedChildId!} childName={selectedChild?.name || ''} ownerId={selectedChild?.owner_id || user.id} tasks={allTasks} taskContext={chatFromTask} onTaskContextUsed={() => setChatFromTask(null)} onCreateTask={(subject, description) => { setPlannerPrefill({ subject, description }); setActiveTab('planner'); }} onCreateTaskFromPhoto={(data) => { setPlannerPrefill(data); setActiveTab('planner'); }} />
             ) : activeTab === 'planner' ? (
-              <Planner childId={selectedChildId!} ownerId={selectedChild?.ownerId || user.uid} prefill={plannerPrefill} onPrefillUsed={() => setPlannerPrefill(null)} onOpenAiForTask={(taskId, subject, description, imageUrl) => { setChatFromTask({ taskId, subject, description, imageUrl }); setActiveTab('chat'); }} />
+              <Planner childId={selectedChildId!} ownerId={selectedChild?.owner_id || user.id} prefill={plannerPrefill} onPrefillUsed={() => setPlannerPrefill(null)} onOpenAiForTask={(taskId, subject, description, imageUrl) => { setChatFromTask({ taskId, subject, description, imageUrl }); setActiveTab('chat'); }} />
             ) : activeTab === 'library' ? (
-              <Library childId={selectedChildId!} ownerId={selectedChild?.ownerId || user.uid} />
+              <Library childId={selectedChildId!} ownerId={selectedChild?.owner_id || user.id} />
             ) : (
               <Info />
             )}

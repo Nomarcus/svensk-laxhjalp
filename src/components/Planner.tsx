@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Trash2, CheckCircle2, Circle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, LayoutList, Calendar, Calculator, BookOpen, Languages, Beaker, Globe, Book, Clock, CalendarCheck, Camera, MessageSquare, X, Image as ImageIcon, Eye, EyeOff, Sparkles, Loader2, GraduationCap } from 'lucide-react';
-import { db, auth, OperationType, handleFirestoreError } from '../firebase';
-import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc, where, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { supabase, handleDbError } from '../supabase';
 import { format, startOfWeek, addDays, getWeek, getYear, addWeeks, subWeeks } from 'date-fns';
 import { sv } from 'date-fns/locale';
 import { cn } from '../utils/cn';
@@ -63,25 +62,27 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
   const viewYear = getYear(viewDate);
 
   useEffect(() => {
-    if (!auth.currentUser || !childId) return;
+    if (!childId) return;
 
-    const q = query(
-      collection(db, 'users', ownerId, 'children', childId, 'tasks'),
-      where('weekNumber', '==', viewWeek),
-      where('year', '==', viewYear)
-    );
+    const fetchTasks = async () => {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('child_id', childId)
+        .eq('week_number', viewWeek)
+        .eq('year', viewYear);
+      if (!error && data) setTasks(data as Task[]);
+    };
+    fetchTasks();
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const tks = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Task[];
-      setTasks(tks);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, `users/${ownerId}/children/${childId}/tasks`);
-    });
+    const channel = supabase
+      .channel(`planner-tasks-${childId}-${viewWeek}-${viewYear}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `child_id=eq.${childId}` }, () => {
+        fetchTasks();
+      })
+      .subscribe();
 
-    return () => unsubscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [viewWeek, viewYear, childId, ownerId]);
 
   const resetForm = () => {
@@ -97,83 +98,88 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
 
   const addTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newSubject.trim() || !auth.currentUser || !childId) return;
+    if (!newSubject.trim() || !childId) return;
 
     try {
       const taskData: any = {
+        child_id: childId,
         day: selectedDay,
         subject: newSubject,
         description: newDesc,
         completed: false,
-        dateType: newDateType,
-        weekNumber: viewWeek,
+        date_type: newDateType,
+        week_number: viewWeek,
         year: viewYear,
-        createdAt: new Date().toISOString(),
-        taskType: newTaskType,
+        task_type: newTaskType,
+        due_day: newDueDay || selectedDay,
+        work_days: newWorkDays.length > 0 ? newWorkDays : [],
       };
 
       if (newMinutesPerDay) {
-        taskData.minutesPerDay = Number(newMinutesPerDay);
+        taskData.minutes_per_day = Number(newMinutesPerDay);
       }
       if (taskImage) {
-        taskData.imageUrl = taskImage;
+        taskData.image_url = taskImage;
       }
 
-      taskData.dueDay = newDueDay || selectedDay;
-      taskData.workDays = newWorkDays.length > 0 ? newWorkDays : [];
-
-      await addDoc(collection(db, 'users', ownerId, 'children', childId, 'tasks'), taskData);
+      const { error } = await supabase.from('tasks').insert(taskData);
+      if (error) throw error;
 
       resetForm();
       setShowAddModal(false);
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `users/${ownerId}/children/${childId}/tasks`);
+      handleDbError(error, 'insert', 'tasks');
     }
   };
 
   const toggleTask = async (task: Task, day?: string) => {
-    if (!auth.currentUser || !childId) return;
-    const taskRef = doc(db, 'users', ownerId, 'children', childId, 'tasks', task.id);
+    if (!childId) return;
     try {
-      // Get all days this task spans
       const allDays = new Set<string>();
       if (task.day) allDays.add(task.day);
-      if (task.dueDay) allDays.add(task.dueDay);
-      task.workDays?.forEach(d => allDays.add(d));
+      if (task.due_day) allDays.add(task.due_day);
+      task.work_days?.forEach(d => allDays.add(d));
 
-      // If task only has one day or no day specified, toggle whole task
       if (allDays.size <= 1 || !day) {
-        await updateDoc(taskRef, { completed: !task.completed, completedDays: !task.completed ? [...allDays] : [] });
+        const { error } = await supabase.from('tasks').update({
+          completed: !task.completed,
+          completed_days: !task.completed ? [...allDays] : [],
+        }).eq('id', task.id);
+        if (error) throw error;
         return;
       }
 
-      // Per-day toggle
-      const currentCompleted = task.completedDays || [];
+      const currentCompleted = task.completed_days || [];
       const isDayDone = currentCompleted.includes(day);
 
       if (isDayDone) {
-        // Unmark this day
-        await updateDoc(taskRef, {
-          completedDays: arrayRemove(day),
-          completed: false
+        const { error } = await supabase.rpc('toggle_completed_day', {
+          p_task_id: task.id,
+          p_day: day,
+          p_add: false,
         });
+        if (error) throw error;
       } else {
-        // Mark this day done
         const newCompleted = [...currentCompleted, day];
         const allComplete = [...allDays].every(d => newCompleted.includes(d));
-        await updateDoc(taskRef, {
-          completedDays: arrayUnion(day),
-          completed: allComplete
+        const { error } = await supabase.rpc('toggle_completed_day', {
+          p_task_id: task.id,
+          p_day: day,
+          p_add: true,
         });
+        if (error) throw error;
+        if (allComplete) {
+          await supabase.from('tasks').update({ completed: true }).eq('id', task.id);
+        }
       }
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `users/${ownerId}/children/${childId}/tasks/${task.id}`);
+      handleDbError(error, 'update', `tasks/${task.id}`);
     }
   };
 
   const isDayCompleted = (task: Task, day: string) => {
     if (task.completed) return true;
-    return task.completedDays?.includes(day) || false;
+    return task.completed_days?.includes(day) || false;
   };
 
   const handleGenerateStudyPlan = async () => {
@@ -187,11 +193,11 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
         incompleteTasks.map(t => ({
           subject: t.subject,
           description: t.description,
-          dueDay: t.dueDay,
-          workDays: t.workDays,
-          minutesPerDay: t.minutesPerDay,
+          due_day: t.due_day,
+          work_days: t.work_days,
+          minutes_per_day: t.minutes_per_day,
           completed: t.completed,
-          completedDays: t.completedDays,
+          completed_days: t.completed_days,
         }))
       );
       setStudyPlanContent(content);
@@ -209,17 +215,15 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
     setExamPrepContent(null);
     try {
       // Check if we already have cached content
-      if (task.examPrepContent) {
-        setExamPrepContent(task.examPrepContent);
+      if (task.exam_prep_content) {
+        setExamPrepContent(task.exam_prep_content);
         setExamPrepLoading(false);
         return;
       }
-      const content = await generateExamPrep(task.subject, task.description, task.aiNotes);
+      const content = await generateExamPrep(task.subject, task.description, task.ai_notes);
       setExamPrepContent(content);
-      // Save to Firestore for caching
-      await updateDoc(doc(db, 'users', ownerId, 'children', childId, 'tasks', task.id), {
-        examPrepContent: content
-      });
+      // Save to Supabase for caching
+      await supabase.from('tasks').update({ exam_prep_content: content }).eq('id', task.id);
     } catch (err) {
       console.error('Error generating exam prep:', err);
       setExamPrepContent('Kunde inte generera provförberedelse. Försök igen.');
@@ -229,22 +233,22 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
   };
 
   const deleteTask = async (id: string) => {
-    if (!auth.currentUser || !childId) return;
+    if (!childId) return;
     try {
-      await deleteDoc(doc(db, 'users', ownerId, 'children', childId, 'tasks', id));
+      const { error } = await supabase.from('tasks').delete().eq('id', id);
+      if (error) throw error;
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `users/${ownerId}/children/${childId}/tasks/${id}`);
+      handleDbError(error, 'delete', `tasks/${id}`);
     }
   };
 
   const moveTask = async (taskId: string, newDay: string) => {
-    if (!auth.currentUser || !childId) return;
+    if (!childId) return;
     try {
-      await updateDoc(doc(db, 'users', ownerId, 'children', childId, 'tasks', taskId), {
-        day: newDay
-      });
+      const { error } = await supabase.from('tasks').update({ day: newDay }).eq('id', taskId);
+      if (error) throw error;
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `users/${ownerId}/children/${childId}/tasks/${taskId}`);
+      handleDbError(error, 'update', `tasks/${taskId}`);
     }
   };
 
@@ -290,9 +294,9 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
       // Direct match (the "day" field, backwards compatible)
       if (t.day === day) return true;
       // Also show if this day is in workDays
-      if (t.workDays?.includes(day)) return true;
+      if (t.work_days?.includes(day)) return true;
       // Also show on the inlämningsdag
-      if (t.dueDay && t.dueDay === day) return true;
+      if (t.due_day && t.due_day === day) return true;
       return false;
     });
   };
@@ -311,28 +315,28 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
 
   const TaskBadges = ({ task }: { task: Task }) => (
     <div className="flex flex-wrap gap-1.5 mt-2">
-      {task.dateType === 'due' && task.workDays && task.workDays.length > 0 && (
+      {task.date_type === 'due' && task.work_days && task.work_days.length > 0 && (
         <span className="inline-flex items-center gap-1 text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
           <Clock size={10} />
-          Jobba: {task.workDays.map(d => d.slice(0, 3)).join(', ')}
+          Jobba: {task.work_days.map(d => d.slice(0, 3)).join(', ')}
         </span>
       )}
-      {task.dateType === 'work' && task.dueDay && (
+      {task.date_type === 'work' && task.due_day && (
         <span className="inline-flex items-center gap-1 text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full">
           <CalendarCheck size={10} />
-          Inlämning: {task.dueDay.slice(0, 3)}
+          Inlämning: {task.due_day.slice(0, 3)}
         </span>
       )}
-      {task.dateType === 'due' && task.dueDay && task.day !== task.dueDay && (
+      {task.date_type === 'due' && task.due_day && task.day !== task.due_day && (
         <span className="inline-flex items-center gap-1 text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full">
           <CalendarCheck size={10} />
-          Inlämning: {task.dueDay.slice(0, 3)}
+          Inlämning: {task.due_day.slice(0, 3)}
         </span>
       )}
-      {task.minutesPerDay && (
+      {task.minutes_per_day && (
         <span className="inline-flex items-center gap-1 text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full">
           <Clock size={10} />
-          {task.minutesPerDay} min/dag
+          {task.minutes_per_day} min/dag
         </span>
       )}
     </div>
@@ -348,24 +352,24 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
 
   const openTaskDetail = (task: Task) => {
     setSelectedTask(task);
-    setEditDueDay(task.dueDay || '');
-    setEditWorkDays(task.workDays || []);
-    setEditDateType(task.dateType || 'due');
+    setEditDueDay(task.due_day || '');
+    setEditWorkDays(task.work_days || []);
+    setEditDateType(task.date_type || 'due');
   };
 
   const saveTaskEdits = async () => {
-    if (!selectedTask || !auth.currentUser || !childId) return;
+    if (!selectedTask || !childId) return;
     try {
-      const taskRef = doc(db, 'users', ownerId, 'children', childId, 'tasks', selectedTask.id);
-      await updateDoc(taskRef, {
-        dueDay: editDueDay,
-        workDays: editWorkDays,
-        dateType: editDateType,
+      const { error } = await supabase.from('tasks').update({
+        due_day: editDueDay,
+        work_days: editWorkDays,
+        date_type: editDateType,
         day: editDateType === 'due' ? editDueDay : (editWorkDays[0] || selectedTask.day),
-      });
+      }).eq('id', selectedTask.id);
+      if (error) throw error;
       setSelectedTask(null);
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `tasks/${selectedTask.id}`);
+      handleDbError(error, 'update', `tasks/${selectedTask.id}`);
     }
   };
 
@@ -377,7 +381,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
 
   // Check if a task's due day matches a specific calendar day
   const isDueOnDay = (task: Task, day: string) => {
-    return task.dueDay === day;
+    return task.due_day === day;
   };
 
   const handlePlannerCamera = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -773,7 +777,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                             )}>
                               {task.subject}
                             </span>
-                            {task.taskType === 'exam' && (
+                            {task.task_type === 'exam' && (
                               <span className="shrink-0 px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[9px] font-bold rounded-full uppercase">Prov</span>
                             )}
                             {task.description && (
@@ -782,25 +786,25 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                               </span>
                             )}
                             <div className="flex items-center gap-1.5 ml-auto shrink-0">
-                              {task.imageUrl && (
+                              {task.image_url && (
                                 <ImageIcon size={14} className="text-amber-500" />
                               )}
-                              {task.linkedChatSessionId && (
+                              {task.linked_chat_session_id && (
                                 <MessageSquare size={14} className="text-emerald-500" />
                               )}
-                              {task.dateType === 'due' && task.dueDay && task.day !== task.dueDay && (
+                              {task.date_type === 'due' && task.due_day && task.day !== task.due_day && (
                                 <span className="text-[10px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                                  {task.dueDay.slice(0, 3)}
+                                  {task.due_day.slice(0, 3)}
                                 </span>
                               )}
-                              {task.dateType === 'work' && task.dueDay && (
+                              {task.date_type === 'work' && task.due_day && (
                                 <span className="text-[10px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                                  Inl: {task.dueDay.slice(0, 3)}
+                                  Inl: {task.due_day.slice(0, 3)}
                                 </span>
                               )}
-                              {task.minutesPerDay && (
+                              {task.minutes_per_day && (
                                 <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                                  {task.minutesPerDay}min
+                                  {task.minutes_per_day}min
                                 </span>
                               )}
                               <button
@@ -851,28 +855,28 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                               "p-3 rounded-xl text-xs shadow-sm border transition-all cursor-pointer hover:shadow-md",
                               isDayCompleted(task, day)
                                 ? "bg-emerald-50 border-emerald-100 text-emerald-700 opacity-60"
-                                : task.taskType === 'exam'
+                                : task.task_type === 'exam'
                                   ? "bg-purple-50 border-purple-200 text-stone-700 ring-2 ring-purple-300/50"
                                   : isDeadline
                                     ? "bg-red-50 border-red-200 text-stone-700 ring-2 ring-red-300/50"
-                                    : task.workDays?.includes(day)
+                                    : task.work_days?.includes(day)
                                       ? "bg-blue-50 border-blue-200 text-stone-700"
                                       : "bg-white border-black/5 text-stone-700"
                             )}
                           >
-                            {task.taskType === 'exam' && !isDayCompleted(task, day) && (
+                            {task.task_type === 'exam' && !isDayCompleted(task, day) && (
                               <div className="flex items-center gap-1 mb-1.5 text-[9px] font-bold text-purple-600 uppercase tracking-wider">
                                 <GraduationCap size={9} />
                                 Prov
                               </div>
                             )}
-                            {task.taskType !== 'exam' && isDeadline && !isDayCompleted(task, day) && (
+                            {task.task_type !== 'exam' && isDeadline && !isDayCompleted(task, day) && (
                               <div className="flex items-center gap-1 mb-1.5 text-[9px] font-bold text-red-600 uppercase tracking-wider">
                                 <CalendarCheck size={9} />
                                 Inlämningsdag
                               </div>
                             )}
-                            {task.taskType !== 'exam' && !isDeadline && !isDayCompleted(task, day) && task.workDays?.includes(day) && (
+                            {task.task_type !== 'exam' && !isDeadline && !isDayCompleted(task, day) && task.work_days?.includes(day) && (
                               <div className="flex items-center gap-1 mb-1.5 text-[9px] font-bold text-blue-600 uppercase tracking-wider">
                                 <Clock size={9} />
                                 Arbetsdag
@@ -885,14 +889,14 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                               <div className="font-bold truncate">{task.subject}</div>
                             </div>
                             <div className="text-[10px] line-clamp-2 opacity-70">{task.description}</div>
-                            {task.minutesPerDay && (
+                            {task.minutes_per_day && (
                               <div className="mt-1 text-[9px] text-emerald-600 flex items-center gap-0.5">
-                                <Clock size={8} /> {task.minutesPerDay} min
+                                <Clock size={8} /> {task.minutes_per_day} min
                               </div>
                             )}
-                            {task.dueDay && task.dueDay !== day && (
+                            {task.due_day && task.due_day !== day && (
                               <div className="mt-0.5 text-[9px] text-amber-600 flex items-center gap-0.5">
-                                <CalendarCheck size={8} /> Inl: {task.dueDay.slice(0, 3)}
+                                <CalendarCheck size={8} /> Inl: {task.due_day.slice(0, 3)}
                               </div>
                             )}
                             <div className="mt-2 flex items-center justify-between">
@@ -905,7 +909,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                               >
                                 {isDayCompleted(task, day) ? <CheckCircle2 size={10} /> : <Circle size={10} />}
                               </button>
-                              {task.taskType === 'exam' && (
+                              {task.task_type === 'exam' && (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleExamPrep(task); }}
                                   className="p-1 text-purple-400 hover:text-purple-600"
@@ -972,10 +976,10 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
 
             <div className="p-6 space-y-5">
               {/* Task image */}
-              {selectedTask.imageUrl && (
+              {selectedTask.image_url && (
                 <div>
                   <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">Foto av läxan</label>
-                  <img src={selectedTask.imageUrl} alt="Läxbild" className="w-full max-h-64 object-contain rounded-xl border border-black/5 bg-stone-50" />
+                  <img src={selectedTask.image_url} alt="Läxbild" className="w-full max-h-64 object-contain rounded-xl border border-black/5 bg-stone-50" />
                 </div>
               )}
 
@@ -1036,11 +1040,11 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
               </div>
 
               {/* AI Notes */}
-              {selectedTask.aiNotes && selectedTask.aiNotes.length > 0 && (
+              {selectedTask.ai_notes && selectedTask.ai_notes.length > 0 && (
                 <div>
                   <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">AI-anteckningar</label>
                   <div className="space-y-2">
-                    {selectedTask.aiNotes.map((note, i) => (
+                    {selectedTask.ai_notes.map((note, i) => (
                       <div key={i} className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-sm text-emerald-800">
                         {note.length > 200 ? note.slice(0, 200) + '...' : note}
                       </div>
@@ -1052,7 +1056,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
               {/* Actions */}
               <div className="flex flex-col gap-2 pt-2">
                 {/* Save edits button - only show if something changed */}
-                {(editDueDay !== (selectedTask.dueDay || '') || JSON.stringify(editWorkDays) !== JSON.stringify(selectedTask.workDays || [])) && (
+                {(editDueDay !== (selectedTask.due_day || '') || JSON.stringify(editWorkDays) !== JSON.stringify(selectedTask.work_days || [])) && (
                   <button
                     onClick={saveTaskEdits}
                     className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 text-white rounded-2xl font-medium shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all"
@@ -1065,7 +1069,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                 {onOpenAiForTask && (
                   <button
                     onClick={() => {
-                      onOpenAiForTask(selectedTask.id, selectedTask.subject, selectedTask.description, selectedTask.imageUrl);
+                      onOpenAiForTask(selectedTask.id, selectedTask.subject, selectedTask.description, selectedTask.image_url);
                       setSelectedTask(null);
                     }}
                     className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white rounded-2xl font-medium shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all"
@@ -1074,7 +1078,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                     Fråga AI om denna läxa
                   </button>
                 )}
-                {selectedTask.taskType === 'exam' && (
+                {selectedTask.task_type === 'exam' && (
                   <button
                     onClick={() => handleExamPrep(selectedTask)}
                     className="w-full py-3 bg-purple-50 border border-purple-200 text-purple-700 rounded-2xl font-medium hover:bg-purple-100 transition-all flex items-center justify-center gap-2"

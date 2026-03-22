@@ -1,15 +1,28 @@
-async function getFirebaseAdmin() { const mod = await import('firebase-admin'); const admin = mod.default; if (!admin.apps?.length) { const sa = process.env.FIREBASE_SERVICE_ACCOUNT; if (sa) admin.initializeApp({ credential: admin.credential.cert(JSON.parse(sa)) }); else admin.initializeApp(); } return admin; }
+import { verifyToken, getSupabaseAdmin } from '../../src/lib/supabase-server';
+
 export default async function handler(req: any, res: any) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: 'Ingen autentisering.' });
+
   try {
-    const admin = await getFirebaseAdmin();
-    const decoded = await admin.auth().verifyIdToken(authHeader.split('Bearer ')[1]);
-    const db = admin.firestore();
-    const data = (await db.doc('users/' + decoded.uid).get()).data() || {};
+    const { uid } = await verifyToken(req.headers.authorization);
+    const supabase = getSupabaseAdmin();
+
+    const { data: userData } = await supabase.from('users').select('tier, subscription_status, current_period_end, cancel_at_period_end').eq('id', uid).single();
     const today = new Date().toISOString().split('T')[0];
-    const usage = (await db.doc('users/' + decoded.uid + '/usage/' + today).get()).data() || { chatCount: 0, imageCount: 0 };
-    res.json({ tier: data.tier || 'free', status: data.subscriptionStatus || 'none', currentPeriodEnd: data.currentPeriodEnd || null, cancelAtPeriodEnd: data.cancelAtPeriodEnd || false, usage: { chatCount: usage.chatCount || 0, imageCount: usage.imageCount || 0 } });
-  } catch (error: any) { console.error('Status error:', error.message); res.status(500).json({ error: 'Status misslyckades.' }); }
+    const { data: usageData } = await supabase.from('daily_usage').select('chat_count, image_count').eq('user_id', uid).eq('date', today).single();
+
+    res.json({
+      tier: userData?.tier || 'free',
+      status: userData?.subscription_status || 'none',
+      currentPeriodEnd: userData?.current_period_end || null,
+      cancelAtPeriodEnd: userData?.cancel_at_period_end || false,
+      usage: {
+        chatCount: usageData?.chat_count || 0,
+        imageCount: usageData?.image_count || 0,
+      },
+    });
+  } catch (error: any) {
+    console.error('Status error:', error.message);
+    res.status(500).json({ error: 'Status misslyckades.' });
+  }
 }

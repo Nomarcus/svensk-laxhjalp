@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db, auth, OperationType, handleFirestoreError } from '../firebase';
-import { collection, query, onSnapshot, deleteDoc, doc, orderBy, collectionGroup, getDocs } from 'firebase/firestore';
+import { supabase, handleDbError } from '../supabase';
 import { Trash2, BookOpen, Image as ImageIcon, ExternalLink, Share2, Search, Plus, MessageSquare } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '../utils/cn';
@@ -19,71 +18,82 @@ export default function Library({ childId, ownerId }: LibraryProps) {
   const [filter, setFilter] = useState<'all' | 'images' | 'text'>('all');
 
   useEffect(() => {
-    if (!auth.currentUser || !childId) return;
+    if (!childId) return;
 
-    const q = query(
-      collection(db, 'users', ownerId, 'children', childId, 'library'),
-      orderBy('createdAt', 'desc')
-    );
+    const fetchItems = async () => {
+      const { data, error } = await supabase
+        .from('library_items')
+        .select('*')
+        .eq('child_id', childId)
+        .order('created_at', { ascending: false });
+      if (!error && data) setItems(data as LibraryItem[]);
+    };
+    fetchItems();
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as LibraryItem[];
-      setItems(data);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, `users/${ownerId}/children/${childId}/library`);
-    });
+    const channel = supabase
+      .channel(`library-${childId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'library_items', filter: `child_id=eq.${childId}` }, () => {
+        fetchItems();
+      })
+      .subscribe();
 
-    return () => unsubscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [childId]);
 
   // Fetch all AI-generated images from chat sessions
   useEffect(() => {
-    if (!auth.currentUser || !childId) return;
+    if (!childId) return;
 
-    const sessionsRef = collection(db, 'users', ownerId, 'children', childId, 'chatSessions');
-    const unsubscribe = onSnapshot(sessionsRef, async (sessionsSnap) => {
-      const allImages: LibraryItem[] = [];
-      const savedImageUrls = new Set(items.filter(i => i.type === 'image' && i.imageUrl).map(i => i.imageUrl));
+    const fetchChatImages = async () => {
+      // Get all chat sessions for this child
+      const { data: sessions } = await supabase
+        .from('chat_sessions')
+        .select('id')
+        .eq('child_id', childId);
 
-      for (const sessionDoc of sessionsSnap.docs) {
-        const msgsRef = collection(db, 'users', ownerId, 'children', childId, 'chatSessions', sessionDoc.id, 'messages');
-        const msgsQ = query(msgsRef, orderBy('timestamp', 'desc'));
-        const msgsSnap = await getDocs(msgsQ);
+      if (!sessions || sessions.length === 0) { setChatImages([]); return; }
 
-        for (const msgDoc of msgsSnap.docs) {
-          const data = msgDoc.data();
-          if (data.generatedImage && !savedImageUrls.has(data.generatedImage)) {
-            allImages.push({
-              id: `chat-img-${msgDoc.id}`,
-              title: data.content?.split('\n')[0]?.replace(/[#*]/g, '').slice(0, 50) || 'AI-illustration',
-              content: data.content || '',
-              type: 'image',
-              imageUrl: data.generatedImage,
-              createdAt: data.timestamp || null,
-              subject: 'Chatt',
-            });
-          }
-        }
-      }
+      const sessionIds = sessions.map(s => s.id);
+      const savedImageUrls = new Set(items.filter(i => i.type === 'image' && i.image_url).map(i => i.image_url));
+
+      // Fetch messages with generated images from these sessions
+      const { data: messages } = await supabase
+        .from('messages')
+        .select('id, content, generated_image, created_at')
+        .in('session_id', sessionIds)
+        .not('generated_image', 'is', null)
+        .order('created_at', { ascending: false });
+
+      if (!messages) { setChatImages([]); return; }
+
+      const allImages: LibraryItem[] = messages
+        .filter(msg => msg.generated_image && !savedImageUrls.has(msg.generated_image))
+        .map(msg => ({
+          id: `chat-img-${msg.id}`,
+          title: msg.content?.split('\n')[0]?.replace(/[#*]/g, '').slice(0, 50) || 'AI-illustration',
+          content: msg.content || '',
+          type: 'image' as const,
+          image_url: msg.generated_image,
+          created_at: msg.created_at || null,
+          subject: 'Chatt',
+        }));
+
       setChatImages(allImages);
-    }, () => setChatImages([]));
+    };
 
-    return () => unsubscribe();
+    fetchChatImages();
   }, [childId, ownerId, items]);
 
   const deleteItem = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!auth.currentUser || !childId) return;
-    // Chat images can't be deleted from library view
+    if (!childId) return;
     if (id.startsWith('chat-img-')) return;
     try {
-      await deleteDoc(doc(db, 'users', ownerId, 'children', childId, 'library', id));
+      const { error } = await supabase.from('library_items').delete().eq('id', id);
+      if (error) throw error;
       if (selectedItem?.id === id) setSelectedItem(null);
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `users/${ownerId}/children/${childId}/library/${id}`);
+      handleDbError(error, 'delete', `library_items/${id}`);
     }
   };
 
@@ -172,16 +182,16 @@ export default function Library({ childId, ownerId }: LibraryProps) {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredItems.map((item) => (
-                <div 
+                <div
                   key={item.id}
                   onClick={() => setSelectedItem(item)}
                   className="bg-white rounded-2xl overflow-hidden border border-black/5 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col"
                 >
-                  {item.type === 'image' && item.imageUrl && (
+                  {item.type === 'image' && item.image_url && (
                     <div className="aspect-video relative overflow-hidden bg-stone-100">
-                      <img 
-                        src={item.imageUrl} 
-                        alt={item.title} 
+                      <img
+                        src={item.image_url}
+                        alt={item.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         referrerPolicy="no-referrer"
                       />
@@ -211,7 +221,7 @@ export default function Library({ childId, ownerId }: LibraryProps) {
                         {item.subject || 'Allmänt'}
                       </span>
                       <div className="flex items-center gap-1">
-                        <button 
+                        <button
                           onClick={(e) => handleShare(item, e)}
                           className="p-2 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
                           title="Dela"
@@ -252,14 +262,14 @@ export default function Library({ childId, ownerId }: LibraryProps) {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button 
+                <button
                   onClick={(e) => handleShare(selectedItem, e)}
                   className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-sm font-medium hover:bg-emerald-100 transition-all"
                 >
                   <Share2 size={16} />
                   <span>Dela</span>
                 </button>
-                <button 
+                <button
                   onClick={() => setSelectedItem(null)}
                   className="p-2 hover:bg-stone-100 rounded-full text-stone-400 transition-colors"
                 >
@@ -269,10 +279,10 @@ export default function Library({ childId, ownerId }: LibraryProps) {
             </div>
             <div className="flex-1 overflow-y-auto p-8">
               <div className="max-w-2xl mx-auto space-y-8">
-                {selectedItem.imageUrl && (
-                  <img 
-                    src={selectedItem.imageUrl} 
-                    alt={selectedItem.title} 
+                {selectedItem.image_url && (
+                  <img
+                    src={selectedItem.image_url}
+                    alt={selectedItem.title}
                     className="w-full rounded-2xl shadow-lg border border-black/5"
                     referrerPolicy="no-referrer"
                   />

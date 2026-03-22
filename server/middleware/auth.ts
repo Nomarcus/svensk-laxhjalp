@@ -1,17 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import admin from 'firebase-admin';
-
-if (!admin.apps.length) {
-  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT;
-  if (serviceAccount) {
-    admin.initializeApp({
-      credential: admin.credential.cert(JSON.parse(serviceAccount)),
-    });
-  } else {
-    // Falls back to Application Default Credentials (works on Cloud Run)
-    admin.initializeApp();
-  }
-}
+import { verifyToken } from '../../src/lib/supabase-server';
 
 export interface AuthenticatedRequest extends Request {
   uid?: string;
@@ -29,17 +17,10 @@ export async function authMiddleware(
     return;
   }
 
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
-    res.status(401).json({ error: 'Ingen autentisering. Logga in först.' });
-    return;
-  }
-
-  const token = authHeader.split('Bearer ')[1];
   try {
-    const decoded = await admin.auth().verifyIdToken(token);
-    req.uid = decoded.uid;
-    req.email = decoded.email;
+    const { uid, email } = await verifyToken(req.headers.authorization);
+    req.uid = uid;
+    req.email = email;
     next();
   } catch {
     res.status(401).json({ error: 'Ogiltig token. Logga in igen.' });

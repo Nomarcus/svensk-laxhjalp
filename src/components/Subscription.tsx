@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Crown, CreditCard, Clock, MessageCircle, Image } from 'lucide-react';
-import { auth } from '../firebase';
+import { supabase } from '../supabase';
 import PricingCard from './PricingCard';
 import type { UserSubscription } from '../types';
 
@@ -22,11 +22,11 @@ export default function Subscription({ subscription }: SubscriptionProps) {
   }, []);
 
   const fetchUsage = async () => {
-    const user = auth.currentUser;
-    if (!user) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
 
     try {
-      const token = await user.getIdToken();
+      const token = session.access_token;
       const res = await fetch('/api/billing/status', {
         headers: { 'Authorization': `Bearer ${token}` },
       });
@@ -40,12 +40,12 @@ export default function Subscription({ subscription }: SubscriptionProps) {
   };
 
   const openPortal = async () => {
-    const user = auth.currentUser;
-    if (!user) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
 
     setPortalLoading(true);
     try {
-      const token = await user.getIdToken();
+      const token = session.access_token;
       const res = await fetch('/api/billing/create-portal-session', {
         method: 'POST',
         headers: {
@@ -69,11 +69,8 @@ export default function Subscription({ subscription }: SubscriptionProps) {
   const isPaid = subscription.tier === 'plus' || subscription.tier === 'pro';
   const tierLabel = subscription.tier === 'pro' ? 'Pro' : subscription.tier === 'plus' ? 'Plus' : 'Gratis';
   const tierColor = subscription.tier === 'pro' ? 'bg-amber-100 text-amber-600' : subscription.tier === 'plus' ? 'bg-blue-100 text-blue-600' : 'bg-stone-100 text-stone-500';
-  const periodEnd = subscription.currentPeriodEnd
-    ? new Date(typeof subscription.currentPeriodEnd === 'string'
-        ? subscription.currentPeriodEnd
-        : subscription.currentPeriodEnd?.toDate?.() || subscription.currentPeriodEnd
-      )
+  const periodEnd = subscription.current_period_end
+    ? new Date(subscription.current_period_end)
     : null;
 
   return (
@@ -95,7 +92,7 @@ export default function Subscription({ subscription }: SubscriptionProps) {
                 <h3 className="font-medium text-lg">{tierLabel}</h3>
                 <p className="text-sm text-stone-400">
                   {isPaid
-                    ? subscription.cancelAtPeriodEnd
+                    ? subscription.cancel_at_period_end
                       ? 'Avslutas efter nuvarande period'
                       : 'Aktivt abonnemang'
                     : 'Grundplan med begränsningar'
@@ -118,7 +115,7 @@ export default function Subscription({ subscription }: SubscriptionProps) {
           {isPaid && periodEnd && (
             <div className="mt-4 pt-4 border-t border-black/5 flex items-center gap-2 text-sm text-stone-500">
               <Clock size={14} />
-              {subscription.cancelAtPeriodEnd
+              {subscription.cancel_at_period_end
                 ? `Avslutas ${periodEnd.toLocaleDateString('sv-SE')}`
                 : `Förnyas ${periodEnd.toLocaleDateString('sv-SE')}`
               }

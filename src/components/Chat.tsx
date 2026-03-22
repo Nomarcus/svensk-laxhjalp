@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Image as ImageIcon, Loader2, Bot, X, Calculator, BookOpen, Languages, Beaker, Globe, Book, Check } from 'lucide-react';
-import { db, auth, OperationType, handleFirestoreError } from '../firebase';
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, deleteDoc, doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { supabase, handleDbError } from '../supabase';
 import { generateHomeworkHelp, generateImage, analyzeHomeworkForTask } from '../services/geminiService';
 import { compressImage } from '../utils/image';
 import { cn } from '../utils/cn';
@@ -38,44 +37,68 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
   const [creatingAutoTask, setCreatingAutoTask] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Chat sessions listener
   useEffect(() => {
-    if (!auth.currentUser || !childId) return;
-    const sessionsRef = collection(db, 'users', ownerId, 'children', childId, 'chatSessions');
-    const q = query(sessionsRef, orderBy('createdAt', 'desc'));
+    if (!childId) return;
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as ChatSession[];
-      setSessions(data);
-      if (data.length > 0) {
-        if (!activeSessionId || !data.find(s => s.id === activeSessionId)) {
-          setActiveSessionId(data[0].id);
+    const fetchSessions = async () => {
+      const { data, error } = await supabase
+        .from('chat_sessions')
+        .select('*')
+        .eq('child_id', childId)
+        .order('created_at', { ascending: false });
+      if (!error && data) {
+        setSessions(data as ChatSession[]);
+        if (data.length > 0) {
+          if (!activeSessionId || !data.find((s: any) => s.id === activeSessionId)) {
+            setActiveSessionId(data[0].id);
+          }
+        } else {
+          createNewSession();
         }
-      } else {
-        createNewSession();
       }
-    }, (err) => handleFirestoreError(err, OperationType.GET, 'chatSessions'));
+    };
+    fetchSessions();
 
-    return () => unsubscribe();
+    const channel = supabase
+      .channel(`chat-sessions-${childId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_sessions', filter: `child_id=eq.${childId}` }, () => {
+        fetchSessions();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [childId, activeSessionId]);
 
+  // Messages listener
   useEffect(() => {
-    if (!auth.currentUser || !childId || !activeSessionId) return;
-    const q = query(
-      collection(db, 'users', ownerId, 'children', childId, 'chatSessions', activeSessionId, 'messages'),
-      orderBy('timestamp', 'asc')
-    );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setMessages(snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Message[]);
-    }, (err) => handleFirestoreError(err, OperationType.GET, 'messages'));
+    if (!childId || !activeSessionId) return;
 
-    return () => unsubscribe();
+    const fetchMessages = async () => {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('session_id', activeSessionId)
+        .order('created_at', { ascending: true });
+      if (!error && data) setMessages(data as Message[]);
+    };
+    fetchMessages();
+
+    const channel = supabase
+      .channel(`messages-${activeSessionId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `session_id=eq.${activeSessionId}` }, () => {
+        fetchMessages();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [childId, activeSessionId]);
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
-  // Handle task context from planner - auto-send question about the task
+  // Handle task context from planner
   const taskContextProcessed = useRef(false);
   useEffect(() => {
     if (taskContext && activeSessionId && !loading && !taskContextProcessed.current) {
@@ -86,7 +109,6 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
         setImage(taskContext.imageUrl);
       }
 
-      // Small delay to ensure session is ready
       setTimeout(() => {
         sendMessage(prompt);
         onTaskContextUsed?.();
@@ -98,42 +120,47 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
   }, [taskContext, activeSessionId]);
 
   const createNewSession = async () => {
-    if (!auth.currentUser || !childId) return;
+    if (!childId) return;
     try {
-      const ref = collection(db, 'users', ownerId, 'children', childId, 'chatSessions');
-      const docRef = await addDoc(ref, { title: `Chatt ${new Date().toLocaleDateString()}`, createdAt: serverTimestamp() });
-      setActiveSessionId(docRef.id);
+      const { data, error } = await supabase
+        .from('chat_sessions')
+        .insert({ child_id: childId, title: `Chatt ${new Date().toLocaleDateString()}` })
+        .select()
+        .single();
+      if (error) throw error;
+      if (data) setActiveSessionId(data.id);
     } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, 'chatSessions');
+      handleDbError(err, 'insert', 'chat_sessions');
     }
   };
 
   const clearChat = async () => {
-    if (!auth.currentUser || !childId || !activeSessionId) return;
+    if (!childId || !activeSessionId) return;
     if (!window.confirm('Är du säker på att du vill rensa denna chatt?')) return;
     try {
-      await deleteDoc(doc(db, 'users', ownerId, 'children', childId, 'chatSessions', activeSessionId));
+      const { error } = await supabase.from('chat_sessions').delete().eq('id', activeSessionId);
+      if (error) throw error;
       setActiveSessionId(null);
     } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, `chatSessions/${activeSessionId}`);
+      handleDbError(err, 'delete', `chat_sessions/${activeSessionId}`);
     }
   };
 
   const saveToLibrary = async (message: Message) => {
-    if (!auth.currentUser || !childId) return;
+    if (!childId) return;
     try {
-      const libraryRef = collection(db, 'users', ownerId, 'children', childId, 'library');
-      await addDoc(libraryRef, {
+      const { error } = await supabase.from('library_items').insert({
+        child_id: childId,
         title: message.content.split('\n')[0].replace(/[#*]/g, '').slice(0, 50) || 'Sparad förklaring',
         content: message.content,
-        type: message.generatedImage ? 'image' : 'text',
-        imageUrl: message.generatedImage || null,
-        createdAt: serverTimestamp(),
+        type: message.generated_image ? 'image' : 'text',
+        image_url: message.generated_image || null,
         subject: 'Allmänt',
       });
+      if (error) throw error;
       setSavedMessageIds(prev => new Set(prev).add(message.id));
     } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, 'library');
+      handleDbError(err, 'insert', 'library_items');
     }
   };
 
@@ -148,18 +175,19 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
   };
 
   const saveNoteToTask = async (taskId: string, content: string) => {
-    if (!auth.currentUser || !childId) return;
+    if (!childId) return;
     try {
-      const taskRef = doc(db, 'users', ownerId, 'children', childId, 'tasks', taskId);
       const note = content.length > 500 ? content.slice(0, 500) + '...' : content;
-      await updateDoc(taskRef, {
-        aiNotes: arrayUnion(note),
-        linkedChatSessionId: activeSessionId,
+      const { error } = await supabase.rpc('append_ai_note', {
+        p_task_id: taskId,
+        p_note: note,
+        p_session_id: activeSessionId,
       });
+      if (error) throw error;
       setLinkedTaskIds(prev => new Set(prev).add(taskId));
       setTaskPickerContent(null);
     } catch (err) {
-      handleFirestoreError(err, OperationType.UPDATE, `tasks/${taskId}`);
+      handleDbError(err, 'rpc', `tasks/${taskId}`);
     }
   };
 
@@ -177,14 +205,14 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
   };
 
   const handleGenerateImage = async (messageId: string, content: string) => {
-    if (!auth.currentUser || !childId || !activeSessionId) return;
+    if (!childId || !activeSessionId) return;
     setGeneratingImageId(messageId);
-    const path = `users/${ownerId}/children/${childId}/chatSessions/${activeSessionId}/messages/${messageId}`;
     try {
       const imageUrl = await generateImage(content);
       if (imageUrl) {
         const compressed = await compressImage(imageUrl, 800, 800, 0.6);
-        await updateDoc(doc(db, path), { generatedImage: compressed });
+        const { error } = await supabase.from('messages').update({ generated_image: compressed }).eq('id', messageId);
+        if (error) throw error;
       }
     } catch (err) {
       console.error('Error generating image:', err);
@@ -197,7 +225,6 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
     if (!onCreateTaskFromPhoto) return;
     setCreatingAutoTask(true);
     try {
-      // Find the user message before this AI response to get the image
       const aiMsgIndex = messages.findIndex(m => m.id === messageId);
       const prevMsg = aiMsgIndex > 0 ? messages[aiMsgIndex - 1] : null;
       const imageUrl = prevMsg?.attachments?.[0] || undefined;
@@ -221,7 +248,7 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
   const sendMessage = async (e: React.FormEvent | string) => {
     if (typeof e !== 'string') e.preventDefault();
     const messageText = typeof e === 'string' ? e : input.trim();
-    if ((!messageText && !image) || loading || !auth.currentUser || !childId || !activeSessionId) return;
+    if ((!messageText && !image) || loading || !childId || !activeSessionId) return;
 
     const currentImage = image;
     if (typeof e !== 'string') setInput('');
@@ -230,25 +257,25 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
     setError(null);
 
     try {
-      const messagesRef = collection(db, 'users', ownerId, 'children', childId, 'chatSessions', activeSessionId, 'messages');
-
+      // Save user message
       try {
-        await addDoc(messagesRef, {
+        const { error } = await supabase.from('messages').insert({
+          session_id: activeSessionId,
           role: 'user',
           content: messageText || 'Analysera denna bild.',
-          timestamp: serverTimestamp(),
           attachments: currentImage ? [currentImage] : [],
         });
+        if (error) throw error;
       } catch (err: any) {
-        if (err.message?.includes('exceeds the maximum allowed size')) {
-          await addDoc(messagesRef, {
+        if (err.message?.includes('too large') || err.message?.includes('exceeds')) {
+          await supabase.from('messages').insert({
+            session_id: activeSessionId,
             role: 'user',
             content: (messageText || 'Analysera denna bild.') + ' (Bilden var för stor för att sparas i historiken)',
-            timestamp: serverTimestamp(),
             attachments: [],
           });
         } else {
-          handleFirestoreError(err, OperationType.CREATE, 'messages');
+          throw err;
         }
       }
 
@@ -259,7 +286,11 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
         currentImage?.split(',')[1]
       );
 
-      await addDoc(messagesRef, { role: 'model', content: response, timestamp: serverTimestamp() });
+      await supabase.from('messages').insert({
+        session_id: activeSessionId,
+        role: 'model',
+        content: response,
+      });
     } catch (err: any) {
       const msg = err.message || '';
       if (msg.includes('Uppgradera') || msg.includes('Pro-abonnemang') || msg.includes('gratis')) {
@@ -332,7 +363,6 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
           <ChatEmptyState childName={childName} onSendStarter={sendMessage} />
         ) : (
           messages.map((msg, idx) => {
-            // Check if the user message before this AI response had an image
             const prevMsg = idx > 0 ? messages[idx - 1] : null;
             const hasImage = msg.role === 'model' && prevMsg?.role === 'user' && (prevMsg.attachments?.length ?? 0) > 0;
 
@@ -361,7 +391,6 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
                   setTaskPickerContent(content);
                 } : undefined}
                 onCreateTask={onCreateTask ? (content) => {
-                  // Extract a subject from the first line, default to 'Allmänt'
                   const firstLine = content.split('\n')[0].replace(/[#*]/g, '').trim();
                   const subject = firstLine.length > 3 && firstLine.length < 60 ? firstLine : 'Allmänt';
                   const description = content.length > 300 ? content.slice(0, 300) + '...' : content;

@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
+import { verifyToken } from '../src/lib/supabase-server';
 
 const TEXT_MODEL = process.env.AI_TEXT_MODEL || 'gemini-2.5-flash-lite';
 const MAX_HISTORY_PAIRS = 8;
@@ -48,33 +49,15 @@ function trimHistory(history: { role: string; content: string }[]) {
   return history.slice(-MAX_HISTORY_PAIRS * 2);
 }
 
-async function getFirebaseAdmin() {
-  const mod = await import('firebase-admin');
-  const admin = mod.default;
-  if (!admin.apps?.length) {
-    const sa = process.env.FIREBASE_SERVICE_ACCOUNT;
-    if (sa) admin.initializeApp({ credential: admin.credential.cert(JSON.parse(sa)) });
-    else admin.initializeApp();
-  }
-  return admin;
-}
-
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Auth
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Ingen autentisering. Logga in först.' });
-  }
-
   let uid: string;
   try {
-    const admin = await getFirebaseAdmin();
-    const decoded = await admin.auth().verifyIdToken(authHeader.split('Bearer ')[1]);
-    uid = decoded.uid;
+    const verified = await verifyToken(req.headers.authorization);
+    uid = verified.uid;
   } catch {
     return res.status(401).json({ error: 'Ogiltig token. Logga in igen.' });
   }

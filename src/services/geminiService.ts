@@ -1,9 +1,9 @@
-import { auth } from '../firebase';
+import { supabase } from '../supabase';
 
 async function getAuthToken(): Promise<string> {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Inte inloggad.');
-  return user.getIdToken();
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Inte inloggad.');
+  return session.access_token;
 }
 
 async function apiRequest(endpoint: string, body: object): Promise<any> {
@@ -100,10 +100,10 @@ Skriv på svenska. Anpassa till grundskolenivå. Använd tydliga rubriker och nu
 }
 
 export async function generateStudyPlan(
-  tasks: Array<{ subject: string; description: string; dueDay?: string; workDays?: string[]; minutesPerDay?: number; completed: boolean; completedDays?: string[] }>
+  tasks: Array<{ subject: string; description: string; due_day?: string; work_days?: string[]; minutes_per_day?: number; completed: boolean; completed_days?: string[] }>
 ): Promise<string> {
   const taskSummary = tasks.map((t, i) =>
-    `${i + 1}. ${t.subject}: ${t.description} (Inlämning: ${t.dueDay || 'ej satt'}, Tid: ${t.minutesPerDay || '?'} min/dag, Klar: ${t.completed ? 'ja' : 'nej'}, Klara dagar: ${t.completedDays?.join(', ') || 'inga'})`
+    `${i + 1}. ${t.subject}: ${t.description} (Inlämning: ${t.due_day || 'ej satt'}, Tid: ${t.minutes_per_day || '?'} min/dag, Klar: ${t.completed ? 'ja' : 'nej'}, Klara dagar: ${t.completed_days?.join(', ') || 'inga'})`
   ).join('\n');
 
   const prompt = `Analysera dessa läxor för veckan och ge en optimal studieplan:

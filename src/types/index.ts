@@ -1,26 +1,27 @@
-import { Timestamp } from 'firebase/firestore';
-
 export interface Child {
   id: string;
   name: string;
   grade?: string;
-  ownerId: string;
-  sharedWith?: string[];
+  owner_id: string;
+  shared_with?: string[];
+  created_at?: string;
 }
 
 export interface Message {
   id: string;
   role: 'user' | 'model';
   content: string;
-  timestamp: Timestamp | null;
+  created_at: string | null;
   attachments?: string[];
-  generatedImage?: string;
+  generated_image?: string;
+  session_id?: string;
 }
 
 export interface ChatSession {
   id: string;
   title: string;
-  createdAt: Timestamp | null;
+  created_at: string | null;
+  child_id?: string;
 }
 
 export interface Task {
@@ -29,28 +30,20 @@ export interface Task {
   subject: string;
   description: string;
   completed: boolean;
-  weekNumber?: number;
+  week_number?: number;
   year?: number;
-  /** 'due' = inlämningsdag, 'work' = arbetsdag */
-  dateType?: 'due' | 'work';
-  /** Om dateType='due': vilka dagar ska barnet jobba med läxan */
-  workDays?: string[];
-  /** Om dateType='work': vilken dag lämnas läxan in */
-  dueDay?: string;
-  /** Minuter per dag att lägga på läxan */
-  minutesPerDay?: number;
-  /** Foto av läxan (base64 data URI) */
-  imageUrl?: string;
-  /** Kopplad AI-chattsession */
-  linkedChatSessionId?: string;
-  /** AI-svar sparade till uppgiften */
-  aiNotes?: string[];
-  /** Dagar som är klarmarkerade individuellt */
-  completedDays?: string[];
-  /** 'homework' (default) or 'exam' */
-  taskType?: 'homework' | 'exam';
-  /** AI-genererad provförberedelse */
-  examPrepContent?: string;
+  date_type?: 'due' | 'work';
+  work_days?: string[];
+  due_day?: string;
+  minutes_per_day?: number;
+  image_url?: string;
+  linked_chat_session_id?: string;
+  ai_notes?: string[];
+  completed_days?: string[];
+  task_type?: 'homework' | 'exam';
+  exam_prep_content?: string;
+  child_id?: string;
+  created_at?: string;
 }
 
 export type SubscriptionTier = 'free' | 'plus' | 'pro';
@@ -59,10 +52,10 @@ export type SubscriptionStatus = 'active' | 'canceled' | 'past_due' | 'none';
 export interface UserSubscription {
   tier: SubscriptionTier;
   status: SubscriptionStatus;
-  stripeCustomerId?: string;
-  stripeSubscriptionId?: string;
-  currentPeriodEnd?: Timestamp | null;
-  cancelAtPeriodEnd?: boolean;
+  stripe_customer_id?: string;
+  stripe_subscription_id?: string;
+  current_period_end?: string | null;
+  cancel_at_period_end?: boolean;
 }
 
 export interface LibraryItem {
@@ -70,7 +63,8 @@ export interface LibraryItem {
   title: string;
   content?: string;
   type: 'text' | 'image';
-  imageUrl?: string;
-  createdAt: Timestamp | null;
+  image_url?: string;
+  created_at: string | null;
   subject?: string;
+  child_id?: string;
 }

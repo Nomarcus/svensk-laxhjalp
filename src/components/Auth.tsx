@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, Mail, Eye, EyeOff, ArrowLeft, UserCircle, MessageSquare, Camera, Calendar, Sparkles, Library, CheckCircle, ChevronLeft, ChevronRight, Shield, GraduationCap, Users, Star } from 'lucide-react';
-import { signInWithGoogle, signInWithEmail, signUpWithEmail, signInAsGuest, resetPassword } from '../firebase';
+import { signInWithGoogle, signInWithEmail, signUpWithEmail, signInAsGuest, resetPassword } from '../supabase';
 
 interface AuthProps {
   onShowPrivacy?: () => void;
@@ -106,18 +106,20 @@ export default function Auth({ onShowPrivacy }: AuthProps) {
   };
 
   const handleError = (err: any) => {
-    const code = err?.code || '';
-    const map: Record<string, string> = {
-      'auth/email-already-in-use': 'E-postadressen används redan. Försök logga in istället.',
-      'auth/invalid-email': 'Ogiltig e-postadress.',
-      'auth/weak-password': 'Lösenordet måste vara minst 6 tecken.',
-      'auth/user-not-found': 'Ingen användare hittades med den e-postadressen.',
-      'auth/wrong-password': 'Fel lösenord. Försök igen.',
-      'auth/invalid-credential': 'Fel e-post eller lösenord. Försök igen.',
-      'auth/too-many-requests': 'För många försök. Vänta en stund och försök igen.',
-      'auth/popup-closed-by-user': 'Inloggningen avbröts.',
-    };
-    setError(map[code] || 'Något gick fel. Försök igen.');
+    const msg = err?.message || '';
+    if (msg.includes('already registered') || msg.includes('already been registered')) {
+      setError('E-postadressen används redan. Försök logga in istället.');
+    } else if (msg.includes('Invalid login')) {
+      setError('Fel e-post eller lösenord. Försök igen.');
+    } else if (msg.includes('Email not confirmed')) {
+      setError('E-posten är inte bekräftad. Kolla din inkorg.');
+    } else if (msg.includes('rate limit') || msg.includes('too many')) {
+      setError('För många försök. Vänta en stund och försök igen.');
+    } else if (msg.includes('Password should be')) {
+      setError('Lösenordet måste vara minst 6 tecken.');
+    } else {
+      setError(msg || 'Något gick fel. Försök igen.');
+    }
   };
 
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -181,9 +183,9 @@ export default function Auth({ onShowPrivacy }: AuthProps) {
     setLoading(true);
     try {
       await signInWithGoogle();
+      // Browser will redirect to Google — loading state is reset on return
     } catch (err) {
       handleError(err);
-    } finally {
       setLoading(false);
     }
   };

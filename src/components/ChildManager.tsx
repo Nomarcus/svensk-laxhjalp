@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db, auth, OperationType, handleFirestoreError } from '../firebase';
-import { collection, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { supabase, handleDbError } from '../supabase';
 import { Plus, Trash2, User as UserIcon, X, Check, Share2, Mail } from 'lucide-react';
 import { cn } from '../utils/cn';
 
@@ -8,7 +7,7 @@ interface ChildWithSharing {
   id: string;
   name: string;
   grade?: string;
-  sharedWith?: string[];
+  shared_with?: string[];
 }
 
 interface ChildManagerProps {
@@ -24,82 +23,87 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
   const [newShareEmail, setNewShareEmail] = useState('');
 
   useEffect(() => {
-    if (!auth.currentUser) return;
+    const fetchChildren = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    const childrenRef = collection(db, 'users', auth.currentUser.uid, 'children');
-    const unsubscribe = onSnapshot(childrenRef, (snapshot) => {
-      const childrenData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as ChildWithSharing[];
-      setChildren(childrenData);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, 'children');
-    });
+      const { data, error } = await supabase.from('children').select('*').eq('owner_id', user.id);
+      if (!error && data) setChildren(data as ChildWithSharing[]);
+    };
+    fetchChildren();
 
-    return () => unsubscribe();
+    const channel = supabase
+      .channel('child-manager')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'children' }, () => {
+        fetchChildren();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const addChild = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newName.trim() || !auth.currentUser) return;
+    if (!newName.trim()) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
     try {
-      const childrenRef = collection(db, 'users', auth.currentUser.uid, 'children');
-      await addDoc(childrenRef, {
+      const { error } = await supabase.from('children').insert({
+        owner_id: user.id,
         name: newName,
-        grade: newGrade,
-        createdAt: serverTimestamp()
+        grade: newGrade || null,
       });
+      if (error) throw error;
       setNewName('');
       setNewGrade('');
       setIsAdding(false);
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'children');
+      handleDbError(error, 'insert', 'children');
     }
   };
 
   const deleteChild = async (id: string) => {
-    if (!auth.currentUser) return;
     if (!window.confirm('Är du säker på att du vill ta bort detta barn? All historik kommer att raderas.')) return;
 
     try {
-      await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'children', id));
+      const { error } = await supabase.from('children').delete().eq('id', id);
+      if (error) throw error;
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `children/${id}`);
+      handleDbError(error, 'delete', `children/${id}`);
     }
   };
 
   const addShare = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!sharingChildId || !newShareEmail.trim() || !auth.currentUser) return;
+    if (!sharingChildId || !newShareEmail.trim()) return;
 
     const child = children.find(c => c.id === sharingChildId);
     if (!child) return;
 
-    const sharedWith = [...(child.sharedWith || []), newShareEmail.trim().toLowerCase()];
-    
+    const shared_with = [...(child.shared_with || []), newShareEmail.trim().toLowerCase()];
+
     try {
-      const childRef = doc(db, 'users', auth.currentUser.uid, 'children', sharingChildId);
-      await updateDoc(childRef, { sharedWith });
+      const { error } = await supabase.from('children').update({ shared_with }).eq('id', sharingChildId);
+      if (error) throw error;
       setNewShareEmail('');
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `children/${sharingChildId}`);
+      handleDbError(error, 'update', `children/${sharingChildId}`);
     }
   };
 
   const removeShare = async (childId: string, email: string) => {
-    if (!auth.currentUser) return;
     const child = children.find(c => c.id === childId);
     if (!child) return;
 
-    const sharedWith = (child.sharedWith || []).filter(e => e !== email);
+    const shared_with = (child.shared_with || []).filter(e => e !== email);
 
     try {
-      const childRef = doc(db, 'users', auth.currentUser.uid, 'children', childId);
-      await updateDoc(childRef, { sharedWith });
+      const { error } = await supabase.from('children').update({ shared_with }).eq('id', childId);
+      if (error) throw error;
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `children/${childId}`);
+      handleDbError(error, 'update', `children/${childId}`);
     }
   };
 
@@ -143,15 +147,15 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
                         "p-2 rounded-xl transition-all flex items-center gap-1",
                         sharingChildId === child.id
                           ? "bg-blue-100 text-blue-600"
-                          : child.sharedWith?.length
+                          : child.shared_with?.length
                             ? "bg-blue-50 text-blue-500"
                             : "text-stone-400 hover:text-blue-600 hover:bg-blue-50"
                       )}
                       title="Dela med förälder"
                     >
                       <Share2 size={16} />
-                      {(child.sharedWith?.length || 0) > 0 && (
-                        <span className="text-[10px] font-bold">{child.sharedWith!.length}</span>
+                      {(child.shared_with?.length || 0) > 0 && (
+                        <span className="text-[10px] font-bold">{child.shared_with!.length}</span>
                       )}
                     </button>
                     <button
@@ -175,10 +179,10 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
                       </p>
                     </div>
 
-                    {(child.sharedWith?.length || 0) > 0 && (
+                    {(child.shared_with?.length || 0) > 0 && (
                       <div className="space-y-2">
                         <p className="text-[10px] font-medium text-blue-400 uppercase tracking-widest">Delas med</p>
-                        {child.sharedWith?.map(email => (
+                        {child.shared_with?.map(email => (
                           <div key={email} className="flex items-center justify-between bg-white px-3 py-2 rounded-xl text-sm border border-blue-100">
                             <div className="flex items-center gap-2">
                               <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
