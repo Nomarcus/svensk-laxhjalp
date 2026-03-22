@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Trash2, CheckCircle2, Circle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, LayoutList, Calendar, Calculator, BookOpen, Languages, Beaker, Globe, Book, Clock, CalendarCheck, Camera, MessageSquare, X, Image as ImageIcon, Eye, EyeOff } from 'lucide-react';
 import { db, auth, OperationType, handleFirestoreError } from '../firebase';
-import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc, where } from 'firebase/firestore';
+import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc, where, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { format, startOfWeek, addDays, getWeek, getYear, addWeeks, subWeeks } from 'date-fns';
 import { sv } from 'date-fns/locale';
 import { cn } from '../utils/cn';
@@ -115,15 +115,49 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
     }
   };
 
-  const toggleTask = async (task: Task) => {
+  const toggleTask = async (task: Task, day?: string) => {
     if (!auth.currentUser || !childId) return;
+    const taskRef = doc(db, 'users', ownerId, 'children', childId, 'tasks', task.id);
     try {
-      await updateDoc(doc(db, 'users', ownerId, 'children', childId, 'tasks', task.id), {
-        completed: !task.completed
-      });
+      // Get all days this task spans
+      const allDays = new Set<string>();
+      if (task.day) allDays.add(task.day);
+      if (task.dueDay) allDays.add(task.dueDay);
+      task.workDays?.forEach(d => allDays.add(d));
+
+      // If task only has one day or no day specified, toggle whole task
+      if (allDays.size <= 1 || !day) {
+        await updateDoc(taskRef, { completed: !task.completed, completedDays: !task.completed ? [...allDays] : [] });
+        return;
+      }
+
+      // Per-day toggle
+      const currentCompleted = task.completedDays || [];
+      const isDayDone = currentCompleted.includes(day);
+
+      if (isDayDone) {
+        // Unmark this day
+        await updateDoc(taskRef, {
+          completedDays: arrayRemove(day),
+          completed: false
+        });
+      } else {
+        // Mark this day done
+        const newCompleted = [...currentCompleted, day];
+        const allComplete = [...allDays].every(d => newCompleted.includes(d));
+        await updateDoc(taskRef, {
+          completedDays: arrayUnion(day),
+          completed: allComplete
+        });
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${ownerId}/children/${childId}/tasks/${task.id}`);
     }
+  };
+
+  const isDayCompleted = (task: Task, day: string) => {
+    if (task.completed) return true;
+    return task.completedDays?.includes(day) || false;
   };
 
   const deleteTask = async (id: string) => {
@@ -202,7 +236,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
     return dayTasks.filter(t => {
       if (seen.has(t.id)) return false;
       seen.add(t.id);
-      if (hideCompleted && t.completed) return false;
+      if (hideCompleted && isDayCompleted(t, day)) return false;
       return true;
     });
   };
@@ -615,27 +649,27 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                             onClick={() => openTaskDetail(task)}
                             className={cn(
                               "bg-white rounded-xl px-3 py-2 shadow-sm border border-black/5 flex items-center gap-3 transition-all group cursor-pointer hover:shadow-md",
-                              task.completed && "opacity-60"
+                              isDayCompleted(task, day) && "opacity-60"
                             )}
                           >
                             <button
-                              onClick={(e) => { e.stopPropagation(); toggleTask(task); }}
+                              onClick={(e) => { e.stopPropagation(); toggleTask(task, day); }}
                               className={cn(
                                 "shrink-0 transition-colors",
-                                task.completed ? "text-emerald-500" : "text-stone-300 hover:text-emerald-500"
+                                isDayCompleted(task, day) ? "text-emerald-500" : "text-stone-300 hover:text-emerald-500"
                               )}
                             >
-                              {task.completed ? <CheckCircle2 size={20} /> : <Circle size={20} />}
+                              {isDayCompleted(task, day) ? <CheckCircle2 size={20} /> : <Circle size={20} />}
                             </button>
                             <div className={cn(
                               "shrink-0 p-1 rounded-lg",
-                              task.completed ? "bg-stone-100 text-stone-400" : "bg-emerald-50 text-emerald-600"
+                              isDayCompleted(task, day) ? "bg-stone-100 text-stone-400" : "bg-emerald-50 text-emerald-600"
                             )}>
                               {getSubjectIcon(task.subject)}
                             </div>
                             <span className={cn(
                               "font-medium text-sm shrink-0",
-                              task.completed && "line-through text-stone-400"
+                              isDayCompleted(task, day) && "line-through text-stone-400"
                             )}>
                               {task.subject}
                             </span>
@@ -712,7 +746,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                             onClick={() => openTaskDetail(task)}
                             className={cn(
                               "p-3 rounded-xl text-xs shadow-sm border transition-all cursor-pointer hover:shadow-md",
-                              task.completed
+                              isDayCompleted(task, day)
                                 ? "bg-emerald-50 border-emerald-100 text-emerald-700 opacity-60"
                                 : isDeadline
                                   ? "bg-red-50 border-red-200 text-stone-700 ring-2 ring-red-300/50"
@@ -721,13 +755,13 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                                     : "bg-white border-black/5 text-stone-700"
                             )}
                           >
-                            {isDeadline && !task.completed && (
+                            {isDeadline && !isDayCompleted(task, day) && (
                               <div className="flex items-center gap-1 mb-1.5 text-[9px] font-bold text-red-600 uppercase tracking-wider">
                                 <CalendarCheck size={9} />
                                 Inlämningsdag
                               </div>
                             )}
-                            {!isDeadline && !task.completed && task.workDays?.includes(day) && (
+                            {!isDeadline && !isDayCompleted(task, day) && task.workDays?.includes(day) && (
                               <div className="flex items-center gap-1 mb-1.5 text-[9px] font-bold text-blue-600 uppercase tracking-wider">
                                 <Clock size={9} />
                                 Arbetsdag
@@ -752,13 +786,13 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                             )}
                             <div className="mt-2 flex items-center justify-between">
                               <button
-                                onClick={(e) => { e.stopPropagation(); toggleTask(task); }}
+                                onClick={(e) => { e.stopPropagation(); toggleTask(task, day); }}
                                 className={cn(
                                   "p-1 rounded-full transition-colors",
-                                  task.completed ? "bg-emerald-200" : "bg-stone-100 hover:bg-emerald-100"
+                                  isDayCompleted(task, day) ? "bg-emerald-200" : "bg-stone-100 hover:bg-emerald-100"
                                 )}
                               >
-                                {task.completed ? <CheckCircle2 size={10} /> : <Circle size={10} />}
+                                {isDayCompleted(task, day) ? <CheckCircle2 size={10} /> : <Circle size={10} />}
                               </button>
                               <button
                                 onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}

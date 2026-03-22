@@ -45,6 +45,8 @@ export interface Task {
   linkedChatSessionId?: string;
   /** AI-svar sparade till uppgiften */
   aiNotes?: string[];
+  /** Dagar som är klarmarkerade individuellt */
+  completedDays?: string[];
 }
 
 export type SubscriptionTier = 'free' | 'plus' | 'pro';
