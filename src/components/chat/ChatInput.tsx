@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { Send, Image as ImageIcon, Camera, X } from 'lucide-react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { Send, Image as ImageIcon, Camera, X, Mic, MicOff } from 'lucide-react';
 import { compressImage } from '../../utils/image';
 
 interface ChatInputProps {
@@ -11,9 +11,46 @@ interface ChatInputProps {
   onSubmit: (e: React.FormEvent) => void;
 }
 
+const SpeechRecognitionAPI = typeof window !== 'undefined'
+  ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+  : null;
+
 export default function ChatInput({ input, setInput, image, setImage, loading, onSubmit }: ChatInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
+  const inputRef = useRef(input);
+  const [isListening, setIsListening] = useState(false);
+
+  useEffect(() => { inputRef.current = input; }, [input]);
+
+  useEffect(() => {
+    if (!SpeechRecognitionAPI) return;
+    const recognition = new SpeechRecognitionAPI();
+    recognition.lang = 'sv-SE';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      // setInput is a simple setter, not a React state setter, so we read current value via ref
+      const currentInput = inputRef.current;
+      setInput(currentInput ? currentInput + ' ' + transcript : transcript);
+    };
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+    recognitionRef.current = recognition;
+    return () => { try { recognition.stop(); } catch {} };
+  }, [setInput]);
+
+  const toggleListening = useCallback(() => {
+    if (!recognitionRef.current) return;
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      recognitionRef.current.start();
+      setIsListening(true);
+    }
+  }, [isListening]);
 
   const processFile = async (file: File) => {
     if (!file.type.startsWith('image/')) return;
@@ -67,6 +104,20 @@ export default function ChatInput({ input, setInput, image, setImage, loading, o
           >
             <ImageIcon size={20} />
           </button>
+          {SpeechRecognitionAPI && (
+            <button
+              type="button"
+              onClick={toggleListening}
+              className={`p-2 rounded-xl transition-colors ${
+                isListening
+                  ? 'text-red-600 bg-red-50 animate-pulse'
+                  : 'text-stone-400 hover:text-red-600 hover:bg-red-50'
+              }`}
+              title={isListening ? 'Stoppa inspelning' : 'Tala in din fråga'}
+            >
+              {isListening ? <MicOff size={20} /> : <Mic size={20} />}
+            </button>
+          )}
           <input
             type="file"
             ref={cameraInputRef}
@@ -104,6 +155,11 @@ export default function ChatInput({ input, setInput, image, setImage, loading, o
             <Send size={20} />
           </button>
         </div>
+        {isListening && (
+          <p className="text-xs text-center text-red-500 mt-2 animate-pulse font-medium">
+            🎙️ Lyssnar... Tala nu
+          </p>
+        )}
         <p className="text-[10px] text-center text-stone-400 mt-2 uppercase tracking-widest">
           AI-genererat innehåll kan vara felaktigt. Kontrollera alltid med läraren.
         </p>

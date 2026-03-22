@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, CheckCircle2, Circle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, LayoutList, Calendar, Calculator, BookOpen, Languages, Beaker, Globe, Book, Clock, CalendarCheck, Camera, MessageSquare, X, Image as ImageIcon, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Circle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, LayoutList, Calendar, Calculator, BookOpen, Languages, Beaker, Globe, Book, Clock, CalendarCheck, Camera, MessageSquare, X, Image as ImageIcon, Eye, EyeOff, Sparkles, Loader2 } from 'lucide-react';
 import { db, auth, OperationType, handleFirestoreError } from '../firebase';
 import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc, where, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { format, startOfWeek, addDays, getWeek, getYear, addWeeks, subWeeks } from 'date-fns';
@@ -7,11 +7,13 @@ import { sv } from 'date-fns/locale';
 import { cn } from '../utils/cn';
 import { compressImage } from '../utils/image';
 import type { Task } from '../types';
+import { generateStudyPlan } from '../services/geminiService';
+import StudyPlanModal from './StudyPlanModal';
 
 interface PlannerProps {
   childId: string;
   ownerId: string;
-  prefill?: { subject: string; description: string } | null;
+  prefill?: { subject: string; description: string; workDays?: string[]; dueDay?: string; minutesPerDay?: number; imageUrl?: string } | null;
   onPrefillUsed?: () => void;
   onOpenAiForTask?: (taskId: string, subject: string, description: string, imageUrl?: string) => void;
 }
@@ -26,6 +28,9 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
   const [selectedDay, setSelectedDay] = useState(format(new Date(), 'EEEE', { locale: sv }));
   const [showAddModal, setShowAddModal] = useState(false);
   const [hideCompleted, setHideCompleted] = useState(false);
+  const [showStudyPlan, setShowStudyPlan] = useState(false);
+  const [studyPlanContent, setStudyPlanContent] = useState<string | null>(null);
+  const [studyPlanLoading, setStudyPlanLoading] = useState(false);
 
   // Form state
   const [newSubject, setNewSubject] = useState('');
@@ -40,6 +45,10 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
     if (prefill) {
       setNewSubject(prefill.subject);
       setNewDesc(prefill.description);
+      if (prefill.workDays?.length) setNewWorkDays(prefill.workDays);
+      if (prefill.dueDay) setNewDueDay(prefill.dueDay);
+      if (prefill.minutesPerDay) setNewMinutesPerDay(prefill.minutesPerDay);
+      if (prefill.imageUrl) setTaskImage(prefill.imageUrl);
       setShowAddModal(true);
       onPrefillUsed?.();
     }
@@ -158,6 +167,33 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
   const isDayCompleted = (task: Task, day: string) => {
     if (task.completed) return true;
     return task.completedDays?.includes(day) || false;
+  };
+
+  const handleGenerateStudyPlan = async () => {
+    const incompleteTasks = tasks.filter(t => !t.completed);
+    if (incompleteTasks.length === 0) return;
+    setShowStudyPlan(true);
+    setStudyPlanLoading(true);
+    setStudyPlanContent(null);
+    try {
+      const content = await generateStudyPlan(
+        incompleteTasks.map(t => ({
+          subject: t.subject,
+          description: t.description,
+          dueDay: t.dueDay,
+          workDays: t.workDays,
+          minutesPerDay: t.minutesPerDay,
+          completed: t.completed,
+          completedDays: t.completedDays,
+        }))
+      );
+      setStudyPlanContent(content);
+    } catch (err) {
+      console.error('Error generating study plan:', err);
+      setStudyPlanContent('Kunde inte generera studieplan. Försök igen.');
+    } finally {
+      setStudyPlanLoading(false);
+    }
   };
 
   const deleteTask = async (id: string) => {
@@ -495,6 +531,15 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
               </div>
             </div>
             <div className="flex items-center gap-2 ml-4">
+              <button
+                onClick={handleGenerateStudyPlan}
+                disabled={tasks.filter(t => !t.completed).length === 0 || studyPlanLoading}
+                className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-xs font-medium rounded-xl shadow-sm hover:bg-emerald-700 disabled:opacity-50 transition-all"
+                title="AI analyserar veckans uppgifter"
+              >
+                {studyPlanLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                <span className="hidden sm:inline">Smart planering</span>
+              </button>
               <button
                 onClick={() => setHideCompleted(!hideCompleted)}
                 className={cn(
@@ -977,6 +1022,13 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
             </div>
           </div>
         </div>
+      )}
+      {showStudyPlan && (
+        <StudyPlanModal
+          content={studyPlanContent}
+          loading={studyPlanLoading}
+          onClose={() => setShowStudyPlan(false)}
+        />
       )}
     </div>
   );

@@ -1,4 +1,4 @@
-import { User, Bot, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle } from 'lucide-react';
+import { User, Bot, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '../../utils/cn';
 import type { Message } from '../../types';
@@ -12,9 +12,12 @@ interface ChatMessageProps {
   onGenerateImage: (messageId: string, content: string) => void;
   onAskCurriculum?: (content: string) => void;
   onAskFacit?: (content: string) => void;
+  onAskFordjupning?: (content: string) => void;
+  onAutoCreateTask?: (messageId: string, content: string) => void;
   onAddToPlanner?: (content: string) => void;
   onCreateTask?: (content: string) => void;
   hasImage?: boolean;
+  creatingAutoTask?: boolean;
 }
 
 export default function ChatMessage({
@@ -26,9 +29,12 @@ export default function ChatMessage({
   onGenerateImage,
   onAskCurriculum,
   onAskFacit,
+  onAskFordjupning,
+  onAutoCreateTask,
   onAddToPlanner,
   onCreateTask,
   hasImage,
+  creatingAutoTask,
 }: ChatMessageProps) {
   const handlePrint = (content: string) => {
     const printWindow = window.open('', '_blank');
@@ -137,6 +143,25 @@ export default function ChatMessage({
               >
                 <ClipboardList size={12} />
                 Visa facit
+              </button>
+            )}
+            {onAskFordjupning && (
+              <button
+                onClick={() => onAskFordjupning(msg.content)}
+                className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-yellow-600 transition-colors px-2 py-1 rounded-md hover:bg-yellow-50"
+              >
+                <Lightbulb size={12} />
+                Fördjupning
+              </button>
+            )}
+            {hasImage && onAutoCreateTask && (
+              <button
+                onClick={() => onAutoCreateTask(msg.id, msg.content)}
+                disabled={creatingAutoTask}
+                className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-teal-600 transition-colors px-2 py-1 rounded-md hover:bg-teal-50 disabled:opacity-50"
+              >
+                {creatingAutoTask ? <Loader2 size={12} className="animate-spin" /> : <ScanLine size={12} />}
+                {creatingAutoTask ? 'Skapar läxa...' : 'Skapa läxa från fotot'}
               </button>
             )}
             <button

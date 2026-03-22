@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Image as ImageIcon, Loader2, Bot, X, Calculator, BookOpen, Languages, Beaker, Globe, Book, Check } from 'lucide-react';
 import { db, auth, OperationType, handleFirestoreError } from '../firebase';
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, deleteDoc, doc, updateDoc, arrayUnion } from 'firebase/firestore';
-import { generateHomeworkHelp, generateImage } from '../services/geminiService';
+import { generateHomeworkHelp, generateImage, analyzeHomeworkForTask } from '../services/geminiService';
 import { compressImage } from '../utils/image';
 import { cn } from '../utils/cn';
 import type { Message, ChatSession, Task } from '../types';
@@ -19,9 +19,10 @@ interface ChatProps {
   taskContext?: { taskId: string; subject: string; description: string; imageUrl?: string } | null;
   onTaskContextUsed?: () => void;
   onCreateTask?: (subject: string, description: string) => void;
+  onCreateTaskFromPhoto?: (data: { subject: string; description: string; workDays: string[]; dueDay: string; minutesPerDay: number; imageUrl?: string }) => void;
 }
 
-export default function Chat({ childId, childName, ownerId, tasks = [], taskContext, onTaskContextUsed, onCreateTask }: ChatProps) {
+export default function Chat({ childId, childName, ownerId, tasks = [], taskContext, onTaskContextUsed, onCreateTask, onCreateTaskFromPhoto }: ChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -34,6 +35,7 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
   const [savedMessageIds, setSavedMessageIds] = useState<Set<string>>(new Set());
   const [taskPickerContent, setTaskPickerContent] = useState<string | null>(null);
   const [linkedTaskIds, setLinkedTaskIds] = useState<Set<string>>(new Set());
+  const [creatingAutoTask, setCreatingAutoTask] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -191,6 +193,31 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
     }
   };
 
+  const handleAutoCreateTask = async (messageId: string, aiContent: string) => {
+    if (!onCreateTaskFromPhoto) return;
+    setCreatingAutoTask(true);
+    try {
+      // Find the user message before this AI response to get the image
+      const aiMsgIndex = messages.findIndex(m => m.id === messageId);
+      const prevMsg = aiMsgIndex > 0 ? messages[aiMsgIndex - 1] : null;
+      const imageUrl = prevMsg?.attachments?.[0] || undefined;
+
+      const taskData = await analyzeHomeworkForTask(aiContent);
+      onCreateTaskFromPhoto({
+        subject: taskData.subject,
+        description: taskData.description,
+        workDays: taskData.suggestedWorkDays,
+        dueDay: taskData.suggestedDueDay,
+        minutesPerDay: taskData.minutesPerDay,
+        imageUrl,
+      });
+    } catch (err) {
+      console.error('Error creating auto task:', err);
+    } finally {
+      setCreatingAutoTask(false);
+    }
+  };
+
   const sendMessage = async (e: React.FormEvent | string) => {
     if (typeof e !== 'string') e.preventDefault();
     const messageText = typeof e === 'string' ? e : input.trim();
@@ -324,6 +351,11 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
                 onAskFacit={(content) => {
                   sendMessage(`Ge mig ett komplett facit med alla svar utskrivna för uppgiften du just förklarade. Skriv tydligt varje fråga/deluppgift följt av det korrekta svaret. Detta är till föräldern — inte till eleven. Formatera det snyggt med numrering.\n\nDin förklaring var:\n${content.slice(0, 500)}`);
                 }}
+                onAskFordjupning={(content) => {
+                  sendMessage(`Baserat på din förklaring, ge förslag på relaterade ämnen och kopplingar som kan fördjupa mitt barns förståelse. Ge 2-3 konkreta förslag på vad vi kan utforska vidare, med en kort förklaring av hur det kopplar till det vi just pratat om. Skriv det så att jag som förälder kan ta upp det med mitt barn.\n\nDin förklaring var:\n${content.slice(0, 500)}`);
+                }}
+                onAutoCreateTask={onCreateTaskFromPhoto ? handleAutoCreateTask : undefined}
+                creatingAutoTask={creatingAutoTask}
                 hasImage={hasImage}
                 onAddToPlanner={tasks.length > 0 ? (content) => {
                   setTaskPickerContent(content);
