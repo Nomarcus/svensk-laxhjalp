@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, CheckCircle2, Circle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, LayoutList, Calendar, Calculator, BookOpen, Languages, Beaker, Globe, Book, Clock, CalendarCheck, Camera, MessageSquare, X, Image as ImageIcon } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Circle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, LayoutList, Calendar, Calculator, BookOpen, Languages, Beaker, Globe, Book, Clock, CalendarCheck, Camera, MessageSquare, X, Image as ImageIcon, Eye, EyeOff } from 'lucide-react';
 import { db, auth, OperationType, handleFirestoreError } from '../firebase';
 import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc, where } from 'firebase/firestore';
 import { format, startOfWeek, addDays, getWeek, getYear, addWeeks, subWeeks } from 'date-fns';
@@ -25,6 +25,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [selectedDay, setSelectedDay] = useState(format(new Date(), 'EEEE', { locale: sv }));
   const [showAddModal, setShowAddModal] = useState(false);
+  const [hideCompleted, setHideCompleted] = useState(false);
 
   // Form state
   const [newSubject, setNewSubject] = useState('');
@@ -201,6 +202,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
     return dayTasks.filter(t => {
       if (seen.has(t.id)) return false;
       seen.add(t.id);
+      if (hideCompleted && t.completed) return false;
       return true;
     });
   };
@@ -458,27 +460,42 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                 </div>
               </div>
             </div>
-            <div className="flex bg-white rounded-xl p-1 shadow-sm border border-black/5 ml-4">
+            <div className="flex items-center gap-2 ml-4">
               <button
-                onClick={() => setViewMode('list')}
+                onClick={() => setHideCompleted(!hideCompleted)}
                 className={cn(
-                  "p-2 rounded-lg transition-all",
-                  viewMode === 'list' ? "bg-emerald-600 text-white shadow-sm" : "text-stone-400 hover:bg-stone-50"
+                  "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all shadow-sm border",
+                  hideCompleted
+                    ? "bg-amber-50 border-amber-200 text-amber-700"
+                    : "bg-white border-black/5 text-stone-400 hover:bg-stone-50"
                 )}
-                title="Listvy"
+                title={hideCompleted ? "Visa klarmarkerade" : "Dölj klarmarkerade"}
               >
-                <LayoutList size={20} />
+                {hideCompleted ? <EyeOff size={16} /> : <Eye size={16} />}
+                <span className="hidden sm:inline">{hideCompleted ? 'Dolda' : 'Visa alla'}</span>
               </button>
-              <button
-                onClick={() => setViewMode('calendar')}
-                className={cn(
-                  "p-2 rounded-lg transition-all",
-                  viewMode === 'calendar' ? "bg-emerald-600 text-white shadow-sm" : "text-stone-400 hover:bg-stone-50"
-                )}
-                title="Kalendervy"
-              >
-                <Calendar size={20} />
-              </button>
+              <div className="flex bg-white rounded-xl p-1 shadow-sm border border-black/5">
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={cn(
+                    "p-2 rounded-lg transition-all",
+                    viewMode === 'list' ? "bg-emerald-600 text-white shadow-sm" : "text-stone-400 hover:bg-stone-50"
+                  )}
+                  title="Listvy"
+                >
+                  <LayoutList size={20} />
+                </button>
+                <button
+                  onClick={() => setViewMode('calendar')}
+                  className={cn(
+                    "p-2 rounded-lg transition-all",
+                    viewMode === 'calendar' ? "bg-emerald-600 text-white shadow-sm" : "text-stone-400 hover:bg-stone-50"
+                  )}
+                  title="Kalendervy"
+                >
+                  <Calendar size={20} />
+                </button>
+              </div>
             </div>
           </div>
           <div className="flex bg-white rounded-xl p-1 shadow-sm border border-black/5 overflow-x-auto">
