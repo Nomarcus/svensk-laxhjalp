@@ -297,7 +297,7 @@ export default function Auth({ onShowPrivacy }: AuthProps) {
             </h1>
             <p className="text-lg text-stone-600 mb-6 leading-relaxed">
               Vill du förstå ditt barns läxor? Fota uppgiften eller ställ en fråga och få pedagogiska
-              förklaringar kopplade till svenska läroplanen Lgr22. Gratis att börja.
+              förklaringar kopplade till svenska läroplanen Lgr22.
             </p>
 
             {/* Trust badges */}
