@@ -281,27 +281,27 @@ export default function Auth({ onShowPrivacy }: AuthProps) {
   return (
     <div className="min-h-screen bg-[#F5F5F0] font-sans">
       {/* Hero section with login */}
-      <div className="flex flex-col lg:flex-row min-h-screen lg:items-start lg:pt-[8vh]">
+      <div className="flex flex-col lg:flex-row min-h-[70vh] lg:items-start lg:pt-[4vh]">
         {/* Left side: Marketing hero */}
-        <div className="flex-1 flex flex-col justify-center lg:justify-start lg:pt-8 p-6 md:p-12 lg:p-16">
+        <div className="flex-1 flex flex-col justify-center lg:justify-start lg:pt-4 p-4 md:p-8 lg:p-10">
           <div className="max-w-xl mx-auto lg:mx-0 w-full">
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-200">
                 <BookOpen size={24} />
               </div>
               <span className="text-xl font-serif italic text-stone-900">Föräldrahjälpen</span>
             </div>
 
-            <h1 className="text-4xl md:text-5xl font-serif italic text-stone-900 mb-4 leading-tight">
+            <h1 className="text-4xl md:text-5xl font-serif italic text-stone-900 mb-2 leading-tight">
               AI-driven läxhjälp för svenska föräldrar
             </h1>
-            <p className="text-lg text-stone-600 mb-5 leading-relaxed">
+            <p className="text-lg text-stone-600 mb-3 leading-relaxed">
               Förstå ditt barns läxor igen. Fota uppgiften eller ställ en fråga — få pedagogiska
               förklaringar kopplade till svenska läroplanen Lgr22. Gratis att börja.
             </p>
 
             {/* Trust badges */}
-            <div className="flex flex-wrap gap-3 mb-5">
+            <div className="flex flex-wrap gap-3 mb-3">
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-sm font-medium">
                 <CheckCircle size={14} /> Gratis att starta
               </span>
@@ -314,7 +314,7 @@ export default function Auth({ onShowPrivacy }: AuthProps) {
             </div>
 
             {/* Feature list */}
-            <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="grid grid-cols-2 gap-2 mb-2">
               {[
                 { icon: <MessageSquare size={16} />, text: "AI-läxhjälp i alla ämnen" },
                 { icon: <Camera size={16} />, text: "Fota läxan med mobilen" },
@@ -333,12 +333,12 @@ export default function Auth({ onShowPrivacy }: AuthProps) {
         </div>
 
         {/* Right side: Login card */}
-        <div className="lg:w-[440px] flex items-start justify-center pt-4 lg:pt-8 p-6 md:p-12">
-          <div className="w-full max-w-md bg-white rounded-[32px] p-10 shadow-sm border border-black/5 text-center relative overflow-hidden">
+        <div className="lg:w-[440px] flex items-start justify-center pt-2 lg:pt-4 p-4 md:p-8">
+          <div className="w-full max-w-md bg-white rounded-[32px] p-8 shadow-sm border border-black/5 text-center relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-2 bg-emerald-600" />
 
             <h2 className="text-2xl font-serif italic text-stone-900 mb-2 mt-2">Kom igång</h2>
-            <p className="text-stone-500 mb-8 text-sm">
+            <p className="text-stone-500 mb-5 text-sm">
               Skapa ett gratis konto och börja hjälpa ditt barn med läxorna idag.
             </p>
 
@@ -364,7 +364,7 @@ export default function Auth({ onShowPrivacy }: AuthProps) {
               </button>
             </div>
 
-            <div className="mt-8 pt-6 border-t border-black/5 grid grid-cols-2 gap-4">
+            <div className="mt-5 pt-4 border-t border-black/5 grid grid-cols-2 gap-4">
               <div className="text-left">
                 <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Pedagogiskt</p>
                 <p className="text-xs text-stone-500">Stöd för föräldrar, inte fusk för elever.</p>
