@@ -68,9 +68,6 @@ export default function ChatMessage({
         {msg.attachments?.map((att, i) => (
           <img key={i} src={att} alt="Attachment" className="max-w-xs rounded-xl border border-black/5 shadow-sm" />
         ))}
-        {msg.generatedImage && (
-          <img src={msg.generatedImage} alt="AI Generated Illustration" className="max-w-xs rounded-xl border border-black/5 shadow-sm" />
-        )}
         <div
           className={cn(
             'px-4 py-3 rounded-2xl text-[15px] leading-relaxed relative group/msg',
@@ -105,6 +102,9 @@ export default function ChatMessage({
             </div>
           )}
         </div>
+        {msg.generatedImage && (
+          <img src={msg.generatedImage} alt="AI Generated Illustration" className="max-w-xs rounded-xl border border-black/5 shadow-sm" />
+        )}
         {msg.role === 'model' && (
           <div className="flex flex-wrap gap-2 mt-1">
             {!msg.generatedImage && (
