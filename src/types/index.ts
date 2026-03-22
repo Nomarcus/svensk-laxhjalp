@@ -47,6 +47,10 @@ export interface Task {
   aiNotes?: string[];
   /** Dagar som är klarmarkerade individuellt */
   completedDays?: string[];
+  /** 'homework' (default) or 'exam' */
+  taskType?: 'homework' | 'exam';
+  /** AI-genererad provförberedelse */
+  examPrepContent?: string;
 }
 
 export type SubscriptionTier = 'free' | 'plus' | 'pro';

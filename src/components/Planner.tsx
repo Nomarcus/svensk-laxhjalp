@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, CheckCircle2, Circle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, LayoutList, Calendar, Calculator, BookOpen, Languages, Beaker, Globe, Book, Clock, CalendarCheck, Camera, MessageSquare, X, Image as ImageIcon, Eye, EyeOff, Sparkles, Loader2 } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Circle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, LayoutList, Calendar, Calculator, BookOpen, Languages, Beaker, Globe, Book, Clock, CalendarCheck, Camera, MessageSquare, X, Image as ImageIcon, Eye, EyeOff, Sparkles, Loader2, GraduationCap } from 'lucide-react';
 import { db, auth, OperationType, handleFirestoreError } from '../firebase';
 import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc, where, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { format, startOfWeek, addDays, getWeek, getYear, addWeeks, subWeeks } from 'date-fns';
@@ -7,8 +7,9 @@ import { sv } from 'date-fns/locale';
 import { cn } from '../utils/cn';
 import { compressImage } from '../utils/image';
 import type { Task } from '../types';
-import { generateStudyPlan } from '../services/geminiService';
+import { generateStudyPlan, generateExamPrep } from '../services/geminiService';
 import StudyPlanModal from './StudyPlanModal';
+import ExamPrepModal from './ExamPrepModal';
 
 interface PlannerProps {
   childId: string;
@@ -31,6 +32,10 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
   const [showStudyPlan, setShowStudyPlan] = useState(false);
   const [studyPlanContent, setStudyPlanContent] = useState<string | null>(null);
   const [studyPlanLoading, setStudyPlanLoading] = useState(false);
+  const [newTaskType, setNewTaskType] = useState<'homework' | 'exam'>('homework');
+  const [examPrepTask, setExamPrepTask] = useState<Task | null>(null);
+  const [examPrepContent, setExamPrepContent] = useState<string | null>(null);
+  const [examPrepLoading, setExamPrepLoading] = useState(false);
 
   // Form state
   const [newSubject, setNewSubject] = useState('');
@@ -87,6 +92,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
     setNewDueDay(selectedDay);
     setNewMinutesPerDay('');
     setTaskImage(null);
+    setNewTaskType('homework');
   };
 
   const addTask = async (e: React.FormEvent) => {
@@ -102,7 +108,8 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
         dateType: newDateType,
         weekNumber: viewWeek,
         year: viewYear,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        taskType: newTaskType,
       };
 
       if (newMinutesPerDay) {
@@ -193,6 +200,31 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
       setStudyPlanContent('Kunde inte generera studieplan. Försök igen.');
     } finally {
       setStudyPlanLoading(false);
+    }
+  };
+
+  const handleExamPrep = async (task: Task) => {
+    setExamPrepTask(task);
+    setExamPrepLoading(true);
+    setExamPrepContent(null);
+    try {
+      // Check if we already have cached content
+      if (task.examPrepContent) {
+        setExamPrepContent(task.examPrepContent);
+        setExamPrepLoading(false);
+        return;
+      }
+      const content = await generateExamPrep(task.subject, task.description, task.aiNotes);
+      setExamPrepContent(content);
+      // Save to Firestore for caching
+      await updateDoc(doc(db, 'users', ownerId, 'children', childId, 'tasks', task.id), {
+        examPrepContent: content
+      });
+    } catch (err) {
+      console.error('Error generating exam prep:', err);
+      setExamPrepContent('Kunde inte generera provförberedelse. Försök igen.');
+    } finally {
+      setExamPrepLoading(false);
     }
   };
 
@@ -389,6 +421,29 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
           <button type="button" onClick={() => setTaskImage(null)} className="absolute top-1 right-1 p-1 bg-white/90 rounded-full text-stone-500 hover:text-red-500">✕</button>
         </div>
       )}
+      {/* Task type toggle */}
+      <div className="flex bg-stone-100 rounded-xl p-1">
+        <button
+          type="button"
+          onClick={() => setNewTaskType('homework')}
+          className={cn(
+            "flex-1 py-2 rounded-lg text-xs font-medium transition-all",
+            newTaskType === 'homework' ? "bg-white shadow-sm text-emerald-700" : "text-stone-400"
+          )}
+        >
+          Läxa
+        </button>
+        <button
+          type="button"
+          onClick={() => setNewTaskType('exam')}
+          className={cn(
+            "flex-1 py-2 rounded-lg text-xs font-medium transition-all",
+            newTaskType === 'exam' ? "bg-purple-600 text-white shadow-sm" : "text-stone-400"
+          )}
+        >
+          Prov
+        </button>
+      </div>
       <div>
         <label className="block text-xs font-medium text-stone-400 uppercase tracking-widest mb-1">Ämne</label>
         <input
@@ -718,6 +773,9 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                             )}>
                               {task.subject}
                             </span>
+                            {task.taskType === 'exam' && (
+                              <span className="shrink-0 px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[9px] font-bold rounded-full uppercase">Prov</span>
+                            )}
                             {task.description && (
                               <span className="text-stone-400 text-sm truncate min-w-0">
                                 {task.description}
@@ -793,20 +851,28 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                               "p-3 rounded-xl text-xs shadow-sm border transition-all cursor-pointer hover:shadow-md",
                               isDayCompleted(task, day)
                                 ? "bg-emerald-50 border-emerald-100 text-emerald-700 opacity-60"
-                                : isDeadline
-                                  ? "bg-red-50 border-red-200 text-stone-700 ring-2 ring-red-300/50"
-                                  : task.workDays?.includes(day)
-                                    ? "bg-blue-50 border-blue-200 text-stone-700"
-                                    : "bg-white border-black/5 text-stone-700"
+                                : task.taskType === 'exam'
+                                  ? "bg-purple-50 border-purple-200 text-stone-700 ring-2 ring-purple-300/50"
+                                  : isDeadline
+                                    ? "bg-red-50 border-red-200 text-stone-700 ring-2 ring-red-300/50"
+                                    : task.workDays?.includes(day)
+                                      ? "bg-blue-50 border-blue-200 text-stone-700"
+                                      : "bg-white border-black/5 text-stone-700"
                             )}
                           >
-                            {isDeadline && !isDayCompleted(task, day) && (
+                            {task.taskType === 'exam' && !isDayCompleted(task, day) && (
+                              <div className="flex items-center gap-1 mb-1.5 text-[9px] font-bold text-purple-600 uppercase tracking-wider">
+                                <GraduationCap size={9} />
+                                Prov
+                              </div>
+                            )}
+                            {task.taskType !== 'exam' && isDeadline && !isDayCompleted(task, day) && (
                               <div className="flex items-center gap-1 mb-1.5 text-[9px] font-bold text-red-600 uppercase tracking-wider">
                                 <CalendarCheck size={9} />
                                 Inlämningsdag
                               </div>
                             )}
-                            {!isDeadline && !isDayCompleted(task, day) && task.workDays?.includes(day) && (
+                            {task.taskType !== 'exam' && !isDeadline && !isDayCompleted(task, day) && task.workDays?.includes(day) && (
                               <div className="flex items-center gap-1 mb-1.5 text-[9px] font-bold text-blue-600 uppercase tracking-wider">
                                 <Clock size={9} />
                                 Arbetsdag
@@ -839,6 +905,15 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                               >
                                 {isDayCompleted(task, day) ? <CheckCircle2 size={10} /> : <Circle size={10} />}
                               </button>
+                              {task.taskType === 'exam' && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleExamPrep(task); }}
+                                  className="p-1 text-purple-400 hover:text-purple-600"
+                                  title="Provförberedelse"
+                                >
+                                  <GraduationCap size={10} />
+                                </button>
+                              )}
                               <button
                                 onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
                                 className="p-1 text-stone-300 hover:text-red-500"
@@ -999,6 +1074,15 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                     Fråga AI om denna läxa
                   </button>
                 )}
+                {selectedTask.taskType === 'exam' && (
+                  <button
+                    onClick={() => handleExamPrep(selectedTask)}
+                    className="w-full py-3 bg-purple-50 border border-purple-200 text-purple-700 rounded-2xl font-medium hover:bg-purple-100 transition-all flex items-center justify-center gap-2"
+                  >
+                    <GraduationCap size={18} />
+                    Skapa provförberedelse med AI
+                  </button>
+                )}
                 <div className="flex gap-2">
                   <button
                     onClick={() => { toggleTask(selectedTask); setSelectedTask({ ...selectedTask, completed: !selectedTask.completed }); }}
@@ -1028,6 +1112,14 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
           content={studyPlanContent}
           loading={studyPlanLoading}
           onClose={() => setShowStudyPlan(false)}
+        />
+      )}
+      {examPrepTask && (
+        <ExamPrepModal
+          content={examPrepContent}
+          subject={examPrepTask.subject}
+          loading={examPrepLoading}
+          onClose={() => { setExamPrepTask(null); setExamPrepContent(null); }}
         />
       )}
     </div>

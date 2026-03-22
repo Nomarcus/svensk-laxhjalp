@@ -77,6 +77,28 @@ AI-analys av läxan: ${aiExplanation.slice(0, 800)}`;
   }
 }
 
+export async function generateExamPrep(
+  subject: string,
+  description: string,
+  aiNotes: string[] = []
+): Promise<string> {
+  const context = aiNotes.length > 0 ? `\n\nTidigare AI-anteckningar om ämnet:\n${aiNotes.join('\n---\n')}` : '';
+
+  const prompt = `Skapa ett komplett studiepaket för ett prov i ${subject}.
+Beskrivning av provet: ${description}${context}
+
+Inkludera:
+1. **Sammanfattning** — De viktigaste koncepten att kunna (3-5 punkter)
+2. **Nyckelbegrepp** — Lista med begrepp barnet måste kunna, med korta förklaringar
+3. **Övningsfrågor** — 5-8 frågor i stigande svårighetsgrad
+4. **Facit** — Korrekta svar på övningsfrågorna
+5. **Tips till föräldern** — Hur föräldern kan förhöra barnet effektivt
+
+Skriv på svenska. Anpassa till grundskolenivå. Använd tydliga rubriker och numrering.`;
+
+  return generateHomeworkHelp(prompt);
+}
+
 export async function generateStudyPlan(
   tasks: Array<{ subject: string; description: string; dueDay?: string; workDays?: string[]; minutesPerDay?: number; completed: boolean; completedDays?: string[] }>
 ): Promise<string> {
