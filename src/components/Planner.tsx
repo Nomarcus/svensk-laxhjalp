@@ -188,7 +188,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
       if (t.day === day) return true;
       // Also show if this day is in workDays
       if (t.workDays?.includes(day)) return true;
-      // Also show on the due/deadline day
+      // Also show on the inlämningsdag
       if (t.dueDay && t.dueDay === day) return true;
       return false;
     });
@@ -699,13 +699,21 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                                 ? "bg-emerald-50 border-emerald-100 text-emerald-700 opacity-60"
                                 : isDeadline
                                   ? "bg-red-50 border-red-200 text-stone-700 ring-2 ring-red-300/50"
-                                  : "bg-white border-black/5 text-stone-700"
+                                  : task.workDays?.includes(day)
+                                    ? "bg-blue-50 border-blue-200 text-stone-700"
+                                    : "bg-white border-black/5 text-stone-700"
                             )}
                           >
                             {isDeadline && !task.completed && (
                               <div className="flex items-center gap-1 mb-1.5 text-[9px] font-bold text-red-600 uppercase tracking-wider">
                                 <CalendarCheck size={9} />
-                                Deadline
+                                Inlämningsdag
+                              </div>
+                            )}
+                            {!isDeadline && !task.completed && task.workDays?.includes(day) && (
+                              <div className="flex items-center gap-1 mb-1.5 text-[9px] font-bold text-blue-600 uppercase tracking-wider">
+                                <Clock size={9} />
+                                Arbetsdag
                               </div>
                             )}
                             <div className="flex items-center gap-1.5 mb-1">
@@ -811,7 +819,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
               {/* Editable: Inlämningsdag */}
               <div>
                 <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">
-                  Inlämningsdag (deadline)
+                  Inlämningsdag
                 </label>
                 <div className="flex flex-wrap gap-1.5">
                   {DAYS.map(day => (
