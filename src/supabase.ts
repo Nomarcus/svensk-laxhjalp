@@ -3,6 +3,7 @@ import type { User, Session } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const siteUrl = import.meta.env.VITE_SITE_URL || window.location.origin;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY environment variables');
@@ -11,8 +12,14 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Auth Helpers
-export const signInWithGoogle = () =>
-  supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+export const signInWithGoogle = async () => {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: `${siteUrl}/auth/callback` },
+  });
+  if (error) throw error;
+  return data;
+};
 
 export const signUpWithEmail = async (email: string, password: string, displayName?: string) => {
   const { data, error } = await supabase.auth.signUp({
