@@ -111,6 +111,12 @@ export default function Auth({ onShowPrivacy }: AuthProps) {
       setError('E-postadressen används redan. Försök logga in istället.');
     } else if (msg.includes('Invalid login')) {
       setError('Fel e-post eller lösenord. Försök igen.');
+    } else if (msg.includes('Anonymous sign-ins are disabled')) {
+      setError('Anonym inloggning är inte aktiverad i Supabase-projektet ännu.');
+    } else if (msg.includes('provider is not enabled')) {
+      setError('Google-inloggning är inte aktiverad i Supabase Authentication > Providers.');
+    } else if (msg.includes('Invalid login credentials')) {
+      setError('Fel inloggningsuppgifter. Kontrollera e-post och lösenord.');
     } else if (msg.includes('Email not confirmed')) {
       setError('E-posten är inte bekräftad. Kolla din inkorg.');
     } else if (msg.includes('rate limit') || msg.includes('too many')) {
