@@ -19,6 +19,18 @@ CREATE TABLE public.users (
   stripe_subscription_id TEXT,
   current_period_end TIMESTAMPTZ,
   cancel_at_period_end BOOLEAN DEFAULT false,
+  plan_type TEXT NOT NULL DEFAULT 'none' CHECK (plan_type IN ('trial', 'plus', 'pro', 'none')),
+  trial_started_at TIMESTAMPTZ,
+  trial_ends_at TIMESTAMPTZ,
+  billing_period_start TIMESTAMPTZ,
+  billing_period_end TIMESTAMPTZ,
+  monthly_credits_total INT NOT NULL DEFAULT 0,
+  monthly_credits_used INT NOT NULL DEFAULT 0,
+  monthly_credits_remaining INT NOT NULL DEFAULT 0,
+  daily_ai_questions_used INT NOT NULL DEFAULT 0,
+  daily_image_analyses_used INT NOT NULL DEFAULT 0,
+  daily_illustrations_used INT NOT NULL DEFAULT 0,
+  daily_usage_date DATE DEFAULT CURRENT_DATE,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -152,6 +164,18 @@ BEGIN
     NEW.stripe_subscription_id := OLD.stripe_subscription_id;
     NEW.current_period_end := OLD.current_period_end;
     NEW.cancel_at_period_end := OLD.cancel_at_period_end;
+    NEW.plan_type := OLD.plan_type;
+    NEW.trial_started_at := OLD.trial_started_at;
+    NEW.trial_ends_at := OLD.trial_ends_at;
+    NEW.billing_period_start := OLD.billing_period_start;
+    NEW.billing_period_end := OLD.billing_period_end;
+    NEW.monthly_credits_total := OLD.monthly_credits_total;
+    NEW.monthly_credits_used := OLD.monthly_credits_used;
+    NEW.monthly_credits_remaining := OLD.monthly_credits_remaining;
+    NEW.daily_ai_questions_used := OLD.daily_ai_questions_used;
+    NEW.daily_image_analyses_used := OLD.daily_image_analyses_used;
+    NEW.daily_illustrations_used := OLD.daily_illustrations_used;
+    NEW.daily_usage_date := OLD.daily_usage_date;
   END IF;
   RETURN NEW;
 END;

@@ -19,7 +19,7 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'chat' | 'planner' | 'info' | 'library' | 'subscription'>('chat');
-  const [subscription, setSubscription] = useState<UserSubscription>({ tier: 'free', status: 'none' });
+  const [subscription, setSubscription] = useState<UserSubscription>({ tier: 'free', status: 'none', plan_type: 'none' });
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [showChildManager, setShowChildManager] = useState(false);
@@ -52,7 +52,7 @@ export default function App() {
         setUser(null);
         setChildren([]);
         setSelectedChildId(null);
-        setSubscription({ tier: 'free', status: 'none' });
+        setSubscription({ tier: 'free', status: 'none', plan_type: 'none' });
       }
       setLoading(false);
 
@@ -72,11 +72,13 @@ export default function App() {
 
     // Initial fetch
     const fetchSub = async () => {
-      const { data } = await supabase.from('users').select('tier, subscription_status, stripe_customer_id, stripe_subscription_id, current_period_end, cancel_at_period_end').eq('id', user.id).single();
+      const { data } = await supabase.from('users').select('tier, subscription_status, plan_type, trial_ends_at, stripe_customer_id, stripe_subscription_id, current_period_end, cancel_at_period_end').eq('id', user.id).single();
       if (data) {
         setSubscription({
           tier: data.tier || 'free',
           status: data.subscription_status || 'none',
+          plan_type: data.plan_type || 'none',
+          trial_ends_at: data.trial_ends_at || null,
           stripe_customer_id: data.stripe_customer_id,
           stripe_subscription_id: data.stripe_subscription_id,
           current_period_end: data.current_period_end || null,
@@ -94,6 +96,8 @@ export default function App() {
         setSubscription({
           tier: data.tier || 'free',
           status: data.subscription_status || 'none',
+          plan_type: data.plan_type || 'none',
+          trial_ends_at: data.trial_ends_at || null,
           stripe_customer_id: data.stripe_customer_id,
           stripe_subscription_id: data.stripe_subscription_id,
           current_period_end: data.current_period_end || null,

@@ -33,26 +33,37 @@ export default async function handler(req: any, res: any) {
     if (event.type === 'checkout.session.completed') {
       const s = event.data.object as Stripe.Checkout.Session;
       const uid = s.metadata?.uid;
+      const selectedPlan = s.metadata?.selected_plan === 'plus' ? 'plus' : 'pro';
       if (uid && s.subscription) {
         const sub = await stripe.subscriptions.retrieve(s.subscription as string);
+        const totalCredits = selectedPlan === 'pro' ? 900 : 400;
         await supabase.from('users').update({
-          tier: 'pro',
+          tier: selectedPlan,
+          plan_type: selectedPlan,
           subscription_status: 'active',
           stripe_subscription_id: sub.id,
           stripe_customer_id: s.customer as string,
           current_period_end: new Date((sub as any).current_period_end * 1000).toISOString(),
           cancel_at_period_end: (sub as any).cancel_at_period_end,
+          billing_period_start: new Date().toISOString(),
+          billing_period_end: new Date((sub as any).current_period_end * 1000).toISOString(),
+          monthly_credits_total: totalCredits,
+          monthly_credits_used: 0,
+          monthly_credits_remaining: totalCredits,
         }).eq('id', uid);
       }
     } else if (event.type === 'customer.subscription.updated') {
       const sub = event.data.object as Stripe.Subscription;
       const uid = sub.metadata?.uid;
+      const plan = sub.metadata?.selected_plan === 'plus' ? 'plus' : 'pro';
       if (uid) {
         await supabase.from('users').update({
-          tier: sub.status === 'active' ? 'pro' : 'free',
+          tier: sub.status === 'active' ? plan : 'free',
+          plan_type: sub.status === 'active' ? plan : 'none',
           subscription_status: sub.status === 'active' ? 'active' : 'past_due',
           current_period_end: new Date((sub as any).current_period_end * 1000).toISOString(),
           cancel_at_period_end: (sub as any).cancel_at_period_end,
+          billing_period_end: new Date((sub as any).current_period_end * 1000).toISOString(),
         }).eq('id', uid);
       }
     } else if (event.type === 'customer.subscription.deleted') {
@@ -61,6 +72,7 @@ export default async function handler(req: any, res: any) {
       if (uid) {
         await supabase.from('users').update({
           tier: 'free',
+          plan_type: 'none',
           subscription_status: 'none',
           stripe_subscription_id: null,
           current_period_end: null,

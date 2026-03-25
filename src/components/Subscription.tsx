@@ -11,10 +11,18 @@ interface SubscriptionProps {
 interface UsageData {
   chatCount: number;
   imageCount: number;
+  illustrationCount?: number;
+}
+
+interface LimitsData {
+  chatLimit: number;
+  imageLimit: number;
+  illustrationLimit: number;
 }
 
 export default function Subscription({ subscription }: SubscriptionProps) {
   const [usage, setUsage] = useState<UsageData>({ chatCount: 0, imageCount: 0 });
+  const [limits, setLimits] = useState<LimitsData>({ chatLimit: 3, imageLimit: 1, illustrationLimit: 1 });
   const [portalLoading, setPortalLoading] = useState(false);
 
   useEffect(() => {
@@ -33,6 +41,9 @@ export default function Subscription({ subscription }: SubscriptionProps) {
       const data = await res.json();
       if (data.usage) {
         setUsage(data.usage);
+      }
+      if (data.limits) {
+        setLimits(data.limits);
       }
     } catch (err) {
       console.error('Failed to fetch usage:', err);
@@ -67,7 +78,7 @@ export default function Subscription({ subscription }: SubscriptionProps) {
   };
 
   const isPaid = subscription.tier === 'plus' || subscription.tier === 'pro';
-  const tierLabel = subscription.tier === 'pro' ? 'Pro' : subscription.tier === 'plus' ? 'Plus' : 'Gratis';
+  const tierLabel = subscription.plan_type === 'trial' ? 'Testa gratis' : subscription.tier === 'pro' ? 'Pro' : subscription.tier === 'plus' ? 'Plus' : 'Ingen plan';
   const tierColor = subscription.tier === 'pro' ? 'bg-amber-100 text-amber-600' : subscription.tier === 'plus' ? 'bg-blue-100 text-blue-600' : 'bg-stone-100 text-stone-500';
   const periodEnd = subscription.current_period_end
     ? new Date(subscription.current_period_end)
@@ -138,12 +149,12 @@ export default function Subscription({ subscription }: SubscriptionProps) {
                 </div>
                 <div className="flex items-end gap-1">
                   <span className="text-2xl font-bold text-stone-800">{usage.chatCount}</span>
-                  <span className="text-sm text-stone-400 mb-0.5">/ 3</span>
+                  <span className="text-sm text-stone-400 mb-0.5">/ {limits.chatLimit}</span>
                 </div>
                 <div className="mt-2 h-2 bg-stone-200 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-emerald-500 transition-all"
-                    style={{ width: `${Math.min((usage.chatCount / 3) * 100, 100)}%` }}
+                    style={{ width: `${Math.min((usage.chatCount / Math.max(1, limits.chatLimit)) * 100, 100)}%` }}
                   />
                 </div>
               </div>
@@ -154,12 +165,12 @@ export default function Subscription({ subscription }: SubscriptionProps) {
                 </div>
                 <div className="flex items-end gap-1">
                   <span className="text-2xl font-bold text-stone-800">{usage.imageCount}</span>
-                  <span className="text-sm text-stone-400 mb-0.5">/ 1</span>
+                  <span className="text-sm text-stone-400 mb-0.5">/ {limits.imageLimit}</span>
                 </div>
                 <div className="mt-2 h-2 bg-stone-200 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-blue-500 transition-all"
-                    style={{ width: `${Math.min((usage.imageCount / 1) * 100, 100)}%` }}
+                    style={{ width: `${Math.min((usage.imageCount / Math.max(1, limits.imageLimit)) * 100, 100)}%` }}
                   />
                 </div>
               </div>
@@ -172,7 +183,7 @@ export default function Subscription({ subscription }: SubscriptionProps) {
           <h3 className="font-medium text-lg mb-4 text-center">
             {isPaid ? 'Alla planer' : 'Uppgradera för mer användning'}
           </h3>
-          <PricingCard currentTier={subscription.tier} />
+          <PricingCard currentTier={subscription.tier} currentPlanType={subscription.plan_type || 'none'} />
         </div>
       </div>
     </div>
