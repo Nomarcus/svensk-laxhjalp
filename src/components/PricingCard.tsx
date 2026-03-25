@@ -2,17 +2,38 @@ import React, { useState } from 'react';
 import { Check, Crown, Zap, Star } from 'lucide-react';
 import { supabase } from '../supabase';
 import { cn } from '../utils/cn';
-import type { SubscriptionTier } from '../types';
+import type { PlanType, SubscriptionTier } from '../types';
 
 interface PricingCardProps {
   currentTier: SubscriptionTier;
+  currentPlanType?: PlanType;
   onUpgradeStart?: () => void;
   onUpgradeEnd?: () => void;
 }
 
-export default function PricingCard({ currentTier, onUpgradeStart, onUpgradeEnd }: PricingCardProps) {
-  const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
+export default function PricingCard({ currentTier, currentPlanType = 'none', onUpgradeStart, onUpgradeEnd }: PricingCardProps) {
   const [loading, setLoading] = useState<string | null>(null);
+  const [trialLoading, setTrialLoading] = useState(false);
+
+  const startTrial = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    setTrialLoading(true);
+    try {
+      const token = session.access_token;
+      const res = await fetch('/api/billing/start-trial', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Kunde inte starta testperioden.');
+      window.location.reload();
+    } catch (err: any) {
+      alert(err.message || 'Kunde inte starta testperioden.');
+    } finally {
+      setTrialLoading(false);
+    }
+  };
 
   const handleUpgrade = async (tier: 'plus' | 'pro') => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -30,7 +51,8 @@ export default function PricingCard({ currentTier, onUpgradeStart, onUpgradeEnd 
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          priceId: `${tier}_${billing}`,
+          priceId: tier,
+          selectedPlan: tier,
         }),
       });
 
@@ -52,63 +74,63 @@ export default function PricingCard({ currentTier, onUpgradeStart, onUpgradeEnd 
   const plans = [
     {
       id: 'free' as const,
-      name: 'Gratis',
+      name: 'Testa gratis',
       icon: <Zap size={18} className="text-stone-400" />,
       priceMonthly: '0 kr',
       priceYearly: '0 kr',
-      priceLabel: 'för alltid',
-      priceLabelYearly: 'för alltid',
+      priceLabel: '7 dagar',
+      priceLabelYearly: '7 dagar',
       borderColor: 'border-black/5',
       activeBorder: 'border-emerald-500',
       checkColor: 'text-emerald-500',
       features: [
         '3 AI-frågor per dag',
         '1 bildanalys per dag',
-        '1 AI-illustration per dag',
+        '1 illustration per dag',
         'Läxplanering & kalender',
         'Koppling till läroplanen',
+        'Visa facit och fördjupning',
       ],
     },
     {
       id: 'plus' as const,
       name: 'Plus',
       icon: <Star size={18} className="text-blue-500" />,
-      priceMonthly: '29 kr',
-      priceYearly: '249 kr',
+      priceMonthly: '49 kr',
+      priceYearly: '49 kr',
       priceLabel: 'per månad',
-      priceLabelYearly: 'per år (21 kr/mån)',
+      priceLabelYearly: 'per månad',
       borderColor: 'border-blue-400',
       activeBorder: 'border-blue-500',
       checkColor: 'text-blue-500',
       badge: 'Populär',
       badgeColor: 'bg-blue-500',
       features: [
-        '15 AI-frågor per dag',
-        '5 bildanalyser per dag',
-        '2 AI-illustrationer per dag',
+        '10 AI-frågor per dag',
+        '3 bildanalyser per dag',
+        '1 illustration per dag',
         'Resursbibliotek',
-        'Facit-funktion',
-        'Allt i Gratis',
+        'Allt i Testa gratis',
       ],
     },
     {
       id: 'pro' as const,
       name: 'Pro',
       icon: <Crown size={18} className="text-amber-500" />,
-      priceMonthly: '59 kr',
-      priceYearly: '499 kr',
+      priceMonthly: '79 kr',
+      priceYearly: '79 kr',
       priceLabel: 'per månad',
-      priceLabelYearly: 'per år (42 kr/mån)',
+      priceLabelYearly: 'per månad',
       borderColor: 'border-amber-400',
       activeBorder: 'border-amber-500',
       checkColor: 'text-amber-500',
       badge: 'Familjepaket',
       badgeColor: 'bg-amber-500',
       features: [
-        'Obegränsade AI-frågor',
-        'Obegränsade bildanalyser',
-        '5 AI-illustrationer per dag',
-        'Dela kalender med föräldrar',
+        '30 AI-frågor per dag',
+        '10 bildanalyser per dag',
+        '3 illustrationer per dag',
+        'Dela med annan förälder',
         'Prioriterad svarstid',
         'Allt i Plus',
       ],
@@ -119,38 +141,9 @@ export default function PricingCard({ currentTier, onUpgradeStart, onUpgradeEnd 
 
   return (
     <div>
-      {/* Billing toggle */}
-      {currentTier === 'free' && (
-        <div className="flex items-center justify-center gap-2 mb-6">
-          <button
-            onClick={() => setBilling('monthly')}
-            className={cn(
-              "text-sm px-4 py-2 rounded-full transition-all",
-              billing === 'monthly'
-                ? "bg-emerald-100 text-emerald-700 font-medium"
-                : "text-stone-400 hover:bg-stone-100"
-            )}
-          >
-            Månadsvis
-          </button>
-          <button
-            onClick={() => setBilling('yearly')}
-            className={cn(
-              "text-sm px-4 py-2 rounded-full transition-all",
-              billing === 'yearly'
-                ? "bg-emerald-100 text-emerald-700 font-medium"
-                : "text-stone-400 hover:bg-stone-100"
-            )}
-          >
-            Årsvis
-            <span className="ml-1 text-[10px] text-amber-600 font-bold">Spara 28%</span>
-          </button>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
         {plans.map((plan) => {
-          const isCurrent = currentTier === plan.id;
+          const isCurrent = (plan.id === 'free' && currentPlanType === 'trial') || (plan.id !== 'free' && currentTier === plan.id);
           const canUpgrade = tierOrder[plan.id] > tierOrder[currentTier];
 
           return (
@@ -176,10 +169,10 @@ export default function PricingCard({ currentTier, onUpgradeStart, onUpgradeEnd 
               </div>
 
               <p className="text-3xl font-bold mb-0.5">
-                {billing === 'monthly' ? plan.priceMonthly : plan.priceYearly}
+                {plan.priceMonthly}
               </p>
               <p className="text-xs text-stone-400 mb-5">
-                {billing === 'monthly' ? plan.priceLabel : plan.priceLabelYearly}
+                {plan.priceLabel}
               </p>
 
               <ul className="space-y-2.5 mb-5">
@@ -195,6 +188,14 @@ export default function PricingCard({ currentTier, onUpgradeStart, onUpgradeEnd 
                 <div className="py-2.5 text-center text-sm font-medium text-emerald-600 bg-emerald-50 rounded-xl">
                   Nuvarande plan
                 </div>
+              ) : plan.id === 'free' ? (
+                <button
+                  onClick={startTrial}
+                  disabled={trialLoading || currentPlanType !== 'none'}
+                  className="w-full py-2.5 bg-stone-900 text-white rounded-xl font-medium transition-all disabled:opacity-50"
+                >
+                  {trialLoading ? 'Startar...' : currentPlanType !== 'none' ? 'Redan använd' : 'Testa gratis'}
+                </button>
               ) : canUpgrade ? (
                 <button
                   onClick={() => handleUpgrade(plan.id as 'plus' | 'pro')}

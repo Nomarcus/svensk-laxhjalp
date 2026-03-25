@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
-import { verifyToken } from '../src/lib/supabase-server';
+import { getSupabaseAdmin, verifyToken } from '../src/lib/supabase-server';
+import { deductCredits, detectActionFromPrompt, enforceUsageAccess } from '../src/lib/subscription';
 
 const TEXT_MODEL = process.env.AI_TEXT_MODEL || 'gemini-2.5-flash-lite';
 const MAX_HISTORY_PAIRS = 8;
@@ -68,6 +69,13 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: 'Meddelande eller bild krävs.' });
     }
 
+    const supabase = getSupabaseAdmin();
+    const action = detectActionFromPrompt(prompt || '', Boolean(imageBase64));
+    const access = await enforceUsageAccess(supabase, uid, action);
+    if (!access.ok) {
+      return res.status(access.status || 403).json({ error: access.error, state: access.state || 'expired' });
+    }
+
     let mimeType = 'image/jpeg';
     let cleanBase64 = imageBase64;
     if (imageBase64?.startsWith('data:')) {
@@ -93,6 +101,8 @@ export default async function handler(req: any, res: any) {
       ],
       config: { systemInstruction: SYSTEM_INSTRUCTION },
     });
+
+    await deductCredits(supabase, uid, action);
 
     res.json({ text: response.text, usage: response.usageMetadata });
   } catch (error: any) {

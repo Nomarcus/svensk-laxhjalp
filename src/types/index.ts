@@ -48,10 +48,13 @@ export interface Task {
 
 export type SubscriptionTier = 'free' | 'plus' | 'pro';
 export type SubscriptionStatus = 'active' | 'canceled' | 'past_due' | 'none';
+export type PlanType = 'trial' | 'plus' | 'pro' | 'none';
 
 export interface UserSubscription {
   tier: SubscriptionTier;
   status: SubscriptionStatus;
+  plan_type?: PlanType;
+  trial_ends_at?: string | null;
   stripe_customer_id?: string;
   stripe_subscription_id?: string;
   current_period_end?: string | null;

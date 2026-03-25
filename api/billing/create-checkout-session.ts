@@ -10,8 +10,13 @@ export default async function handler(req: any, res: any) {
     const { uid, email } = await verifyToken(req.headers.authorization);
     if (!email) return res.status(400).json({ error: 'E-post kravs.' });
 
-    const { priceId } = req.body;
-    const priceMap: Record<string, string | undefined> = { monthly: process.env.STRIPE_PRICE_ID_MONTHLY, yearly: process.env.STRIPE_PRICE_ID_YEARLY };
+    const { priceId, selectedPlan } = req.body;
+    const priceMap: Record<string, string | undefined> = {
+      plus: process.env.STRIPE_PRICE_ID_PLUS_MONTHLY,
+      pro: process.env.STRIPE_PRICE_ID_PRO_MONTHLY,
+      monthly: process.env.STRIPE_PRICE_ID_MONTHLY,
+      yearly: process.env.STRIPE_PRICE_ID_YEARLY
+    };
     const stripePriceId = priceMap[priceId] || priceId;
     if (!stripePriceId) return res.status(400).json({ error: 'Ogiltigt pris.' });
 
@@ -32,8 +37,8 @@ export default async function handler(req: any, res: any) {
       line_items: [{ price: stripePriceId, quantity: 1 }],
       success_url: CLIENT_URL + '?subscription=success',
       cancel_url: CLIENT_URL + '?subscription=canceled',
-      metadata: { uid },
-      subscription_data: { metadata: { uid } },
+      metadata: { uid, selected_plan: selectedPlan || (priceId === 'plus' ? 'plus' : 'pro') },
+      subscription_data: { metadata: { uid, selected_plan: selectedPlan || (priceId === 'plus' ? 'plus' : 'pro') } },
       locale: 'sv',
     });
     res.json({ url: session.url });
