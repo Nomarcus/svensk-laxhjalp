@@ -1,23 +1,30 @@
 import { GoogleGenAI } from '@google/genai';
 import { getSupabaseAdmin, verifyToken } from '../src/lib/supabase-server';
-import { deductCredits, enforceUsageAccess } from '../src/lib/subscription';
+import { deductCredits, deductGuestCredits, enforceGuestUsageAccess, enforceUsageAccess } from '../src/lib/subscription';
 
 const IMAGE_MODEL = process.env.AI_IMAGE_MODEL || 'gemini-3.1-flash-image-preview';
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  let uid: string;
+  let uid: string | null = null;
+  const guestId = req.headers['x-guest-user-id'] as string | undefined;
   try {
     const verified = await verifyToken(req.headers.authorization);
     uid = verified.uid;
   } catch {
-    return res.status(401).json({ error: 'Ogiltig token.' });
+    if (!guestId) return res.status(401).json({ error: 'Ogiltig token.' });
   }
 
   try {
-    const supabase = getSupabaseAdmin();
-    const access = await enforceUsageAccess(supabase, uid, 'illustration');
+    let access: any;
+    let supabase: any = null;
+    if (uid) {
+      supabase = getSupabaseAdmin();
+      access = await enforceUsageAccess(supabase, uid, 'illustration');
+    } else {
+      access = enforceGuestUsageAccess(guestId as string, 'illustration');
+    }
     if (!access.ok) {
       return res.status(access.status || 403).json({ error: access.error, state: access.state || 'expired' });
     }
@@ -37,7 +44,11 @@ export default async function handler(req: any, res: any) {
       for (const part of response.candidates[0].content.parts) {
         if (part.inlineData) {
           const mimeType = part.inlineData.mimeType || 'image/png';
-          await deductCredits(supabase, uid, 'illustration');
+          if (uid && supabase) {
+            await deductCredits(supabase, uid, 'illustration');
+          } else {
+            deductGuestCredits(guestId as string, 'illustration');
+          }
           return res.json({ imageData: `data:${mimeType};base64,${part.inlineData.data}` });
         }
       }

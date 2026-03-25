@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { getGuestUsageProfile, resetGuestDailyUsageIfNeeded, saveGuestUsageProfile, setGuestAccessState } from './guest-usage';
 
 export type PlanType = 'trial' | 'plus' | 'pro' | 'none';
 export type AccessState = 'trial_active' | 'plus_active' | 'pro_active' | 'expired' | 'blocked_no_credits';
@@ -12,21 +13,21 @@ export type UsageAction =
   | 'create_homework'
   | 'curriculum_link';
 
-const DAILY_LIMITS: Record<PlanType, { ai_question: number; image_analysis: number; illustration: number }> = {
+export const DAILY_LIMITS: Record<PlanType, { ai_question: number; image_analysis: number; illustration: number }> = {
   trial: { ai_question: 3, image_analysis: 1, illustration: 1 },
   plus: { ai_question: 10, image_analysis: 3, illustration: 1 },
   pro: { ai_question: 30, image_analysis: 10, illustration: 3 },
   none: { ai_question: 0, image_analysis: 0, illustration: 0 },
 };
 
-const MONTHLY_CREDITS: Record<PlanType, number> = {
+export const MONTHLY_CREDITS: Record<PlanType, number> = {
   trial: 100,
   plus: 400,
   pro: 900,
   none: 0,
 };
 
-const CREDIT_COSTS: Record<UsageAction, number> = {
+export const CREDIT_COSTS: Record<UsageAction, number> = {
   ai_question: 1,
   image_analysis: 3,
   illustration: 5,
@@ -231,6 +232,71 @@ export async function enforceUsageAccess(supabase: SupabaseClient, uid: string, 
   return { ok: true, profile: refreshed, planType: plan.planType };
 }
 
+export function startGuestTrial(guestId: string, now = new Date()) {
+  const trialEnd = new Date(now);
+  trialEnd.setDate(trialEnd.getDate() + 7);
+
+  const profile = getGuestUsageProfile(guestId);
+  if (profile.trial_started_at || profile.plan_type === 'trial') {
+    return { ok: false, error: 'Gratisperioden har redan använts.' };
+  }
+
+  const startedAt = now.toISOString();
+  const endsAt = trialEnd.toISOString();
+  const total = MONTHLY_CREDITS.trial;
+
+  saveGuestUsageProfile(guestId, {
+    ...profile,
+    plan_type: 'trial',
+    trial_started_at: startedAt,
+    trial_ends_at: endsAt,
+    monthly_credits_total: total,
+    monthly_credits_used: 0,
+    monthly_credits_remaining: total,
+    daily_ai_questions_used: 0,
+    daily_image_analyses_used: 0,
+    daily_illustrations_used: 0,
+    daily_usage_date: dateOnly(now),
+    state: 'trial_active',
+  });
+
+  return { ok: true, trial_ends_at: endsAt };
+}
+
+export function enforceGuestUsageAccess(guestId: string, action: UsageAction) {
+  const profile = resetGuestDailyUsageIfNeeded(guestId);
+  const plan = checkPlanAccess(profile);
+  if (!plan.ok) {
+    setGuestAccessState(guestId, plan.state);
+    return { ok: false, status: 403, state: plan.state, error: plan.message };
+  }
+
+  const daily = checkDailyLimit(profile, action, plan.planType);
+  if (!daily.ok) return { ok: false, status: 429, error: daily.message };
+
+  const credits = checkCredits(profile, action);
+  if (!credits.ok) {
+    setGuestAccessState(guestId, 'blocked_no_credits');
+    return { ok: false, status: 429, state: 'blocked_no_credits' as AccessState, error: credits.message };
+  }
+
+  setGuestAccessState(guestId, plan.state);
+  return { ok: true, planType: plan.planType, profile };
+}
+
+export function deductGuestCredits(guestId: string, action: UsageAction) {
+  const profile = getGuestUsageProfile(guestId);
+  const cost = creditCostFor(action);
+  profile.monthly_credits_used = Number(profile.monthly_credits_used || 0) + cost;
+  profile.monthly_credits_remaining = Math.max(0, Number(profile.monthly_credits_remaining || 0) - cost);
+
+  if (action === 'ai_question') profile.daily_ai_questions_used = Number(profile.daily_ai_questions_used || 0) + 1;
+  if (action === 'image_analysis') profile.daily_image_analyses_used = Number(profile.daily_image_analyses_used || 0) + 1;
+  if (action === 'illustration') profile.daily_illustrations_used = Number(profile.daily_illustrations_used || 0) + 1;
+
+  saveGuestUsageProfile(guestId, profile);
+}
+
 export function getPlanConfig(planType: PlanType) {
   return {
     planType,
@@ -238,5 +304,3 @@ export function getPlanConfig(planType: PlanType) {
     monthlyCredits: MONTHLY_CREDITS[planType],
   };
 }
-
-export { DAILY_LIMITS, MONTHLY_CREDITS, CREDIT_COSTS };

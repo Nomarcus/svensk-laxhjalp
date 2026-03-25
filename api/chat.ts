@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { getSupabaseAdmin, verifyToken } from '../src/lib/supabase-server';
-import { deductCredits, detectActionFromPrompt, enforceUsageAccess } from '../src/lib/subscription';
+import { deductCredits, deductGuestCredits, detectActionFromPrompt, enforceGuestUsageAccess, enforceUsageAccess } from '../src/lib/subscription';
 
 const TEXT_MODEL = process.env.AI_TEXT_MODEL || 'gemini-2.5-flash-lite';
 const MAX_HISTORY_PAIRS = 8;
@@ -55,12 +55,13 @@ export default async function handler(req: any, res: any) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  let uid: string;
+  let uid: string | null = null;
+  const guestId = req.headers['x-guest-user-id'] as string | undefined;
   try {
     const verified = await verifyToken(req.headers.authorization);
     uid = verified.uid;
   } catch {
-    return res.status(401).json({ error: 'Ogiltig token. Logga in igen.' });
+    if (!guestId) return res.status(401).json({ error: 'Ogiltig token. Logga in igen.' });
   }
 
   try {
@@ -69,9 +70,15 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: 'Meddelande eller bild krävs.' });
     }
 
-    const supabase = getSupabaseAdmin();
     const action = detectActionFromPrompt(prompt || '', Boolean(imageBase64));
-    const access = await enforceUsageAccess(supabase, uid, action);
+    let access: any;
+    let supabase: any = null;
+    if (uid) {
+      supabase = getSupabaseAdmin();
+      access = await enforceUsageAccess(supabase, uid, action);
+    } else {
+      access = enforceGuestUsageAccess(guestId as string, action);
+    }
     if (!access.ok) {
       return res.status(access.status || 403).json({ error: access.error, state: access.state || 'expired' });
     }
@@ -102,7 +109,11 @@ export default async function handler(req: any, res: any) {
       config: { systemInstruction: SYSTEM_INSTRUCTION },
     });
 
-    await deductCredits(supabase, uid, action);
+    if (uid && supabase) {
+      await deductCredits(supabase, uid, action);
+    } else {
+      deductGuestCredits(guestId as string, action);
+    }
 
     res.json({ text: response.text, usage: response.usageMetadata });
   } catch (error: any) {

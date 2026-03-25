@@ -90,6 +90,7 @@ export default function PricingCard({ currentTier, currentPlanType = 'none', onU
         'Läxplanering & kalender',
         'Koppling till läroplanen',
         'Visa facit och fördjupning',
+        'Skapa läxa med AI',
       ],
     },
     {
