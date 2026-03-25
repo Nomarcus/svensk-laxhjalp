@@ -1,18 +1,29 @@
 import { supabase } from '../supabase';
 
+const GUEST_ID_KEY = 'laxhjalp_guest_id';
+
+function getGuestId(): string {
+  const existing = localStorage.getItem(GUEST_ID_KEY);
+  if (existing) return existing;
+  const id = (globalThis.crypto?.randomUUID?.() || `guest_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
+  localStorage.setItem(GUEST_ID_KEY, id);
+  return id;
+}
+
 async function getAuthToken(): Promise<string> {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error('Inte inloggad.');
-  return session.access_token;
+  return session?.access_token || '';
 }
 
 async function apiRequest(endpoint: string, body: object): Promise<any> {
   const token = await getAuthToken();
+  const guestId = getGuestId();
   const response = await fetch(`/api/${endpoint}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      'x-guest-user-id': guestId,
     },
     body: JSON.stringify(body),
   });
