@@ -35,7 +35,7 @@ export const CREDIT_COSTS: Record<UsageAction, number> = {
   fordjupning: 2,
   study_plan: 3,
   create_homework: 2,
-  curriculum_link: 1,
+  curriculum_link: 0,
 };
 
 function dateOnly(now = new Date()) {
@@ -45,6 +45,23 @@ function dateOnly(now = new Date()) {
 function isPast(isoDate: string | null | undefined, now = new Date()) {
   if (!isoDate) return true;
   return new Date(isoDate).getTime() < now.getTime();
+}
+
+function resolvePlanType(profile: any): PlanType {
+  if (profile?.plan_type) return profile.plan_type;
+  if (profile?.tier === 'plus' || profile?.tier === 'pro') return profile.tier;
+  return 'none';
+}
+
+function hasPaidAccess(profile: any, now = new Date()) {
+  const status = profile?.subscription_status;
+  if (status === 'active') return true;
+  if (status === 'canceled' && profile?.current_period_end && !isPast(profile.current_period_end, now)) return true;
+  return false;
+}
+
+function consumesAiQuestionLimit(action: UsageAction) {
+  return action !== 'image_analysis' && action !== 'illustration';
 }
 
 export function creditCostFor(action: UsageAction): number {
@@ -78,7 +95,7 @@ export async function resetDailyUsageIfNeeded(supabase: SupabaseClient, uid: str
 }
 
 export async function resetMonthlyCreditsIfNeeded(supabase: SupabaseClient, uid: string, profile: any, now = new Date()) {
-  const planType: PlanType = profile?.plan_type || (profile?.tier === 'plus' || profile?.tier === 'pro' ? profile.tier : 'none');
+  const planType: PlanType = resolvePlanType(profile);
   if (planType !== 'plus' && planType !== 'pro') return;
 
   const periodEnd = profile?.billing_period_end ? new Date(profile.billing_period_end) : null;
@@ -103,7 +120,7 @@ export async function resetMonthlyCreditsIfNeeded(supabase: SupabaseClient, uid:
 }
 
 export function checkPlanAccess(profile: any, now = new Date()): { ok: boolean; state: AccessState; message?: string; planType: PlanType } {
-  const planType: PlanType = profile?.plan_type || (profile?.tier === 'plus' || profile?.tier === 'pro' ? profile.tier : 'none');
+  const planType: PlanType = resolvePlanType(profile);
 
   if (planType === 'trial') {
     if (!profile?.trial_ends_at || isPast(profile.trial_ends_at, now)) {
@@ -117,8 +134,29 @@ export function checkPlanAccess(profile: any, now = new Date()): { ok: boolean; 
     return { ok: true, state: 'trial_active', planType };
   }
 
-  if (planType === 'plus') return { ok: true, state: 'plus_active', planType };
-  if (planType === 'pro') return { ok: true, state: 'pro_active', planType };
+  if (planType === 'plus') {
+    if (!hasPaidAccess(profile, now)) {
+      return {
+        ok: false,
+        state: 'expired',
+        planType,
+        message: 'Din gratisperiod är slut. Välj Plus eller Pro för att fortsätta använda tjänsten.',
+      };
+    }
+    return { ok: true, state: 'plus_active', planType };
+  }
+
+  if (planType === 'pro') {
+    if (!hasPaidAccess(profile, now)) {
+      return {
+        ok: false,
+        state: 'expired',
+        planType,
+        message: 'Din gratisperiod är slut. Välj Plus eller Pro för att fortsätta använda tjänsten.',
+      };
+    }
+    return { ok: true, state: 'pro_active', planType };
+  }
 
   return {
     ok: false,
@@ -129,16 +167,13 @@ export function checkPlanAccess(profile: any, now = new Date()): { ok: boolean; 
 }
 
 export function checkDailyLimit(profile: any, action: UsageAction, planType: PlanType): { ok: boolean; message?: string } {
-  const isLimitedAction = action === 'ai_question' || action === 'image_analysis' || action === 'illustration';
-  if (!isLimitedAction) return { ok: true };
-
   const daily = DAILY_LIMITS[planType] || DAILY_LIMITS.none;
 
   const aiUsed = profile?.daily_ai_questions_used || 0;
   const imageUsed = profile?.daily_image_analyses_used || 0;
   const illustrationUsed = profile?.daily_illustrations_used || 0;
 
-  if (action === 'ai_question' && aiUsed >= daily.ai_question) {
+  if (consumesAiQuestionLimit(action) && aiUsed >= daily.ai_question) {
     return { ok: false, message: 'Du har nått dagens gräns för denna funktion. Försök igen imorgon eller uppgradera din plan.' };
   }
   if (action === 'image_analysis' && imageUsed >= daily.image_analysis) {
@@ -181,7 +216,7 @@ export async function deductCredits(supabase: SupabaseClient, uid: string, actio
     monthly_credits_remaining: Math.max(0, Number(profile?.monthly_credits_remaining || 0) - cost),
   };
 
-  if (action === 'ai_question') updates.daily_ai_questions_used = Number(profile?.daily_ai_questions_used || 0) + 1;
+  if (consumesAiQuestionLimit(action)) updates.daily_ai_questions_used = Number(profile?.daily_ai_questions_used || 0) + 1;
   if (action === 'image_analysis') updates.daily_image_analyses_used = Number(profile?.daily_image_analyses_used || 0) + 1;
   if (action === 'illustration') updates.daily_illustrations_used = Number(profile?.daily_illustrations_used || 0) + 1;
 
@@ -192,7 +227,7 @@ export async function enforceUsageAccess(supabase: SupabaseClient, uid: string, 
   const { data: profile } = await supabase
     .from('users')
     .select(`
-      id, tier, subscription_status, plan_type,
+      id, tier, subscription_status, current_period_end, cancel_at_period_end, plan_type,
       trial_started_at, trial_ends_at,
       billing_period_start, billing_period_end,
       monthly_credits_total, monthly_credits_used, monthly_credits_remaining,
@@ -211,7 +246,7 @@ export async function enforceUsageAccess(supabase: SupabaseClient, uid: string, 
   const { data: refreshed } = await supabase
     .from('users')
     .select(`
-      id, tier, subscription_status, plan_type,
+      id, tier, subscription_status, current_period_end, cancel_at_period_end, plan_type,
       trial_started_at, trial_ends_at,
       billing_period_start, billing_period_end,
       monthly_credits_total, monthly_credits_used, monthly_credits_remaining,
@@ -290,7 +325,7 @@ export function deductGuestCredits(guestId: string, action: UsageAction) {
   profile.monthly_credits_used = Number(profile.monthly_credits_used || 0) + cost;
   profile.monthly_credits_remaining = Math.max(0, Number(profile.monthly_credits_remaining || 0) - cost);
 
-  if (action === 'ai_question') profile.daily_ai_questions_used = Number(profile.daily_ai_questions_used || 0) + 1;
+  if (consumesAiQuestionLimit(action)) profile.daily_ai_questions_used = Number(profile.daily_ai_questions_used || 0) + 1;
   if (action === 'image_analysis') profile.daily_image_analyses_used = Number(profile.daily_image_analyses_used || 0) + 1;
   if (action === 'illustration') profile.daily_illustrations_used = Number(profile.daily_illustrations_used || 0) + 1;
 
