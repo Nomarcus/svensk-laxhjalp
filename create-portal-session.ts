@@ -1,0 +1,142 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields: uid, displayName, email, createdAt
+    //
+    // Collection: chatSessions (subcollection of users)
+    // Fields: id, userId, title, createdAt, updatedAt
+    //
+    // Collection: messages (subcollection of chatSessions)
+    // Fields: role, content, timestamp, attachments
+    //
+    // Collection: tasks (subcollection of children)
+    // Fields: day, subject, description, completed, weekNumber, year, createdAt
+    //
+    // Collection: library (subcollection of children)
+    // Fields: id, title, content, type, imageUrl, createdAt, subject
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isSharedParent(userId, childId) {
+      return isAuthenticated() && 
+             (request.auth.uid == userId || 
+              (exists(/databases/$(database)/documents/users/$(userId)/children/$(childId)) &&
+               request.auth.token.email in get(/databases/$(database)/documents/users/$(userId)/children/$(childId)).data.sharedWith));
+    }
+
+    function isValidUser(data) {
+      return data.uid is string && data.uid.size() > 0;
+    }
+
+    function isValidChatSession(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() < 200;
+    }
+
+    function isValidMessage(data) {
+      return data.role in ['user', 'model'] &&
+             data.content is string && data.content.size() < 10000 &&
+             (!('generatedImage' in data) || (data.generatedImage is string && data.generatedImage.size() < 1048576)) &&
+             (!('attachments' in data) || (data.attachments is list && data.attachments.size() < 5));
+    }
+
+    function isValidHomeworkPlan(data) {
+      return data.weekNumber is int && data.year is int;
+    }
+
+    function isValidTask(data) {
+      return data.day is string && data.day.size() > 0 &&
+             data.subject is string && data.subject.size() > 0 && data.subject.size() < 100 &&
+             (!('description' in data) || (data.description is string && data.description.size() < 1000)) &&
+             data.weekNumber is int && data.year is int;
+    }
+
+    function isValidChild(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 50 &&
+             (!('grade' in data) || (data.grade is string && data.grade.size() < 20));
+    }
+
+    function isValidLibraryItem(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.type in ['text', 'image'] &&
+             (!('content' in data) || data.content == null || (data.content is string && data.content.size() < 10000)) &&
+             (!('imageUrl' in data) || data.imageUrl == null || (data.imageUrl is string && data.imageUrl.size() < 1048576)) &&
+             (!('subject' in data) || data.subject == null || (data.subject is string && data.subject.size() < 100));
+    }
+
+    // Subscription fields that only the server (Admin SDK) can write
+    function noSubscriptionTampering(data) {
+      return (!('tier' in data) || data.tier == resource.data.tier)
+          && (!('subscriptionStatus' in data) || data.subscriptionStatus == resource.data.subscriptionStatus)
+          && (!('stripeCustomerId' in data) || data.stripeCustomerId == resource.data.stripeCustomerId)
+          && (!('stripeSubscriptionId' in data) || data.stripeSubscriptionId == resource.data.stripeSubscriptionId);
+    }
+
+    // Rules
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data)
+                    && (resource.data == null || noSubscriptionTampering(request.resource.data));
+
+      // Usage tracking (read-only for client, server writes via Admin SDK)
+      match /usage/{dateId} {
+        allow read: if isOwner(userId);
+      }
+
+      match /children/{childId} {
+        allow read: if isOwner(userId) || (isAuthenticated() && 'sharedWith' in resource.data && request.auth.token.email in resource.data.sharedWith);
+        allow create: if isOwner(userId) && isValidChild(request.resource.data);
+        allow update: if isOwner(userId) && isValidChild(request.resource.data);
+        allow delete: if isOwner(userId);
+
+        match /chatSessions/{sessionId} {
+          allow read: if isSharedParent(userId, childId);
+          allow create: if isSharedParent(userId, childId) && isValidChatSession(request.resource.data);
+          allow update: if isSharedParent(userId, childId) && isValidChatSession(request.resource.data);
+          allow delete: if isSharedParent(userId, childId);
+
+          match /messages/{messageId} {
+            allow read: if isSharedParent(userId, childId);
+            allow create: if isSharedParent(userId, childId) && isValidMessage(request.resource.data);
+            allow update: if isSharedParent(userId, childId) && isValidMessage(request.resource.data);
+          }
+        }
+
+        match /homeworkPlans/{planId} {
+          allow read: if isSharedParent(userId, childId);
+          allow create: if isSharedParent(userId, childId) && isValidHomeworkPlan(request.resource.data);
+          allow update: if isSharedParent(userId, childId) && isValidHomeworkPlan(request.resource.data);
+          allow delete: if isSharedParent(userId, childId);
+        }
+
+        match /tasks/{taskId} {
+          allow read: if isSharedParent(userId, childId);
+          allow create: if isSharedParent(userId, childId) && isValidTask(request.resource.data);
+          allow update: if isSharedParent(userId, childId) && isValidTask(request.resource.data);
+          allow delete: if isSharedParent(userId, childId);
+        }
+
+        match /library/{itemId} {
+          allow read: if isSharedParent(userId, childId);
+          allow create: if isSharedParent(userId, childId) && isValidLibraryItem(request.resource.data);
+          allow update: if isSharedParent(userId, childId) && isValidLibraryItem(request.resource.data);
+          allow delete: if isSharedParent(userId, childId);
+        }
+      }
+    }
+  }
+}

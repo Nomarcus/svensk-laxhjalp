@@ -1,8 +1,16 @@
-{
-  "name": "Svensk Läxhjälp för Föräldrar",
-  "description": "En pedagogisk assistent som hjälper föräldrar att stötta sina barn med läxor och skolarbete i den svenska skolan.",
-  "requestFramePermissions": [
-    "camera",
-    "microphone"
-  ]
-}
+node_modules
+dist
+.git
+.env*
+!.env.example
+*.md
+src/
+public/
+index.html
+vite.config.ts
+tsconfig.json
+firestore.rules
+firebase-blueprint.json
+AppData/
+.firebase/
+.claude/
