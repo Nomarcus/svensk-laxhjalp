@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { getSupabaseAdmin } from '../../src/lib/supabase-server';
+import { MONTHLY_CREDITS } from '../../src/lib/subscription';
 
 export const config = { api: { bodyParser: false } };
 
@@ -10,6 +10,26 @@ async function getRawBody(req: any): Promise<Buffer> {
     req.on('end', () => resolve(Buffer.concat(chunks)));
     req.on('error', reject);
   });
+}
+
+async function getFirebaseAdmin() {
+  const mod = await import('firebase-admin');
+  const admin = mod.default;
+  if (!admin.apps?.length) {
+    const sa = process.env.FIREBASE_SERVICE_ACCOUNT;
+    if (sa) admin.initializeApp({ credential: admin.credential.cert(JSON.parse(sa)) });
+    else admin.initializeApp();
+  }
+  return admin;
+}
+
+function resolvePlanFromPrice(subscription: Stripe.Subscription): 'plus' | 'pro' {
+  const priceId = subscription.items?.data?.[0]?.price?.id || '';
+  if (priceId.includes('pro')) return 'pro';
+  // Check amount: Pro is 79 kr (7900 öre), Plus is 49 kr (4900 öre)
+  const amount = subscription.items?.data?.[0]?.price?.unit_amount || 0;
+  if (amount >= 7000) return 'pro';
+  return 'plus';
 }
 
 export default async function handler(req: any, res: any) {
@@ -27,63 +47,79 @@ export default async function handler(req: any, res: any) {
     return res.status(400).json({ error: 'Signature failed.' });
   }
 
-  const supabase = getSupabaseAdmin();
+  const admin = await getFirebaseAdmin();
+  const db = admin.firestore();
 
   try {
     if (event.type === 'checkout.session.completed') {
       const s = event.data.object as Stripe.Checkout.Session;
-      const uid = s.metadata?.uid;
-      const selectedPlan = s.metadata?.selected_plan === 'plus' ? 'plus' : 'pro';
+      const uid = s.metadata?.firebaseUID;
       if (uid && s.subscription) {
         const sub = await stripe.subscriptions.retrieve(s.subscription as string);
-        const totalCredits = selectedPlan === 'pro' ? 900 : 400;
-        await supabase.from('users').update({
-          tier: selectedPlan,
-          plan_type: selectedPlan,
-          subscription_status: 'active',
-          stripe_subscription_id: sub.id,
-          stripe_customer_id: s.customer as string,
-          current_period_end: new Date((sub as any).current_period_end * 1000).toISOString(),
-          cancel_at_period_end: (sub as any).cancel_at_period_end,
-          billing_period_start: new Date().toISOString(),
-          billing_period_end: new Date((sub as any).current_period_end * 1000).toISOString(),
-          monthly_credits_total: totalCredits,
-          monthly_credits_used: 0,
-          monthly_credits_remaining: totalCredits,
-        }).eq('id', uid);
+        const plan = resolvePlanFromPrice(sub);
+        const total = MONTHLY_CREDITS[plan];
+        const now = new Date();
+        const periodEnd = new Date(sub.current_period_end * 1000);
+
+        await db.doc(`users/${uid}`).set({
+          tier: plan,
+          planType: plan,
+          subscriptionStatus: 'active',
+          stripeSubscriptionId: sub.id,
+          stripeCustomerId: s.customer as string,
+          currentPeriodEnd: periodEnd.toISOString(),
+          cancelAtPeriodEnd: sub.cancel_at_period_end,
+          monthlyCreditsTotal: total,
+          monthlyCreditsUsed: 0,
+          monthlyCreditsRemaining: total,
+          billingPeriodStart: now.toISOString(),
+          billingPeriodEnd: periodEnd.toISOString(),
+        }, { merge: true });
       }
     } else if (event.type === 'customer.subscription.updated') {
       const sub = event.data.object as Stripe.Subscription;
-      const uid = sub.metadata?.uid;
-      const plan = sub.metadata?.selected_plan === 'plus' ? 'plus' : 'pro';
+      const uid = sub.metadata?.firebaseUID;
       if (uid) {
-        await supabase.from('users').update({
-          tier: sub.status === 'active' ? plan : 'free',
-          plan_type: sub.status === 'active' ? plan : 'none',
-          subscription_status: sub.status === 'active' ? 'active' : 'past_due',
-          current_period_end: new Date((sub as any).current_period_end * 1000).toISOString(),
-          cancel_at_period_end: (sub as any).cancel_at_period_end,
-          billing_period_end: new Date((sub as any).current_period_end * 1000).toISOString(),
-        }).eq('id', uid);
+        const isActive = sub.status === 'active';
+        const plan = isActive ? resolvePlanFromPrice(sub) : 'none';
+        const total = isActive ? MONTHLY_CREDITS[plan as 'plus' | 'pro'] : 0;
+
+        const updates: Record<string, any> = {
+          tier: isActive ? plan : 'free',
+          planType: plan,
+          subscriptionStatus: isActive ? 'active' : 'past_due',
+          currentPeriodEnd: new Date(sub.current_period_end * 1000).toISOString(),
+          cancelAtPeriodEnd: sub.cancel_at_period_end,
+        };
+
+        // Only reset credits if plan changed or new period
+        if (isActive) {
+          updates.monthlyCreditsTotal = total;
+        }
+
+        await db.doc(`users/${uid}`).set(updates, { merge: true });
       }
     } else if (event.type === 'customer.subscription.deleted') {
       const sub = event.data.object as Stripe.Subscription;
-      const uid = sub.metadata?.uid;
+      const uid = sub.metadata?.firebaseUID;
       if (uid) {
-        await supabase.from('users').update({
+        await db.doc(`users/${uid}`).set({
           tier: 'free',
-          plan_type: 'none',
-          subscription_status: 'none',
-          stripe_subscription_id: null,
-          current_period_end: null,
-          cancel_at_period_end: false,
-        }).eq('id', uid);
+          planType: 'none',
+          subscriptionStatus: 'none',
+          stripeSubscriptionId: null,
+          currentPeriodEnd: null,
+          cancelAtPeriodEnd: false,
+          monthlyCreditsTotal: 0,
+          monthlyCreditsUsed: 0,
+          monthlyCreditsRemaining: 0,
+        }, { merge: true });
       }
     } else if (event.type === 'invoice.payment_failed') {
       const inv = event.data.object as Stripe.Invoice;
-      const { data: users } = await supabase.from('users').select('id').eq('stripe_customer_id', inv.customer as string).limit(1);
-      if (users && users.length > 0) {
-        await supabase.from('users').update({ subscription_status: 'past_due' }).eq('id', users[0].id);
+      const snap = await db.collection('users').where('stripeCustomerId', '==', inv.customer as string).limit(1).get();
+      if (!snap.empty) {
+        await snap.docs[0].ref.set({ subscriptionStatus: 'past_due' }, { merge: true });
       }
     }
 

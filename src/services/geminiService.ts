@@ -1,29 +1,18 @@
-import { supabase } from '../supabase';
-
-const GUEST_ID_KEY = 'laxhjalp_guest_id';
-
-function getGuestId(): string {
-  const existing = localStorage.getItem(GUEST_ID_KEY);
-  if (existing) return existing;
-  const id = (globalThis.crypto?.randomUUID?.() || `guest_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
-  localStorage.setItem(GUEST_ID_KEY, id);
-  return id;
-}
+import { auth } from '../firebase';
 
 async function getAuthToken(): Promise<string> {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.access_token || '';
+  const user = auth.currentUser;
+  if (!user) throw new Error('Inte inloggad.');
+  return user.getIdToken();
 }
 
 async function apiRequest(endpoint: string, body: object): Promise<any> {
   const token = await getAuthToken();
-  const guestId = getGuestId();
   const response = await fetch(`/api/${endpoint}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-      'x-guest-user-id': guestId,
+      'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify(body),
   });
@@ -111,10 +100,10 @@ Skriv på svenska. Anpassa till grundskolenivå. Använd tydliga rubriker och nu
 }
 
 export async function generateStudyPlan(
-  tasks: Array<{ subject: string; description: string; due_day?: string; work_days?: string[]; minutes_per_day?: number; completed: boolean; completed_days?: string[] }>
+  tasks: Array<{ subject: string; description: string; dueDay?: string; workDays?: string[]; minutesPerDay?: number; completed: boolean; completedDays?: string[] }>
 ): Promise<string> {
   const taskSummary = tasks.map((t, i) =>
-    `${i + 1}. ${t.subject}: ${t.description} (Inlämning: ${t.due_day || 'ej satt'}, Tid: ${t.minutes_per_day || '?'} min/dag, Klar: ${t.completed ? 'ja' : 'nej'}, Klara dagar: ${t.completed_days?.join(', ') || 'inga'})`
+    `${i + 1}. ${t.subject}: ${t.description} (Inlämning: ${t.dueDay || 'ej satt'}, Tid: ${t.minutesPerDay || '?'} min/dag, Klar: ${t.completed ? 'ja' : 'nej'}, Klara dagar: ${t.completedDays?.join(', ') || 'inga'})`
   ).join('\n');
 
   const prompt = `Analysera dessa läxor för veckan och ge en optimal studieplan:

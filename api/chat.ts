@@ -1,6 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import { getSupabaseAdmin, verifyToken } from '../src/lib/supabase-server';
-import { deductCredits, deductGuestCredits, detectActionFromPrompt, enforceGuestUsageAccess, enforceUsageAccess } from '../src/lib/subscription';
+import { detectActionFromPrompt, enforceUsageAccessFirestore, deductCreditsFirestore, enforceGuestUsageAccess, deductGuestCredits } from '../src/lib/subscription';
 
 const TEXT_MODEL = process.env.AI_TEXT_MODEL || 'gemini-2.5-flash-lite';
 const MAX_HISTORY_PAIRS = 8;
@@ -50,6 +49,17 @@ function trimHistory(history: { role: string; content: string }[]) {
   return history.slice(-MAX_HISTORY_PAIRS * 2);
 }
 
+async function getFirebaseAdmin() {
+  const mod = await import('firebase-admin');
+  const admin = mod.default;
+  if (!admin.apps?.length) {
+    const sa = process.env.FIREBASE_SERVICE_ACCOUNT;
+    if (sa) admin.initializeApp({ credential: admin.credential.cert(JSON.parse(sa)) });
+    else admin.initializeApp();
+  }
+  return admin;
+}
+
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -57,11 +67,18 @@ export default async function handler(req: any, res: any) {
 
   let uid: string | null = null;
   const guestId = req.headers['x-guest-user-id'] as string | undefined;
-  try {
-    const verified = await verifyToken(req.headers.authorization);
-    uid = verified.uid;
-  } catch {
-    if (!guestId) return res.status(401).json({ error: 'Ogiltig token. Logga in igen.' });
+  const authHeader = req.headers.authorization;
+
+  if (authHeader?.startsWith('Bearer ')) {
+    try {
+      const admin = await getFirebaseAdmin();
+      const decoded = await admin.auth().verifyIdToken(authHeader.split('Bearer ')[1]);
+      uid = decoded.uid;
+    } catch {
+      return res.status(401).json({ error: 'Ogiltig token. Logga in igen.' });
+    }
+  } else if (!guestId) {
+    return res.status(401).json({ error: 'Ingen autentisering. Logga in först.' });
   }
 
   try {
@@ -70,12 +87,14 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: 'Meddelande eller bild krävs.' });
     }
 
+    // Check usage limits
     const action = detectActionFromPrompt(prompt || '', Boolean(imageBase64));
     let access: any;
-    let supabase: any = null;
+    let db: any = null;
     if (uid) {
-      supabase = getSupabaseAdmin();
-      access = await enforceUsageAccess(supabase, uid, action);
+      const admin = await getFirebaseAdmin();
+      db = admin.firestore();
+      access = await enforceUsageAccessFirestore(db, uid, action);
     } else {
       access = enforceGuestUsageAccess(guestId as string, action);
     }
@@ -109,8 +128,9 @@ export default async function handler(req: any, res: any) {
       config: { systemInstruction: SYSTEM_INSTRUCTION },
     });
 
-    if (uid && supabase) {
-      await deductCredits(supabase, uid, action);
+    // Deduct credits after successful response
+    if (uid && db) {
+      await deductCreditsFirestore(db, uid, action);
     } else {
       deductGuestCredits(guestId as string, action);
     }

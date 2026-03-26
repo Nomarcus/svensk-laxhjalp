@@ -108,12 +108,12 @@ export default function ChatMessage({
             </div>
           )}
         </div>
-        {msg.generated_image && (
-          <img src={msg.generated_image} alt="AI Generated Illustration" className="max-w-xs rounded-xl border border-black/5 shadow-sm" />
+        {msg.generatedImage && (
+          <img src={msg.generatedImage} alt="AI Generated Illustration" className="max-w-xs rounded-xl border border-black/5 shadow-sm" />
         )}
         {msg.role === 'model' && (
           <div className="flex flex-wrap gap-2 mt-1">
-            {!msg.generated_image && (
+            {!msg.generatedImage && (
               <button
                 onClick={() => onGenerateImage(msg.id, msg.content)}
                 disabled={generatingImageId === msg.id}

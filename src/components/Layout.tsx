@@ -1,6 +1,6 @@
 import React from 'react';
 import { LogOut, MessageSquare, Calendar, BookOpen, User as UserIcon, ChevronDown, Settings, Info, Library, Crown, Download, Users, X, Menu } from 'lucide-react';
-import { logout, User } from '../supabase';
+import { logout, User } from '../firebase';
 import { cn } from '../utils/cn';
 import type { Child, SubscriptionTier } from '../types';
 
@@ -32,8 +32,8 @@ export default function Layout({
   const [showChildSelect, setShowChildSelect] = React.useState(false);
   const [showMobileMenu, setShowMobileMenu] = React.useState(false);
   const selectedChild = childrenList.find(c => c.id === selectedChildId);
-  const isSharedChild = (child: Child) => child.owner_id !== user.id;
-  const hasSharing = (child: Child) => (child.shared_with?.length || 0) > 0;
+  const isSharedChild = (child: Child) => child.ownerId !== user.uid;
+  const hasSharing = (child: Child) => (child.sharedWith?.length || 0) > 0;
 
   const handleTabChange = (tab: typeof activeTab) => {
     setActiveTab(tab);
@@ -199,15 +199,15 @@ export default function Layout({
             </button>
           )}
           <div className="flex items-center gap-3 px-4 py-3 mb-2">
-            {user.user_metadata?.avatar_url ? (
-              <img src={user.user_metadata?.avatar_url} alt={user.user_metadata?.full_name || ''} className="w-8 h-8 rounded-full" referrerPolicy="no-referrer" />
+            {user.photoURL ? (
+              <img src={user.photoURL} alt={user.displayName || ''} className="w-8 h-8 rounded-full" referrerPolicy="no-referrer" />
             ) : (
               <div className="w-8 h-8 bg-stone-200 rounded-full flex items-center justify-center">
                 <UserIcon size={16} className="text-stone-500" />
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user.user_metadata?.full_name || 'Användare'}</p>
+              <p className="text-sm font-medium truncate">{user.displayName || 'Användare'}</p>
               <p className="text-xs text-stone-500 truncate">{user.email}</p>
             </div>
           </div>
@@ -411,15 +411,15 @@ export default function Layout({
             {/* User info + logout */}
             <div className="p-4 border-t border-black/5 mt-auto">
               <div className="flex items-center gap-3 px-3 py-3 mb-2">
-                {user.user_metadata?.avatar_url ? (
-                  <img src={user.user_metadata?.avatar_url} alt={user.user_metadata?.full_name || ''} className="w-8 h-8 rounded-full" referrerPolicy="no-referrer" />
+                {user.photoURL ? (
+                  <img src={user.photoURL} alt={user.displayName || ''} className="w-8 h-8 rounded-full" referrerPolicy="no-referrer" />
                 ) : (
                   <div className="w-8 h-8 bg-stone-200 rounded-full flex items-center justify-center">
                     <UserIcon size={16} className="text-stone-500" />
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{user.user_metadata?.full_name || 'Användare'}</p>
+                  <p className="text-sm font-medium truncate">{user.displayName || 'Användare'}</p>
                   <p className="text-xs text-stone-500 truncate">{user.email}</p>
                 </div>
               </div>

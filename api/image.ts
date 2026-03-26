@@ -1,27 +1,46 @@
 import { GoogleGenAI } from '@google/genai';
-import { getSupabaseAdmin, verifyToken } from '../src/lib/supabase-server';
-import { deductCredits, deductGuestCredits, enforceGuestUsageAccess, enforceUsageAccess } from '../src/lib/subscription';
+import { enforceUsageAccessFirestore, deductCreditsFirestore, enforceGuestUsageAccess, deductGuestCredits } from '../src/lib/subscription';
 
 const IMAGE_MODEL = process.env.AI_IMAGE_MODEL || 'gemini-3.1-flash-image-preview';
+
+async function getFirebaseAdmin() {
+  const mod = await import('firebase-admin');
+  const admin = mod.default;
+  if (!admin.apps?.length) {
+    const sa = process.env.FIREBASE_SERVICE_ACCOUNT;
+    if (sa) admin.initializeApp({ credential: admin.credential.cert(JSON.parse(sa)) });
+    else admin.initializeApp();
+  }
+  return admin;
+}
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   let uid: string | null = null;
   const guestId = req.headers['x-guest-user-id'] as string | undefined;
-  try {
-    const verified = await verifyToken(req.headers.authorization);
-    uid = verified.uid;
-  } catch {
-    if (!guestId) return res.status(401).json({ error: 'Ogiltig token.' });
+  const authHeader = req.headers.authorization;
+
+  if (authHeader?.startsWith('Bearer ')) {
+    try {
+      const admin = await getFirebaseAdmin();
+      const decoded = await admin.auth().verifyIdToken(authHeader.split('Bearer ')[1]);
+      uid = decoded.uid;
+    } catch {
+      return res.status(401).json({ error: 'Ogiltig token.' });
+    }
+  } else if (!guestId) {
+    return res.status(401).json({ error: 'Ingen autentisering.' });
   }
 
   try {
+    // Check usage limits
     let access: any;
-    let supabase: any = null;
+    let db: any = null;
     if (uid) {
-      supabase = getSupabaseAdmin();
-      access = await enforceUsageAccess(supabase, uid, 'illustration');
+      const admin = await getFirebaseAdmin();
+      db = admin.firestore();
+      access = await enforceUsageAccessFirestore(db, uid, 'illustration');
     } else {
       access = enforceGuestUsageAccess(guestId as string, 'illustration');
     }
@@ -44,8 +63,9 @@ export default async function handler(req: any, res: any) {
       for (const part of response.candidates[0].content.parts) {
         if (part.inlineData) {
           const mimeType = part.inlineData.mimeType || 'image/png';
-          if (uid && supabase) {
-            await deductCredits(supabase, uid, 'illustration');
+          // Deduct credits
+          if (uid && db) {
+            await deductCreditsFirestore(db, uid, 'illustration');
           } else {
             deductGuestCredits(guestId as string, 'illustration');
           }

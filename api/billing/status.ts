@@ -1,105 +1,96 @@
-import { verifyToken, getSupabaseAdmin } from '../../src/lib/supabase-server';
-import { checkPlanAccess, getPlanConfig, resetDailyUsageIfNeeded, resetMonthlyCreditsIfNeeded } from '../../src/lib/subscription';
-import { getGuestUsageProfile, resetGuestDailyUsageIfNeeded } from '../../src/lib/guest-usage';
+import { DAILY_LIMITS, MONTHLY_CREDITS, CREDIT_COSTS } from '../../src/lib/subscription';
+
+async function getFirebaseAdmin() {
+  const mod = await import('firebase-admin');
+  const admin = mod.default;
+  if (!admin.apps?.length) {
+    const sa = process.env.FIREBASE_SERVICE_ACCOUNT;
+    if (sa) admin.initializeApp({ credential: admin.credential.cert(JSON.parse(sa)) });
+    else admin.initializeApp();
+  }
+  return admin;
+}
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  try {
-    let uid: string | null = null;
-    const guestId = req.headers['x-guest-user-id'] as string | undefined;
-    try {
-      const verified = await verifyToken(req.headers.authorization);
-      uid = verified.uid;
-    } catch {
-      if (!guestId) throw new Error('MISSING_AUTH_OR_GUEST');
-    }
+  const authHeader = req.headers.authorization;
+  const guestId = req.headers['x-guest-user-id'] as string | undefined;
 
-    if (!uid && guestId) {
-      resetGuestDailyUsageIfNeeded(guestId);
+  if (!authHeader?.startsWith('Bearer ') && !guestId) {
+    return res.status(401).json({ error: 'Ingen autentisering.' });
+  }
+
+  try {
+    // Guest user - return from in-memory store
+    if (!authHeader?.startsWith('Bearer ') && guestId) {
+      const { getGuestUsageProfile } = await import('../../src/lib/guest-usage');
       const profile = getGuestUsageProfile(guestId);
-      const planAccess = checkPlanAccess(profile);
-      const planConfig = getPlanConfig(planAccess.planType);
+      const planType = profile.plan_type || 'none';
+      const limits = DAILY_LIMITS[planType] || DAILY_LIMITS.none;
 
       return res.json({
-        tier: 'free',
-        planType: profile.plan_type || 'none',
-        status: 'none',
-        currentPeriodEnd: profile.billing_period_end || null,
-        cancelAtPeriodEnd: false,
-        state: planAccess.state,
-        trialEndsAt: profile.trial_ends_at || null,
-        billingPeriodStart: profile.billing_period_start || null,
-        billingPeriodEnd: profile.billing_period_end || null,
+        tier: planType === 'trial' ? 'free' : planType,
+        status: planType === 'trial' ? 'active' : 'none',
+        plan_type: planType,
+        trial_ends_at: profile.trial_ends_at || null,
+        daily_limits: limits,
+        monthly_credits_total: profile.monthly_credits_total || 0,
+        monthly_credits_used: profile.monthly_credits_used || 0,
+        monthly_credits_remaining: profile.monthly_credits_remaining || 0,
         usage: {
-          chatCount: profile.daily_ai_questions_used || 0,
-          imageCount: profile.daily_image_analyses_used || 0,
-          illustrationCount: profile.daily_illustrations_used || 0,
+          ai_questions_used: profile.daily_ai_questions_used || 0,
+          image_analyses_used: profile.daily_image_analyses_used || 0,
+          illustrations_used: profile.daily_illustrations_used || 0,
         },
-        limits: {
-          chatLimit: planConfig.dailyLimits.ai_question,
-          imageLimit: planConfig.dailyLimits.image_analysis,
-          illustrationLimit: planConfig.dailyLimits.illustration,
-        },
-        hasCredits: (profile.monthly_credits_remaining || 0) > 0,
+        credit_costs: CREDIT_COSTS,
+        guest: true,
       });
     }
 
-    const supabase = getSupabaseAdmin();
+    // Authenticated user
+    const admin = await getFirebaseAdmin();
+    const decoded = await admin.auth().verifyIdToken(authHeader!.split('Bearer ')[1]);
+    const db = admin.firestore();
+    const data = (await db.doc(`users/${decoded.uid}`).get()).data() || {};
 
-    const { data: userData } = await supabase
-      .from('users')
-      .select(`
-        tier, subscription_status, current_period_end, cancel_at_period_end, plan_type,
-        trial_ends_at, daily_ai_questions_used, daily_image_analyses_used, daily_illustrations_used, daily_usage_date,
-        billing_period_start, billing_period_end, monthly_credits_remaining
-      `)
-      .eq('id', uid!)
-      .single();
+    const planType = data.planType || data.plan_type || 'none';
+    const limits = DAILY_LIMITS[planType] || DAILY_LIMITS.none;
 
-    await resetDailyUsageIfNeeded(supabase, uid!, userData?.daily_usage_date);
-    await resetMonthlyCreditsIfNeeded(supabase, uid!, userData);
+    // Reset daily usage if needed
+    const today = new Date().toISOString().split('T')[0];
+    let aiUsed = data.dailyAiQuestionsUsed || 0;
+    let imageUsed = data.dailyImageAnalysesUsed || 0;
+    let illustrationUsed = data.dailyIllustrationsUsed || 0;
 
-    const { data: refreshed } = await supabase
-      .from('users')
-      .select(`
-        tier, subscription_status, current_period_end, cancel_at_period_end, plan_type,
-        trial_ends_at, daily_ai_questions_used, daily_image_analyses_used, daily_illustrations_used, daily_usage_date,
-        billing_period_start, billing_period_end, monthly_credits_remaining
-      `)
-      .eq('id', uid!)
-      .single();
-
-    const planAccess = checkPlanAccess(refreshed);
-    const planConfig = getPlanConfig(planAccess.planType);
+    if (data.dailyUsageDate !== today) {
+      aiUsed = 0;
+      imageUsed = 0;
+      illustrationUsed = 0;
+    }
 
     res.json({
-      tier: refreshed?.tier || 'free',
-      planType: refreshed?.plan_type || 'none',
-      status: refreshed?.subscription_status || 'none',
-      currentPeriodEnd: refreshed?.current_period_end || null,
-      cancelAtPeriodEnd: refreshed?.cancel_at_period_end || false,
-      state: planAccess.state,
-      trialEndsAt: refreshed?.trial_ends_at || null,
-      billingPeriodStart: refreshed?.billing_period_start || null,
-      billingPeriodEnd: refreshed?.billing_period_end || null,
+      tier: data.tier || 'free',
+      status: data.subscriptionStatus || 'none',
+      plan_type: planType,
+      trial_ends_at: data.trialEndsAt || null,
+      currentPeriodEnd: data.currentPeriodEnd || null,
+      cancelAtPeriodEnd: data.cancelAtPeriodEnd || false,
+      daily_limits: limits,
+      monthly_credits_total: data.monthlyCreditsTotal || MONTHLY_CREDITS[planType] || 0,
+      monthly_credits_used: data.monthlyCreditsUsed || 0,
+      monthly_credits_remaining: data.monthlyCreditsRemaining || 0,
       usage: {
-        chatCount: refreshed?.daily_ai_questions_used || 0,
-        imageCount: refreshed?.daily_image_analyses_used || 0,
-        illustrationCount: refreshed?.daily_illustrations_used || 0,
+        ai_questions_used: aiUsed,
+        image_analyses_used: imageUsed,
+        illustrations_used: illustrationUsed,
+        chatCount: aiUsed,
+        imageCount: imageUsed,
       },
-      limits: {
-        chatLimit: planConfig.dailyLimits.ai_question,
-        imageLimit: planConfig.dailyLimits.image_analysis,
-        illustrationLimit: planConfig.dailyLimits.illustration,
-      },
-      hasCredits: (refreshed?.monthly_credits_remaining || 0) > 0,
+      credit_costs: CREDIT_COSTS,
     });
   } catch (error: any) {
     console.error('Status error:', error.message);
-    if (error.message === 'MISSING_AUTH_OR_GUEST') {
-      return res.status(401).json({ error: 'Ogiltig token. Logga in igen.' });
-    }
     res.status(500).json({ error: 'Status misslyckades.' });
   }
 }

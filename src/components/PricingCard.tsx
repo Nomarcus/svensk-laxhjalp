@@ -1,49 +1,63 @@
 import React, { useState } from 'react';
 import { Check, Crown, Zap, Star } from 'lucide-react';
-import { supabase } from '../supabase';
+import { auth } from '../firebase';
 import { cn } from '../utils/cn';
-import type { PlanType, SubscriptionTier } from '../types';
+import type { SubscriptionTier } from '../types';
 
 interface PricingCardProps {
   currentTier: SubscriptionTier;
-  currentPlanType?: PlanType;
   onUpgradeStart?: () => void;
   onUpgradeEnd?: () => void;
 }
 
-export default function PricingCard({ currentTier, currentPlanType = 'none', onUpgradeStart, onUpgradeEnd }: PricingCardProps) {
+export default function PricingCard({ currentTier, onUpgradeStart, onUpgradeEnd }: PricingCardProps) {
+  const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
   const [loading, setLoading] = useState<string | null>(null);
-  const [trialLoading, setTrialLoading] = useState(false);
 
-  const startTrial = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-    setTrialLoading(true);
+  const handleStartTrial = async () => {
+    setLoading('free');
     try {
-      const token = session.access_token;
+      const user = auth.currentUser;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (user) {
+        headers['Authorization'] = `Bearer ${await user.getIdToken()}`;
+      } else {
+        // Guest user
+        let guestId = localStorage.getItem('guest_user_id');
+        if (!guestId) {
+          guestId = 'guest_' + Math.random().toString(36).slice(2) + Date.now();
+          localStorage.setItem('guest_user_id', guestId);
+        }
+        headers['x-guest-user-id'] = guestId;
+      }
+
       const res = await fetch('/api/billing/start-trial', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers,
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Kunde inte starta testperioden.');
-      window.location.reload();
-    } catch (err: any) {
-      alert(err.message || 'Kunde inte starta testperioden.');
+      if (data.ok) {
+        window.location.reload();
+      } else {
+        alert(data.error || 'Kunde inte starta gratisperioden.');
+      }
+    } catch (err) {
+      console.error('Trial start error:', err);
+      alert('Kunde inte starta gratisperioden. Försök igen.');
     } finally {
-      setTrialLoading(false);
+      setLoading(null);
     }
   };
 
   const handleUpgrade = async (tier: 'plus' | 'pro') => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    const user = auth.currentUser;
+    if (!user) return;
 
     setLoading(tier);
     onUpgradeStart?.();
 
     try {
-      const token = session.access_token;
+      const token = await user.getIdToken();
       const res = await fetch(`/api/billing/create-checkout-session`, {
         method: 'POST',
         headers: {
@@ -51,8 +65,7 @@ export default function PricingCard({ currentTier, currentPlanType = 'none', onU
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          priceId: tier,
-          selectedPlan: tier,
+          priceId: `${tier}_${billing}`,
         }),
       });
 
@@ -86,11 +99,9 @@ export default function PricingCard({ currentTier, currentPlanType = 'none', onU
       features: [
         '3 AI-frågor per dag',
         '1 bildanalys per dag',
-        '1 illustration per dag',
+        '1 AI-illustration per dag',
         'Läxplanering & kalender',
         'Koppling till läroplanen',
-        'Visa facit och fördjupning',
-        'Skapa läxa med AI',
       ],
     },
     {
@@ -142,9 +153,38 @@ export default function PricingCard({ currentTier, currentPlanType = 'none', onU
 
   return (
     <div>
+      {/* Billing toggle */}
+      {currentTier === 'free' && (
+        <div className="flex items-center justify-center gap-2 mb-6">
+          <button
+            onClick={() => setBilling('monthly')}
+            className={cn(
+              "text-sm px-4 py-2 rounded-full transition-all",
+              billing === 'monthly'
+                ? "bg-emerald-100 text-emerald-700 font-medium"
+                : "text-stone-400 hover:bg-stone-100"
+            )}
+          >
+            Månadsvis
+          </button>
+          <button
+            onClick={() => setBilling('yearly')}
+            className={cn(
+              "text-sm px-4 py-2 rounded-full transition-all",
+              billing === 'yearly'
+                ? "bg-emerald-100 text-emerald-700 font-medium"
+                : "text-stone-400 hover:bg-stone-100"
+            )}
+          >
+            Årsvis
+            <span className="ml-1 text-[10px] text-amber-600 font-bold">Spara 28%</span>
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
         {plans.map((plan) => {
-          const isCurrent = (plan.id === 'free' && currentPlanType === 'trial') || (plan.id !== 'free' && currentTier === plan.id);
+          const isCurrent = currentTier === plan.id;
           const canUpgrade = tierOrder[plan.id] > tierOrder[currentTier];
 
           return (
@@ -170,10 +210,10 @@ export default function PricingCard({ currentTier, currentPlanType = 'none', onU
               </div>
 
               <p className="text-3xl font-bold mb-0.5">
-                {plan.priceMonthly}
+                {billing === 'monthly' ? plan.priceMonthly : plan.priceYearly}
               </p>
               <p className="text-xs text-stone-400 mb-5">
-                {plan.priceLabel}
+                {billing === 'monthly' ? plan.priceLabel : plan.priceLabelYearly}
               </p>
 
               <ul className="space-y-2.5 mb-5">
@@ -189,13 +229,13 @@ export default function PricingCard({ currentTier, currentPlanType = 'none', onU
                 <div className="py-2.5 text-center text-sm font-medium text-emerald-600 bg-emerald-50 rounded-xl">
                   Nuvarande plan
                 </div>
-              ) : plan.id === 'free' ? (
+              ) : plan.id === 'free' && currentTier === 'free' ? (
                 <button
-                  onClick={startTrial}
-                  disabled={trialLoading || currentPlanType !== 'none'}
-                  className="w-full py-2.5 bg-stone-900 text-white rounded-xl font-medium transition-all disabled:opacity-50"
+                  onClick={handleStartTrial}
+                  disabled={loading !== null}
+                  className="w-full py-2.5 text-white rounded-xl font-medium shadow-lg transition-all active:scale-[0.98] disabled:opacity-50 bg-emerald-600 shadow-emerald-500/20 hover:bg-emerald-700"
                 >
-                  {trialLoading ? 'Startar...' : currentPlanType !== 'none' ? 'Redan använd' : 'Testa gratis'}
+                  {loading === 'free' ? 'Vänta...' : 'Starta gratis i 7 dagar'}
                 </button>
               ) : canUpgrade ? (
                 <button

@@ -1,4 +1,3 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
 import { getGuestUsageProfile, resetGuestDailyUsageIfNeeded, saveGuestUsageProfile, setGuestAccessState } from './guest-usage';
 
 export type PlanType = 'trial' | 'plus' | 'pro' | 'none';
@@ -48,15 +47,19 @@ function isPast(isoDate: string | null | undefined, now = new Date()) {
 }
 
 function resolvePlanType(profile: any): PlanType {
+  if (profile?.planType) return profile.planType;
   if (profile?.plan_type) return profile.plan_type;
   if (profile?.tier === 'plus' || profile?.tier === 'pro') return profile.tier;
   return 'none';
 }
 
 function hasPaidAccess(profile: any, now = new Date()) {
-  const status = profile?.subscription_status;
+  const status = profile?.subscriptionStatus;
   if (status === 'active') return true;
-  if (status === 'canceled' && profile?.current_period_end && !isPast(profile.current_period_end, now)) return true;
+  if (status === 'canceled' && profile?.currentPeriodEnd) {
+    const end = profile.currentPeriodEnd?.toDate ? profile.currentPeriodEnd.toDate() : new Date(profile.currentPeriodEnd);
+    return end.getTime() > now.getTime();
+  }
   return false;
 }
 
@@ -79,51 +82,12 @@ export function detectActionFromPrompt(prompt: string, hasImage: boolean): Usage
   return 'ai_question';
 }
 
-export async function resetDailyUsageIfNeeded(supabase: SupabaseClient, uid: string, dailyUsageDate?: string | null) {
-  const today = dateOnly();
-  if (dailyUsageDate === today) return;
-
-  await supabase
-    .from('users')
-    .update({
-      daily_ai_questions_used: 0,
-      daily_image_analyses_used: 0,
-      daily_illustrations_used: 0,
-      daily_usage_date: today,
-    })
-    .eq('id', uid);
-}
-
-export async function resetMonthlyCreditsIfNeeded(supabase: SupabaseClient, uid: string, profile: any, now = new Date()) {
-  const planType: PlanType = resolvePlanType(profile);
-  if (planType !== 'plus' && planType !== 'pro') return;
-
-  const periodEnd = profile?.billing_period_end ? new Date(profile.billing_period_end) : null;
-  if (periodEnd && periodEnd.getTime() > now.getTime()) return;
-
-  const periodStart = now.toISOString();
-  const next = new Date(now);
-  next.setMonth(next.getMonth() + 1);
-
-  const total = MONTHLY_CREDITS[planType];
-
-  await supabase
-    .from('users')
-    .update({
-      billing_period_start: periodStart,
-      billing_period_end: next.toISOString(),
-      monthly_credits_total: total,
-      monthly_credits_used: 0,
-      monthly_credits_remaining: total,
-    })
-    .eq('id', uid);
-}
-
 export function checkPlanAccess(profile: any, now = new Date()): { ok: boolean; state: AccessState; message?: string; planType: PlanType } {
   const planType: PlanType = resolvePlanType(profile);
 
   if (planType === 'trial') {
-    if (!profile?.trial_ends_at || isPast(profile.trial_ends_at, now)) {
+    const trialEnd = profile?.trialEndsAt || profile?.trial_ends_at;
+    if (!trialEnd || isPast(trialEnd, now)) {
       return {
         ok: false,
         state: 'expired',
@@ -136,24 +100,14 @@ export function checkPlanAccess(profile: any, now = new Date()): { ok: boolean; 
 
   if (planType === 'plus') {
     if (!hasPaidAccess(profile, now)) {
-      return {
-        ok: false,
-        state: 'expired',
-        planType,
-        message: 'Din gratisperiod är slut. Välj Plus eller Pro för att fortsätta använda tjänsten.',
-      };
+      return { ok: false, state: 'expired', planType, message: 'Din gratisperiod är slut. Välj Plus eller Pro för att fortsätta använda tjänsten.' };
     }
     return { ok: true, state: 'plus_active', planType };
   }
 
   if (planType === 'pro') {
     if (!hasPaidAccess(profile, now)) {
-      return {
-        ok: false,
-        state: 'expired',
-        planType,
-        message: 'Din gratisperiod är slut. Välj Plus eller Pro för att fortsätta använda tjänsten.',
-      };
+      return { ok: false, state: 'expired', planType, message: 'Din gratisperiod är slut. Välj Plus eller Pro för att fortsätta använda tjänsten.' };
     }
     return { ok: true, state: 'pro_active', planType };
   }
@@ -169,9 +123,9 @@ export function checkPlanAccess(profile: any, now = new Date()): { ok: boolean; 
 export function checkDailyLimit(profile: any, action: UsageAction, planType: PlanType): { ok: boolean; message?: string } {
   const daily = DAILY_LIMITS[planType] || DAILY_LIMITS.none;
 
-  const aiUsed = profile?.daily_ai_questions_used || 0;
-  const imageUsed = profile?.daily_image_analyses_used || 0;
-  const illustrationUsed = profile?.daily_illustrations_used || 0;
+  const aiUsed = profile?.dailyAiQuestionsUsed || profile?.daily_ai_questions_used || 0;
+  const imageUsed = profile?.dailyImageAnalysesUsed || profile?.daily_image_analyses_used || 0;
+  const illustrationUsed = profile?.dailyIllustrationsUsed || profile?.daily_illustrations_used || 0;
 
   if (consumesAiQuestionLimit(action) && aiUsed >= daily.ai_question) {
     return { ok: false, message: 'Du har nått dagens gräns för denna funktion. Försök igen imorgon eller uppgradera din plan.' };
@@ -188,7 +142,7 @@ export function checkDailyLimit(profile: any, action: UsageAction, planType: Pla
 
 export function checkCredits(profile: any, action: UsageAction): { ok: boolean; state?: AccessState; message?: string; cost: number } {
   const cost = creditCostFor(action);
-  const remaining = Number(profile?.monthly_credits_remaining ?? profile?.monthly_credits_total ?? 0);
+  const remaining = Number(profile?.monthlyCreditsRemaining ?? profile?.monthly_credits_remaining ?? 0);
 
   if (remaining < cost) {
     return {
@@ -202,58 +156,77 @@ export function checkCredits(profile: any, action: UsageAction): { ok: boolean; 
   return { ok: true, cost };
 }
 
-export async function deductCredits(supabase: SupabaseClient, uid: string, action: UsageAction) {
+// Firestore-based deduction (called from API routes)
+export async function deductCreditsFirestore(db: any, uid: string, action: UsageAction) {
   const cost = creditCostFor(action);
-
-  const { data: profile } = await supabase
-    .from('users')
-    .select('monthly_credits_used, monthly_credits_remaining, daily_ai_questions_used, daily_image_analyses_used, daily_illustrations_used')
-    .eq('id', uid)
-    .single();
+  const userRef = db.doc(`users/${uid}`);
+  const snap = await userRef.get();
+  const data = snap.data() || {};
 
   const updates: Record<string, any> = {
-    monthly_credits_used: Number(profile?.monthly_credits_used || 0) + cost,
-    monthly_credits_remaining: Math.max(0, Number(profile?.monthly_credits_remaining || 0) - cost),
+    monthlyCreditsUsed: (data.monthlyCreditsUsed || 0) + cost,
+    monthlyCreditsRemaining: Math.max(0, (data.monthlyCreditsRemaining || 0) - cost),
   };
 
-  if (consumesAiQuestionLimit(action)) updates.daily_ai_questions_used = Number(profile?.daily_ai_questions_used || 0) + 1;
-  if (action === 'image_analysis') updates.daily_image_analyses_used = Number(profile?.daily_image_analyses_used || 0) + 1;
-  if (action === 'illustration') updates.daily_illustrations_used = Number(profile?.daily_illustrations_used || 0) + 1;
+  if (consumesAiQuestionLimit(action)) updates.dailyAiQuestionsUsed = (data.dailyAiQuestionsUsed || 0) + 1;
+  if (action === 'image_analysis') updates.dailyImageAnalysesUsed = (data.dailyImageAnalysesUsed || 0) + 1;
+  if (action === 'illustration') updates.dailyIllustrationsUsed = (data.dailyIllustrationsUsed || 0) + 1;
 
-  await supabase.from('users').update(updates).eq('id', uid);
+  await userRef.update(updates);
 }
 
-export async function enforceUsageAccess(supabase: SupabaseClient, uid: string, action: UsageAction) {
-  const { data: profile } = await supabase
-    .from('users')
-    .select(`
-      id, tier, subscription_status, current_period_end, cancel_at_period_end, plan_type,
-      trial_started_at, trial_ends_at,
-      billing_period_start, billing_period_end,
-      monthly_credits_total, monthly_credits_used, monthly_credits_remaining,
-      daily_ai_questions_used, daily_image_analyses_used, daily_illustrations_used, daily_usage_date
-    `)
-    .eq('id', uid)
-    .single();
+// Firestore-based daily reset
+export async function resetDailyUsageIfNeededFirestore(db: any, uid: string) {
+  const today = dateOnly();
+  const userRef = db.doc(`users/${uid}`);
+  const snap = await userRef.get();
+  const data = snap.data() || {};
 
-  if (!profile) {
-    return { ok: false, status: 403, error: 'Konto hittades inte.' };
-  }
+  if (data.dailyUsageDate === today) return data;
 
-  await resetDailyUsageIfNeeded(supabase, uid, profile.daily_usage_date);
-  await resetMonthlyCreditsIfNeeded(supabase, uid, profile);
+  const updates = {
+    dailyAiQuestionsUsed: 0,
+    dailyImageAnalysesUsed: 0,
+    dailyIllustrationsUsed: 0,
+    dailyUsageDate: today,
+  };
+  await userRef.update(updates);
+  return { ...data, ...updates };
+}
 
-  const { data: refreshed } = await supabase
-    .from('users')
-    .select(`
-      id, tier, subscription_status, current_period_end, cancel_at_period_end, plan_type,
-      trial_started_at, trial_ends_at,
-      billing_period_start, billing_period_end,
-      monthly_credits_total, monthly_credits_used, monthly_credits_remaining,
-      daily_ai_questions_used, daily_image_analyses_used, daily_illustrations_used, daily_usage_date
-    `)
-    .eq('id', uid)
-    .single();
+// Firestore-based monthly reset
+export async function resetMonthlyCreditsIfNeededFirestore(db: any, uid: string, profile: any, now = new Date()) {
+  const planType: PlanType = resolvePlanType(profile);
+  if (planType !== 'plus' && planType !== 'pro') return profile;
+
+  const periodEnd = profile?.billingPeriodEnd ? new Date(profile.billingPeriodEnd) : null;
+  if (periodEnd && periodEnd.getTime() > now.getTime()) return profile;
+
+  const periodStart = now.toISOString();
+  const next = new Date(now);
+  next.setMonth(next.getMonth() + 1);
+  const total = MONTHLY_CREDITS[planType];
+
+  const updates = {
+    billingPeriodStart: periodStart,
+    billingPeriodEnd: next.toISOString(),
+    monthlyCreditsTotal: total,
+    monthlyCreditsUsed: 0,
+    monthlyCreditsRemaining: total,
+  };
+
+  await db.doc(`users/${uid}`).update(updates);
+  return { ...profile, ...updates };
+}
+
+// Full enforcement for Firestore (called from API routes)
+export async function enforceUsageAccessFirestore(db: any, uid: string, action: UsageAction) {
+  let profile = await resetDailyUsageIfNeededFirestore(db, uid);
+  profile = await resetMonthlyCreditsIfNeededFirestore(db, uid, profile);
+
+  // Re-read after resets
+  const snap = await db.doc(`users/${uid}`).get();
+  const refreshed = snap.data() || {};
 
   const plan = checkPlanAccess(refreshed);
   if (!plan.ok) return { ok: false, status: 403, state: plan.state, error: plan.message };
@@ -267,6 +240,7 @@ export async function enforceUsageAccess(supabase: SupabaseClient, uid: string, 
   return { ok: true, profile: refreshed, planType: plan.planType };
 }
 
+// Guest functions (unchanged - no DB dependency)
 export function startGuestTrial(guestId: string, now = new Date()) {
   const trialEnd = new Date(now);
   trialEnd.setDate(trialEnd.getDate() + 7);
@@ -276,18 +250,14 @@ export function startGuestTrial(guestId: string, now = new Date()) {
     return { ok: false, error: 'Gratisperioden har redan använts.' };
   }
 
-  const startedAt = now.toISOString();
-  const endsAt = trialEnd.toISOString();
-  const total = MONTHLY_CREDITS.trial;
-
   saveGuestUsageProfile(guestId, {
     ...profile,
     plan_type: 'trial',
-    trial_started_at: startedAt,
-    trial_ends_at: endsAt,
-    monthly_credits_total: total,
+    trial_started_at: now.toISOString(),
+    trial_ends_at: trialEnd.toISOString(),
+    monthly_credits_total: MONTHLY_CREDITS.trial,
     monthly_credits_used: 0,
-    monthly_credits_remaining: total,
+    monthly_credits_remaining: MONTHLY_CREDITS.trial,
     daily_ai_questions_used: 0,
     daily_image_analyses_used: 0,
     daily_illustrations_used: 0,
@@ -295,7 +265,7 @@ export function startGuestTrial(guestId: string, now = new Date()) {
     state: 'trial_active',
   });
 
-  return { ok: true, trial_ends_at: endsAt };
+  return { ok: true, trial_ends_at: trialEnd.toISOString() };
 }
 
 export function enforceGuestUsageAccess(guestId: string, action: UsageAction) {
@@ -322,12 +292,12 @@ export function enforceGuestUsageAccess(guestId: string, action: UsageAction) {
 export function deductGuestCredits(guestId: string, action: UsageAction) {
   const profile = getGuestUsageProfile(guestId);
   const cost = creditCostFor(action);
-  profile.monthly_credits_used = Number(profile.monthly_credits_used || 0) + cost;
-  profile.monthly_credits_remaining = Math.max(0, Number(profile.monthly_credits_remaining || 0) - cost);
+  profile.monthly_credits_used = (profile.monthly_credits_used || 0) + cost;
+  profile.monthly_credits_remaining = Math.max(0, (profile.monthly_credits_remaining || 0) - cost);
 
-  if (consumesAiQuestionLimit(action)) profile.daily_ai_questions_used = Number(profile.daily_ai_questions_used || 0) + 1;
-  if (action === 'image_analysis') profile.daily_image_analyses_used = Number(profile.daily_image_analyses_used || 0) + 1;
-  if (action === 'illustration') profile.daily_illustrations_used = Number(profile.daily_illustrations_used || 0) + 1;
+  if (consumesAiQuestionLimit(action)) profile.daily_ai_questions_used = (profile.daily_ai_questions_used || 0) + 1;
+  if (action === 'image_analysis') profile.daily_image_analyses_used = (profile.daily_image_analyses_used || 0) + 1;
+  if (action === 'illustration') profile.daily_illustrations_used = (profile.daily_illustrations_used || 0) + 1;
 
   saveGuestUsageProfile(guestId, profile);
 }
