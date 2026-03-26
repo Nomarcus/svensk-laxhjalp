@@ -1,10 +1,22 @@
-{
-  "projectId": "lead-agent-489101",
-  "appId": "1:288867992327:web:b5482e565865fdca7a7ba2",
-  "apiKey": "AIzaSyCy4s5ywxkvVC7MuTcLYE-b3WbKRe_y9eg",
-  "authDomain": "lead-agent-489101.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-8af631ef-cd5d-43bc-94dd-19902f5cf06f",
-  "storageBucket": "lead-agent-489101.firebasestorage.app",
-  "messagingSenderId": "288867992327",
-  "measurementId": ""
-}
+import tailwindcss from '@tailwindcss/vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, '.'),
+    },
+  },
+  server: {
+    port: 3000,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
+  },
+});

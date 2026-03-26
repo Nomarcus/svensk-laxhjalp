@@ -1,35 +1,185 @@
-export async function compressImage(base64Str: string, maxWidth = 800, maxHeight = 800, quality = 0.7): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      let width = img.width;
-      let height = img.height;
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 
-      if (width > height) {
-        if (width > maxWidth) {
-          height *= maxWidth / width;
-          width = maxWidth;
-        }
-      } else {
-        if (height > maxHeight) {
-          width *= maxHeight / height;
-          height = maxHeight;
-        }
-      }
+    <!-- SEO: Title & Description -->
+    <title>Föräldrahjälpen — AI-driven läxhjälp för svenska föräldrar | Lgr22</title>
+    <meta name="description" content="Gratis AI-läxhjälp för föräldrar med barn i grundskolan. Fota läxan, få pedagogiska förklaringar kopplade till svenska läroplanen (Lgr22). Läxplanering, bildanalys och resursbibliotek." />
 
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        reject(new Error('Could not get canvas context'));
-        return;
+    <!-- SEO: Author & Freshness -->
+    <meta name="author" content="Föräldrahjälpen" />
+    <meta property="article:published_time" content="2026-01-15T08:00:00Z" />
+    <meta property="article:modified_time" content="2026-03-21T10:00:00Z" />
+
+    <!-- SEO: Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Föräldrahjälpen — AI-driven läxhjälp för svenska föräldrar" />
+    <meta property="og:description" content="Fota läxan och få den förklarad med AI. Pedagogisk hjälp kopplad till svenska läroplanen (Lgr22) för föräldrar med barn i åk 1-9." />
+    <meta property="og:url" content="https://foraldrahjalpen.se/" />
+    <meta property="og:site_name" content="Föräldrahjälpen" />
+    <meta property="og:locale" content="sv_SE" />
+
+    <!-- SEO: Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Föräldrahjälpen — AI-driven läxhjälp" />
+    <meta name="twitter:description" content="Fota läxan och få pedagogiska förklaringar kopplade till Lgr22. Gratis att börja." />
+
+    <!-- SEO: Canonical -->
+    <link rel="canonical" href="https://foraldrahjalpen.se/" />
+
+    <!-- SEO: Additional keywords & robots -->
+    <meta name="keywords" content="läxhjälp, läxhjälp föräldrar, AI läxhjälp, svensk läxhjälp, hjälp med läxor, Lgr22, grundskolan, skolhjälp, läxplanering, fota läxan" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- PWA -->
+    <meta name="theme-color" content="#059669" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Föräldrahjälpen" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+
+    <!-- JSON-LD: Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Föräldrahjälpen",
+      "url": "https://foraldrahjalpen.se",
+      "description": "AI-driven läxhjälp för svenska föräldrar med barn i grundskolan. Pedagogiska förklaringar kopplade till läroplanen Lgr22.",
+      "foundingDate": "2026",
+      "areaServed": {
+        "@type": "Country",
+        "name": "Sweden"
       }
-      ctx.drawImage(img, 0, 0, width, height);
-      const compressed = canvas.toDataURL('image/jpeg', quality);
-      resolve(compressed);
-    };
-    img.onerror = (err) => reject(err);
-    img.src = base64Str;
-  });
-}
+    }
+    </script>
+
+    <!-- JSON-LD: SoftwareApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Föräldrahjälpen",
+      "applicationCategory": "EducationalApplication",
+      "operatingSystem": "Web, Android, iOS",
+      "description": "AI-driven läxhjälp som hjälper svenska föräldrar förklara skoluppgifter för sina barn. Stöder alla ämnen i grundskolan åk 1-9 och kopplar till läroplanen Lgr22.",
+      "url": "https://foraldrahjalpen.se",
+      "inLanguage": "sv",
+      "offers": [
+        {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "SEK",
+          "name": "Testa gratis",
+          "description": "7 dagar gratis. 3 AI-frågor per dag, 1 bildanalys, 1 illustration"
+        },
+        {
+          "@type": "Offer",
+          "price": "49",
+          "priceCurrency": "SEK",
+          "name": "Plus",
+          "description": "10 AI-frågor per dag, 3 bildanalyser, 1 illustration, resursbibliotek"
+        },
+        {
+          "@type": "Offer",
+          "price": "79",
+          "priceCurrency": "SEK",
+          "name": "Pro",
+          "description": "30 AI-frågor per dag, 10 bildanalyser, 3 illustrationer, dela med förälder, prioriterad svarstid"
+        }
+      ],
+      "featureList": [
+        "AI-driven läxhjälp kopplad till Lgr22",
+        "Fota läxan och få den förklarad",
+        "Läxplanering med veckokalender",
+        "Dela kalender mellan föräldrar",
+        "AI-genererade pedagogiska illustrationer",
+        "Resursbibliotek med sparade förklaringar",
+        "Facit-funktion för föräldrar",
+        "PWA-app för mobil och dator"
+      ]
+    }
+    </script>
+
+    <!-- JSON-LD: FAQPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Vad är Föräldrahjälpen?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Föräldrahjälpen är en AI-driven läxhjälp-app för svenska föräldrar med barn i grundskolan (åk 1-9). Du kan ställa frågor om läxor, fota en uppgift och få den förklarad, eller använda läxplaneringen för att organisera veckans skolarbete. Alla svar kopplas till den svenska läroplanen Lgr22."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Hur fungerar AI-läxhjälpen?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Du skriver eller fotar en läxuppgift, och AI:n förklarar den pedagogiskt steg för steg. Förklaringarna är anpassade efter barnets årskurs och kopplade till Lgr22. AI:n hjälper föräldern förstå uppgiften — det är inte fusk, utan ett verktyg som gör det lättare att stötta sitt barn."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Är Föräldrahjälpen gratis?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Ja, du kan testa gratis i 7 dagar med 3 AI-frågor och 1 bildanalys per dag. Därefter finns Plus (49 kr/mån) och Pro (79 kr/mån) med fler frågor och funktioner."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Vilka ämnen stöds?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Alla ämnen i den svenska grundskolan stöds: matematik, svenska, engelska, NO (biologi, fysik, kemi), SO (historia, geografi, samhällskunskap, religion) och moderna språk. AI:n anpassar förklaringarna efter barnets årskurs (åk 1-9)."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Kan man dela med en annan förälder?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Ja, med Pro-abonnemanget kan du dela barnets kalender och planering med en annan förälder. Perfekt för separerade föräldrar eller för att båda föräldrarna ska ha koll på barnets läxor och deadlines."
+          }
+        }
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+
+    <!-- SEO: Crawlable content for search engines (SPA fallback) -->
+    <noscript>
+      <div>
+        <h1>Föräldrahjälpen — AI-driven läxhjälp för svenska föräldrar</h1>
+        <p>Föräldrahjälpen är en gratis AI-driven app som hjälper svenska föräldrar med barn i grundskolan (åk 1-9) att förstå och förklara läxor. Fota läxan med mobilen och få pedagogiska förklaringar kopplade till den svenska läroplanen Lgr22.</p>
+
+        <h2>Funktioner</h2>
+        <ul>
+          <li>AI-assistent som förklarar alla skolämnen pedagogiskt och kopplar till Lgr22</li>
+          <li>Fota läxan med mobilen och få den analyserad med bildanalys</li>
+          <li>Veckoplanering med kalender, deadlines och arbetsdagar</li>
+          <li>Dela kalender och planering mellan föräldrar</li>
+          <li>AI-genererade pedagogiska illustrationer</li>
+          <li>Resursbibliotek för att spara förklaringar</li>
+          <li>Facit-funktion för föräldrar</li>
+          <li>PWA-app för mobil och dator</li>
+        </ul>
+
+        <h2>Priser</h2>
+        <p>Testa gratis i 7 dagar. Plus: 49 kr/mån. Pro: 79 kr/mån.</p>
+      </div>
+    </noscript>
+  </body>
+</html>
