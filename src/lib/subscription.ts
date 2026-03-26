@@ -35,7 +35,7 @@ export const CREDIT_COSTS: Record<UsageAction, number> = {
   fordjupning: 2,
   study_plan: 3,
   create_homework: 2,
-  curriculum_link: 0,
+  curriculum_link: 1, // 0 om redan inkluderat i grundsvaret utan extra AI-anrop
 };
 
 function dateOnly(now = new Date()) {

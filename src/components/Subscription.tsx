@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Crown, CreditCard, Clock, MessageCircle, Image } from 'lucide-react';
+import { Crown, CreditCard, Clock, MessageCircle, Image, Paintbrush } from 'lucide-react';
 import { supabase } from '../supabase';
 import PricingCard from './PricingCard';
 import type { UserSubscription } from '../types';
@@ -78,11 +78,15 @@ export default function Subscription({ subscription }: SubscriptionProps) {
   };
 
   const isPaid = subscription.tier === 'plus' || subscription.tier === 'pro';
-  const tierLabel = subscription.plan_type === 'trial' ? 'Testa gratis' : subscription.tier === 'pro' ? 'Pro' : subscription.tier === 'plus' ? 'Plus' : 'Ingen plan';
-  const tierColor = subscription.tier === 'pro' ? 'bg-amber-100 text-amber-600' : subscription.tier === 'plus' ? 'bg-blue-100 text-blue-600' : 'bg-stone-100 text-stone-500';
+  const isTrial = subscription.plan_type === 'trial';
+  const tierLabel = isTrial ? 'Testa gratis' : subscription.tier === 'pro' ? 'Pro' : subscription.tier === 'plus' ? 'Plus' : 'Ingen plan';
+  const tierColor = subscription.tier === 'pro' ? 'bg-amber-100 text-amber-600' : subscription.tier === 'plus' ? 'bg-blue-100 text-blue-600' : isTrial ? 'bg-emerald-100 text-emerald-600' : 'bg-stone-100 text-stone-500';
   const periodEnd = subscription.current_period_end
     ? new Date(subscription.current_period_end)
     : null;
+
+  const trialEnd = subscription.trial_ends_at ? new Date(subscription.trial_ends_at) : null;
+  const trialDaysLeft = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0;
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 bg-[#F5F5F0]">
@@ -106,7 +110,9 @@ export default function Subscription({ subscription }: SubscriptionProps) {
                     ? subscription.cancel_at_period_end
                       ? 'Avslutas efter nuvarande period'
                       : 'Aktivt abonnemang'
-                    : 'Grundplan med begränsningar'
+                    : isTrial
+                      ? `${trialDaysLeft} dagar kvar av gratisperioden`
+                      : 'Ingen aktiv plan'
                   }
                 </p>
               </div>
@@ -134,14 +140,14 @@ export default function Subscription({ subscription }: SubscriptionProps) {
           )}
         </div>
 
-        {/* Usage (free tier) */}
-        {!isPaid && (
+        {/* Usage - shown for all active plans */}
+        {(isPaid || isTrial) && (
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-black/5">
             <h3 className="font-medium mb-4 flex items-center gap-2">
               <Clock size={18} className="text-emerald-600" />
               Dagens användning
             </h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="bg-stone-50 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <MessageCircle size={16} className="text-emerald-600" />
@@ -171,6 +177,22 @@ export default function Subscription({ subscription }: SubscriptionProps) {
                   <div
                     className="h-full bg-blue-500 transition-all"
                     style={{ width: `${Math.min((usage.imageCount / Math.max(1, limits.imageLimit)) * 100, 100)}%` }}
+                  />
+                </div>
+              </div>
+              <div className="bg-stone-50 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Paintbrush size={16} className="text-purple-600" />
+                  <span className="text-sm font-medium">Illustrationer</span>
+                </div>
+                <div className="flex items-end gap-1">
+                  <span className="text-2xl font-bold text-stone-800">{usage.illustrationCount || 0}</span>
+                  <span className="text-sm text-stone-400 mb-0.5">/ {limits.illustrationLimit}</span>
+                </div>
+                <div className="mt-2 h-2 bg-stone-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-purple-500 transition-all"
+                    style={{ width: `${Math.min(((usage.illustrationCount || 0) / Math.max(1, limits.illustrationLimit)) * 100, 100)}%` }}
                   />
                 </div>
               </div>
