@@ -20,7 +20,7 @@
       ]
     },
     {
-      "source": "/(.*\\.(js|css|map))",
+      "source": "/assets/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
