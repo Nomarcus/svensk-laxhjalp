@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, handleDbError, User } from './supabase';
+import { supabase, supabaseConfigured, handleDbError, User } from './supabase';
 import Auth from './components/Auth';
 import Layout from './components/Layout';
 import Chat from './components/Chat';
@@ -31,7 +31,22 @@ export default function App() {
 
   // Auth state listener
   useEffect(() => {
+    if (!supabaseConfigured) {
+      console.error('Supabase not configured — showing login screen');
+      setLoading(false);
+      return;
+    }
+
+    // Safety timeout: if auth state never fires, stop loading after 8s
+    const timeout = setTimeout(() => {
+      setLoading((prev) => {
+        if (prev) console.warn('Auth timeout — stopping loading spinner');
+        return false;
+      });
+    }, 8000);
+
     const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      clearTimeout(timeout);
       const currentUser = session?.user ?? null;
 
       if (currentUser) {
@@ -63,7 +78,10 @@ export default function App() {
       }
     });
 
-    return () => authSub.unsubscribe();
+    return () => {
+      clearTimeout(timeout);
+      authSub.unsubscribe();
+    };
   }, []);
 
   // Subscription listener
