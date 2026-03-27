@@ -1,4 +1,4 @@
-import { Shield, ArrowLeft, Database, Brain, Lock, UserCheck, Cookie, Server, Trash2, Mail } from 'lucide-react';
+import { Shield, ArrowLeft, Database, Brain, Lock, UserCheck, Cookie, Server, Trash2 } from 'lucide-react';
 
 interface PrivacyPolicyProps {
   onBack: () => void;
@@ -197,23 +197,6 @@ export default function PrivacyPolicy({ onBack }: PrivacyPolicyProps) {
                 <li>Barnprofiler innehåller enbart förnamn och årskurs.</li>
                 <li>Chattkonversationer sparas under förälderns konto och kontrolleras av föräldern.</li>
               </ul>
-            </Section>
-
-            {/* Tillsynsmyndighet */}
-            <Section
-              icon={<Mail size={18} />}
-              title="Klagomål och tillsynsmyndighet"
-            >
-              <p>
-                Om du anser att vi behandlar dina personuppgifter felaktigt har du rätt att lämna klagomål
-                till Integritetsskyddsmyndigheten (IMY):
-              </p>
-              <div className="bg-stone-50 dark:bg-slate-800 rounded-xl p-4 text-sm">
-                <p className="font-medium dark:text-stone-200">Integritetsskyddsmyndigheten (IMY)</p>
-                <p className="text-stone-500 dark:text-stone-400">Box 8114, 104 20 Stockholm</p>
-                <p className="text-stone-500 dark:text-stone-400">imy@imy.se</p>
-                <p className="text-stone-500 dark:text-stone-400">www.imy.se</p>
-              </div>
             </Section>
 
             {/* Ändringar */}

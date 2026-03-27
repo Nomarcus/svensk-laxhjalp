@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, MessageSquare, Calendar, BookOpen, User as UserIcon, ChevronDown, Settings, Info, Library, Crown, Download, Users, X, Menu, Moon, Sun, Mail, Shield } from 'lucide-react';
+import { LogOut, MessageSquare, Calendar, BookOpen, User as UserIcon, ChevronDown, Settings, Info, Library, Crown, Download, Users, X, Menu, Moon, Sun, Mail, Shield, FileText } from 'lucide-react';
 import { logout, User } from '../firebase';
 import { cn } from '../utils/cn';
 import type { Child, SubscriptionTier } from '../types';
@@ -16,6 +16,7 @@ interface LayoutProps {
   subscriptionTier?: SubscriptionTier;
   onShowInstallGuide?: () => void;
   onShowPrivacy?: () => void;
+  onShowTerms?: () => void;
   dark?: boolean;
   onToggleDark?: () => void;
 }
@@ -32,6 +33,7 @@ export default function Layout({
   subscriptionTier = 'free',
   onShowInstallGuide,
   onShowPrivacy,
+  onShowTerms,
   dark,
   onToggleDark,
 }: LayoutProps) {
@@ -215,6 +217,15 @@ export default function Layout({
             >
               <Shield size={18} />
               <span className="text-sm">GDPR & Integritet</span>
+            </button>
+          )}
+          {onShowTerms && (
+            <button
+              onClick={onShowTerms}
+              className="w-full flex items-center gap-3 px-4 py-2 mb-2 text-stone-500 dark:text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all"
+            >
+              <FileText size={18} />
+              <span className="text-sm">Användarvillkor</span>
             </button>
           )}
           <div className="flex items-center gap-3 px-4 py-3 mb-2">
@@ -408,6 +419,15 @@ export default function Layout({
                 >
                   <Shield size={18} />
                   <span>GDPR & Integritet</span>
+                </button>
+              )}
+              {onShowTerms && (
+                <button
+                  onClick={() => { onShowTerms(); setShowMobileMenu(false); }}
+                  className="w-full flex items-center gap-3 px-3 py-3 text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800 rounded-xl transition-all text-sm"
+                >
+                  <FileText size={18} />
+                  <span>Användarvillkor</span>
                 </button>
               )}
               {onToggleDark && (
