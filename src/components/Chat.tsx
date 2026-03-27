@@ -392,7 +392,7 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
             <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white">
               <Bot size={16} />
             </div>
-            <div className="bg-white border border-black/5 shadow-sm rounded-2xl rounded-tl-none px-4 py-3 flex items-center gap-2">
+            <div className="bg-white dark:bg-slate-900 border border-black/5 dark:border-white/5 shadow-sm rounded-2xl rounded-tl-none px-4 py-3 flex items-center gap-2">
               <Loader2 size={16} className="animate-spin text-emerald-600" />
               <span className="text-sm text-stone-500 italic">Tänker...</span>
             </div>

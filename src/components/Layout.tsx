@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, MessageSquare, Calendar, BookOpen, User as UserIcon, ChevronDown, Settings, Info, Library, Crown, Download, Users, X, Menu, Moon, Sun } from 'lucide-react';
+import { LogOut, MessageSquare, Calendar, BookOpen, User as UserIcon, ChevronDown, Settings, Info, Library, Crown, Download, Users, X, Menu, Moon, Sun, Mail } from 'lucide-react';
 import { logout, User } from '../firebase';
 import { cn } from '../utils/cn';
 import type { Child, SubscriptionTier } from '../types';
@@ -7,8 +7,8 @@ import type { Child, SubscriptionTier } from '../types';
 interface LayoutProps {
   children: React.ReactNode;
   user: User;
-  activeTab: 'chat' | 'planner' | 'info' | 'library' | 'subscription';
-  setActiveTab: (tab: 'chat' | 'planner' | 'info' | 'library' | 'subscription') => void;
+  activeTab: 'chat' | 'planner' | 'info' | 'library' | 'subscription' | 'contact';
+  setActiveTab: (tab: 'chat' | 'planner' | 'info' | 'library' | 'subscription' | 'contact') => void;
   childrenList: Child[];
   selectedChildId: string | null;
   onSelectChild: (id: string) => void;
@@ -172,6 +172,18 @@ export default function Layout({
               {subscriptionTier === 'pro' ? 'Pro' : subscriptionTier === 'plus' ? 'Plus' : 'Gratis'}
             </span>
           </button>
+          <button
+            onClick={() => setActiveTab('contact')}
+            className={cn(
+              "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+              activeTab === 'contact'
+                ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-medium shadow-sm"
+                : "text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800"
+            )}
+          >
+            <Mail size={20} />
+            <span>Kontakta oss</span>
+          </button>
         </nav>
 
         <div className="p-4 border-t border-black/5 dark:border-white/5 mt-auto">
@@ -272,7 +284,7 @@ export default function Layout({
           onClick={() => setShowMobileMenu(true)}
           className={cn(
             "flex-1 flex flex-col items-center gap-0.5 py-2 pt-3 transition-colors",
-            (activeTab === 'info' || activeTab === 'subscription') ? "text-emerald-600 dark:text-emerald-400" : "text-stone-400 dark:text-stone-500"
+            (activeTab === 'info' || activeTab === 'subscription' || activeTab === 'contact') ? "text-emerald-600 dark:text-emerald-400" : "text-stone-400 dark:text-stone-500"
           )}
         >
           <Menu size={20} />
@@ -358,6 +370,16 @@ export default function Layout({
                 )}>
                   Gratis
                 </span>
+              </button>
+              <button
+                onClick={() => handleTabChange('contact')}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all text-sm",
+                  activeTab === 'contact' ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-medium" : "text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800"
+                )}
+              >
+                <Mail size={18} />
+                <span>Kontakta oss</span>
               </button>
               {onShowInstallGuide && (
                 <button
