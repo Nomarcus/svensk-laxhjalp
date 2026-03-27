@@ -121,23 +121,23 @@ export default function Library({ childId, ownerId }: LibraryProps) {
   });
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-[#F5F5F0]">
+    <div className="flex-1 flex flex-col min-h-0 bg-[#F5F5F0] dark:bg-slate-950">
       <div className="p-4 md:p-8 flex-1 min-h-0 overflow-y-auto">
         <div className="max-w-6xl mx-auto space-y-8">
           <header className="flex flex-col gap-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <h2 className="text-3xl font-serif italic mb-1">Resursbibliotek</h2>
-                <p className="text-stone-500 text-sm">Alla förklaringar, illustrationer och bilder.</p>
+                <p className="text-stone-500 dark:text-stone-400 text-sm">Alla förklaringar, illustrationer och bilder.</p>
               </div>
               <div className="relative max-w-xs w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={18} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500" size={18} />
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Sök i biblioteket..."
-                  className="w-full pl-10 pr-4 py-2 bg-white border border-black/5 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                  className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-black/5 dark:border-white/5 rounded-xl text-sm dark:text-stone-200 focus:ring-2 focus:ring-emerald-500/20 transition-all"
                 />
               </div>
             </div>
@@ -150,7 +150,7 @@ export default function Library({ childId, ownerId }: LibraryProps) {
                     'px-4 py-1.5 rounded-full text-sm font-medium transition-all',
                     filter === key
                       ? 'bg-emerald-600 text-white'
-                      : 'bg-white text-stone-500 border border-black/5 hover:bg-emerald-50 hover:text-emerald-700'
+                      : 'bg-white dark:bg-slate-900 text-stone-500 dark:text-stone-400 border border-black/5 dark:border-white/5 hover:bg-emerald-50 hover:text-emerald-700'
                   )}
                 >
                   {label}
@@ -160,12 +160,12 @@ export default function Library({ childId, ownerId }: LibraryProps) {
           </header>
 
           {filteredItems.length === 0 ? (
-            <div className="bg-white rounded-3xl p-12 text-center border border-black/5 shadow-sm">
-              <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center text-stone-300 mx-auto mb-4">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-12 text-center border border-black/5 dark:border-white/5 shadow-sm">
+              <div className="w-16 h-16 bg-stone-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-stone-300 dark:text-stone-400 mx-auto mb-4">
                 <BookOpen size={32} />
               </div>
-              <h3 className="text-lg font-medium text-stone-900 mb-2">Biblioteket är tomt</h3>
-              <p className="text-stone-500 max-w-xs mx-auto text-sm">
+              <h3 className="text-lg font-medium text-stone-900 dark:text-stone-100 mb-2">Biblioteket är tomt</h3>
+              <p className="text-stone-500 dark:text-stone-400 max-w-xs mx-auto text-sm">
                 Spara förklaringar från chatten för att se dem här senare.
               </p>
             </div>
@@ -175,17 +175,17 @@ export default function Library({ childId, ownerId }: LibraryProps) {
                 <div 
                   key={item.id}
                   onClick={() => setSelectedItem(item)}
-                  className="bg-white rounded-2xl overflow-hidden border border-black/5 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col"
+                  className="bg-white dark:bg-slate-900 rounded-2xl overflow-hidden border border-black/5 dark:border-white/5 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col"
                 >
                   {item.type === 'image' && item.imageUrl && (
-                    <div className="aspect-video relative overflow-hidden bg-stone-100">
+                    <div className="aspect-video relative overflow-hidden bg-stone-100 dark:bg-slate-700">
                       <img 
                         src={item.imageUrl} 
                         alt={item.title} 
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         referrerPolicy="no-referrer"
                       />
-                      <div className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm">
+                      <div className="absolute top-2 right-2 p-1.5 bg-white/90 dark:bg-slate-800/90 backdrop-blur rounded-lg shadow-sm">
                         {item.id.startsWith('chat-img-') ? <MessageSquare size={14} className="text-blue-600" /> : <ImageIcon size={14} className="text-emerald-600" />}
                       </div>
                     </div>
@@ -198,7 +198,7 @@ export default function Library({ childId, ownerId }: LibraryProps) {
                             <BookOpen size={14} />
                           </div>
                         )}
-                        <h4 className="font-semibold text-stone-900 line-clamp-1">{item.title}</h4>
+                        <h4 className="font-semibold text-stone-900 dark:text-stone-100 line-clamp-1">{item.title}</h4>
                       </div>
                     </div>
                     {item.content && (
