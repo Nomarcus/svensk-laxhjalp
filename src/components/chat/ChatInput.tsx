@@ -77,17 +77,17 @@ export default function ChatInput({ input, setInput, image, setImage, loading, o
   };
 
   return (
-    <div className="p-4 md:p-8 bg-white md:bg-transparent border-t md:border-t-0">
+    <div className="p-4 md:p-8 bg-white dark:bg-slate-950 md:bg-transparent md:dark:bg-transparent border-t md:border-t-0 dark:border-white/5">
       <form onSubmit={onSubmit} className="max-w-3xl mx-auto relative">
         {image && (
-          <div className="absolute bottom-full left-0 mb-4 p-2 bg-white rounded-xl border border-black/5 shadow-lg flex items-center gap-2">
+          <div className="absolute bottom-full left-0 mb-4 p-2 bg-white dark:bg-slate-800 rounded-xl border border-black/5 dark:border-white/5 shadow-lg flex items-center gap-2">
             <img src={image} alt="Preview" className="w-12 h-12 object-cover rounded-lg" />
             <button type="button" onClick={() => setImage(null)} className="p-1 hover:bg-stone-100 rounded-full text-stone-400">
               <X size={16} />
             </button>
           </div>
         )}
-        <div className="relative flex items-end gap-2 bg-white border border-black/10 rounded-2xl p-2 shadow-sm focus-within:border-emerald-500/50 transition-all">
+        <div className="relative flex items-end gap-2 bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl p-2 shadow-sm focus-within:border-emerald-500/50 transition-all">
           <button
             type="button"
             onClick={() => cameraInputRef.current?.click()}
@@ -137,8 +137,8 @@ export default function ChatInput({ input, setInput, image, setImage, loading, o
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onPaste={handlePaste}
-            placeholder="Skriv din fråga här eller klistra in en bild..."
-            className="flex-1 bg-transparent border-none focus:ring-0 py-2 px-2 resize-none max-h-32 min-h-[40px] text-[15px]"
+            placeholder="Ställ en fråga eller fota läxan med kameraknappen..."
+            className="flex-1 bg-transparent border-none focus:ring-0 py-2 px-2 resize-none max-h-32 min-h-[40px] text-[15px] text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500"
             rows={1}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {

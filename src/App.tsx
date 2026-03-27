@@ -14,13 +14,14 @@ import type { Child, UserSubscription, Task } from './types';
 import InstallPrompt, { InstallGuide } from './components/InstallPrompt';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import Subscription from './components/Subscription';
+import Contact from './components/Contact';
 import CookieConsent from './components/CookieConsent';
 import { useTheme } from './hooks/useTheme';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'chat' | 'planner' | 'info' | 'library' | 'subscription'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'planner' | 'info' | 'library' | 'subscription' | 'contact'>('chat');
   const [subscription, setSubscription] = useState<UserSubscription>({ tier: 'free', status: 'none' });
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
@@ -193,7 +194,9 @@ export default function App() {
         dark={dark}
         onToggleDark={toggleDark}
       >
-        {activeTab === 'subscription' ? (
+        {activeTab === 'contact' ? (
+          <Contact />
+        ) : activeTab === 'subscription' ? (
           <Subscription />
         ) : activeTab === 'info' ? (
           <Info />
