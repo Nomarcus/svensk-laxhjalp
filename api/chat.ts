@@ -43,6 +43,20 @@ När du analyserar bilder av läxor:
 - Inkludera "💡 Fastna inte här"-avsnittet.
 `;
 
+const SIMPLE_SWEDISH_ADDON = `
+
+ENKEL SVENSKA-LÄGE (AKTIVERAT):
+Användaren har valt "Enkel svenska". Följ dessa regler STRIKT:
+1. Använd BARA enkla, vanliga ord. Inga svåra eller ovanliga ord.
+2. Skriv korta meningar — max 10-15 ord per mening.
+3. Förklara allt steg för steg, som om du pratar med någon som nyss börjat lära sig svenska.
+4. Om du måste använda ett svårt ord, förklara det direkt efter. Exempel: "kunskapskrav (det som barnet ska kunna)".
+5. Använd gärna exempel från vardagen för att förklara saker.
+6. Undvik förkortningar och skoltermer utan förklaring.
+7. Skriv tydligt med punktlistor och korta stycken.
+8. Tänk: föräldern kanske inte gick i svensk skola. Förklara hur svenska skolan fungerar om det behövs.
+`;
+
 function trimHistory(history: { role: string; content: string }[]) {
   if (history.length <= MAX_HISTORY_PAIRS * 2) return history;
   return history.slice(-MAX_HISTORY_PAIRS * 2);
@@ -80,7 +94,7 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { prompt, history = [], imageBase64 } = req.body;
+    const { prompt, history = [], imageBase64, simpleSwedish } = req.body;
     if (!prompt && !imageBase64) {
       return res.status(400).json({ error: 'Meddelande eller bild krävs.' });
     }
@@ -108,7 +122,7 @@ export default async function handler(req: any, res: any) {
           ],
         },
       ],
-      config: { systemInstruction: SYSTEM_INSTRUCTION },
+      config: { systemInstruction: simpleSwedish ? SYSTEM_INSTRUCTION + SIMPLE_SWEDISH_ADDON : SYSTEM_INSTRUCTION },
     });
 
     res.json({ text: response.text, usage: response.usageMetadata });

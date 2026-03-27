@@ -190,7 +190,7 @@ export default function App() {
         onShowInstallGuide={() => setShowInstallGuide(true)}
       >
         {activeTab === 'subscription' ? (
-          <Subscription subscription={subscription} />
+          <Subscription />
         ) : activeTab === 'info' ? (
           <Info />
         ) : children.length === 0 ? (

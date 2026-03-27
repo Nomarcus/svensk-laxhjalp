@@ -1,4 +1,5 @@
-import { User, Bot, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine } from 'lucide-react';
+import { useState } from 'react';
+import { User, Bot, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '../../utils/cn';
 import type { Message } from '../../types';
@@ -36,6 +37,8 @@ export default function ChatMessage({
   hasImage,
   creatingAutoTask,
 }: ChatMessageProps) {
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+
   const handlePrint = (content: string) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
@@ -72,7 +75,13 @@ export default function ChatMessage({
       </div>
       <div className={cn('space-y-2', msg.role === 'user' ? 'items-end' : 'items-start')}>
         {msg.attachments?.map((att, i) => (
-          <img key={i} src={att} alt="Attachment" className="max-w-xs rounded-xl border border-black/5 shadow-sm" />
+          <img
+            key={i}
+            src={att}
+            alt="Attachment"
+            className="max-w-xs rounded-xl border border-black/5 shadow-sm cursor-zoom-in active:scale-[0.98] transition-transform"
+            onClick={() => setZoomedImage(att)}
+          />
         ))}
         <div
           className={cn(
@@ -109,7 +118,31 @@ export default function ChatMessage({
           )}
         </div>
         {msg.generatedImage && (
-          <img src={msg.generatedImage} alt="AI Generated Illustration" className="max-w-xs rounded-xl border border-black/5 shadow-sm" />
+          <img
+            src={msg.generatedImage}
+            alt="AI Generated Illustration"
+            className="max-w-xs rounded-xl border border-black/5 shadow-sm cursor-zoom-in active:scale-[0.98] transition-transform"
+            onClick={() => setZoomedImage(msg.generatedImage!)}
+          />
+        )}
+        {zoomedImage && (
+          <div
+            className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 animate-in fade-in"
+            onClick={() => setZoomedImage(null)}
+          >
+            <button
+              onClick={() => setZoomedImage(null)}
+              className="absolute top-4 right-4 p-2 bg-white/20 rounded-full text-white hover:bg-white/40 transition-colors z-10"
+            >
+              <X size={24} />
+            </button>
+            <img
+              src={zoomedImage}
+              alt="Zoomed illustration"
+              className="max-w-full max-h-full object-contain rounded-xl"
+              style={{ touchAction: 'pinch-zoom' }}
+            />
+          </div>
         )}
         {msg.role === 'model' && (
           <div className="flex flex-wrap gap-2 mt-1">

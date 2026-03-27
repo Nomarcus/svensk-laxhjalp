@@ -1,4 +1,5 @@
-import { MessageSquare, Plus, Trash2 } from 'lucide-react';
+import { MessageSquare, Plus, Trash2, Languages } from 'lucide-react';
+import { cn } from '../../utils/cn';
 import type { ChatSession } from '../../types';
 
 interface ChatHeaderProps {
@@ -8,6 +9,8 @@ interface ChatHeaderProps {
   onSelectSession: (id: string) => void;
   onNewSession: () => void;
   onClearChat: () => void;
+  simpleSwedish: boolean;
+  onToggleSimpleSwedish: () => void;
 }
 
 export default function ChatHeader({
@@ -17,6 +20,8 @@ export default function ChatHeader({
   onSelectSession,
   onNewSession,
   onClearChat,
+  simpleSwedish,
+  onToggleSimpleSwedish,
 }: ChatHeaderProps) {
   return (
     <div className="px-4 py-3 md:px-8 md:py-4 bg-white border-b border-black/5 flex items-center justify-between">
@@ -45,6 +50,20 @@ export default function ChatHeader({
         </div>
       </div>
       <div className="flex items-center gap-2">
+        {/* Enkel svenska toggle */}
+        <button
+          onClick={onToggleSimpleSwedish}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all",
+            simpleSwedish
+              ? "bg-blue-100 text-blue-700"
+              : "bg-stone-50 text-stone-400 hover:bg-stone-100 hover:text-stone-600"
+          )}
+          title="Enkel svenska — svar skrivs med enkla ord och korta meningar"
+        >
+          <Languages size={14} />
+          <span className="hidden sm:inline">Enkel svenska</span>
+        </button>
         <button
           onClick={onNewSession}
           className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-medium hover:bg-emerald-100 transition-all"
