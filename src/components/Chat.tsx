@@ -36,7 +36,16 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
   const [taskPickerContent, setTaskPickerContent] = useState<string | null>(null);
   const [linkedTaskIds, setLinkedTaskIds] = useState<Set<string>>(new Set());
   const [creatingAutoTask, setCreatingAutoTask] = useState(false);
+  const [simpleSwedish, setSimpleSwedish] = useState(() => localStorage.getItem('simple-swedish') === 'true');
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const toggleSimpleSwedish = () => {
+    setSimpleSwedish(prev => {
+      const next = !prev;
+      localStorage.setItem('simple-swedish', String(next));
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!auth.currentUser || !childId) return;
@@ -256,7 +265,8 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
       const response = await generateHomeworkHelp(
         messageText || 'Analysera denna bild.',
         history,
-        currentImage?.split(',')[1]
+        currentImage?.split(',')[1],
+        simpleSwedish
       );
 
       await addDoc(messagesRef, { role: 'model', content: response, timestamp: serverTimestamp() });
@@ -316,6 +326,8 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
         onSelectSession={setActiveSessionId}
         onNewSession={createNewSession}
         onClearChat={clearChat}
+        simpleSwedish={simpleSwedish}
+        onToggleSimpleSwedish={toggleSimpleSwedish}
       />
 
       <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">

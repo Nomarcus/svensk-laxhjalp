@@ -28,9 +28,10 @@ async function apiRequest(endpoint: string, body: object): Promise<any> {
 export async function generateHomeworkHelp(
   prompt: string,
   history: { role: 'user' | 'model'; content: string }[] = [],
-  imageBase64?: string
+  imageBase64?: string,
+  simpleSwedish?: boolean
 ): Promise<string> {
-  const data = await apiRequest('chat', { prompt, history, imageBase64 });
+  const data = await apiRequest('chat', { prompt, history, imageBase64, simpleSwedish });
   return data.text;
 }
 
