@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Download, X, Share, MoreVertical, Plus, ExternalLink } from 'lucide-react';
+import { Download, X, Share, MoreVertical, Plus, ExternalLink, Monitor } from 'lucide-react';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -189,14 +189,31 @@ export function InstallGuide({ onClose }: { onClose: () => void }) {
           {platform === 'desktop' && !nativePrompt && (
             <div className="space-y-4">
               <p className="text-sm text-stone-500 mb-2">Följ dessa steg:</p>
-              <Step n={1} icon={<Download size={16} />}>
-                Klicka på <strong>installera-ikonen</strong> i adressfältet (till höger)
-              </Step>
-              <Step n={2}>
-                Klicka <strong>Installera</strong> i dialogrutan som visas
-              </Step>
+
+              {/* Chrome */}
+              <div className="space-y-3">
+                <p className="text-xs font-bold text-stone-400 uppercase tracking-widest">Chrome</p>
+                <Step n={1} icon={<Download size={16} />}>
+                  Klicka på <strong>installera-ikonen</strong> i adressfältet (till höger) — den ser ut som en datorskärm med en nedåtpil
+                </Step>
+                <Step n={2}>
+                  Klicka <strong>Installera</strong> i dialogrutan som visas
+                </Step>
+              </div>
+
+              {/* Edge */}
+              <div className="space-y-3 pt-2 border-t border-black/5">
+                <p className="text-xs font-bold text-stone-400 uppercase tracking-widest">Microsoft Edge</p>
+                <Step n={1} icon={<Monitor size={16} />}>
+                  Leta efter <strong>app-ikonen</strong> i adressfältet — en liten datorskärm med en nedåtpil (<span className="inline-flex items-center align-middle mx-0.5 text-stone-500"><Monitor size={14} /></span>)
+                </Step>
+                <Step n={2}>
+                  Klicka på ikonen och välj <strong>Installera</strong>
+                </Step>
+              </div>
+
               <p className="text-xs text-stone-400 mt-4 p-3 bg-stone-50 rounded-xl">
-                Ingen installera-ikon? Klicka på menyn och välj <strong>Installera Läxhjälpen</strong>. Fungerar i Chrome, Edge och Safari.
+                Ingen installera-ikon? Klicka på menyn (⋯) och välj <strong>"Appar" → "Installera den här webbplatsen som en app"</strong>.
               </p>
             </div>
           )}

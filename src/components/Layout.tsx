@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, MessageSquare, Calendar, BookOpen, User as UserIcon, ChevronDown, Settings, Info, Library, Crown, Download, Users, X, Menu, Moon, Sun, Mail } from 'lucide-react';
+import { LogOut, MessageSquare, Calendar, BookOpen, User as UserIcon, ChevronDown, Settings, Info, Library, Crown, Download, Users, X, Menu, Moon, Sun, Mail, Shield } from 'lucide-react';
 import { logout, User } from '../firebase';
 import { cn } from '../utils/cn';
 import type { Child, SubscriptionTier } from '../types';
@@ -15,6 +15,7 @@ interface LayoutProps {
   onManageChildren: () => void;
   subscriptionTier?: SubscriptionTier;
   onShowInstallGuide?: () => void;
+  onShowPrivacy?: () => void;
   dark?: boolean;
   onToggleDark?: () => void;
 }
@@ -30,6 +31,7 @@ export default function Layout({
   onManageChildren,
   subscriptionTier = 'free',
   onShowInstallGuide,
+  onShowPrivacy,
   dark,
   onToggleDark,
 }: LayoutProps) {
@@ -204,6 +206,15 @@ export default function Layout({
             >
               <Download size={18} />
               <span className="text-sm">Installera appen</span>
+            </button>
+          )}
+          {onShowPrivacy && (
+            <button
+              onClick={onShowPrivacy}
+              className="w-full flex items-center gap-3 px-4 py-2 mb-2 text-stone-500 dark:text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all"
+            >
+              <Shield size={18} />
+              <span className="text-sm">GDPR & Integritet</span>
             </button>
           )}
           <div className="flex items-center gap-3 px-4 py-3 mb-2">
@@ -388,6 +399,15 @@ export default function Layout({
                 >
                   <Download size={18} />
                   <span>Installera appen</span>
+                </button>
+              )}
+              {onShowPrivacy && (
+                <button
+                  onClick={() => { onShowPrivacy(); setShowMobileMenu(false); }}
+                  className="w-full flex items-center gap-3 px-3 py-3 text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800 rounded-xl transition-all text-sm"
+                >
+                  <Shield size={18} />
+                  <span>GDPR & Integritet</span>
                 </button>
               )}
               {onToggleDark && (

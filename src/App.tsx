@@ -191,6 +191,7 @@ export default function App() {
         onManageChildren={() => setShowChildManager(true)}
         subscriptionTier={subscription.tier}
         onShowInstallGuide={() => setShowInstallGuide(true)}
+        onShowPrivacy={() => setShowPrivacy(true)}
         dark={dark}
         onToggleDark={toggleDark}
       >
