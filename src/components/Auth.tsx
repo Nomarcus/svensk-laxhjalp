@@ -497,36 +497,29 @@ export default function Auth({ onShowPrivacy }: AuthProps) {
           </div>
         </section>
 
-        {/* Pricing overview */}
-        <section>
-          <h2 className="text-3xl font-serif italic text-stone-900 text-center mb-3">Enkel och transparent prissättning</h2>
-          <p className="text-center text-stone-500 mb-10">Börja gratis. Uppgradera när du behöver mer.</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              { name: "Gratis", price: "0 kr", period: "för alltid", features: ["3 AI-frågor per dag", "1 bildanalys per dag", "Läxplanering & kalender", "Koppling till Lgr22"], color: "stone" },
-              { name: "Plus", price: "29 kr", period: "per månad", features: ["15 AI-frågor per dag", "5 bildanalyser per dag", "2 AI-illustrationer per dag", "Resursbibliotek", "Facit-funktion"], color: "blue", badge: "Populär" },
-              { name: "Pro", price: "59 kr", period: "per månad", features: ["Obegränsade AI-frågor", "Obegränsade bildanalyser", "5 AI-illustrationer per dag", "Dela med föräldrar", "Prioriterad svarstid"], color: "amber", badge: "Familjepaket" },
-            ].map((plan, i) => (
-              <div key={i} className={`bg-white rounded-3xl p-6 shadow-sm border-2 ${plan.badge ? `border-${plan.color}-400` : 'border-black/5'} relative`}>
-                {plan.badge && (
-                  <div className={`absolute -top-3 left-1/2 -translate-x-1/2 bg-${plan.color}-500 text-white text-xs font-bold px-3 py-1 rounded-full`}>
-                    {plan.badge}
-                  </div>
-                )}
-                <h3 className="text-xl font-medium text-stone-900 mb-1">{plan.name}</h3>
-                <div className="text-3xl font-bold text-stone-900 mb-0.5">{plan.price}</div>
-                <div className="text-xs text-stone-400 mb-5">{plan.period}</div>
-                <ul className="space-y-2">
-                  {plan.features.map((f, fi) => (
-                    <li key={fi} className="flex items-center gap-2 text-sm text-stone-600">
-                      <CheckCircle size={14} className="text-emerald-500 shrink-0" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+        {/* Free to use + support */}
+        <section className="bg-white rounded-[2rem] p-8 md:p-12 shadow-sm border border-black/5 text-center">
+          <h2 className="text-3xl font-serif italic text-stone-900 mb-3">Gratis att använda</h2>
+          <p className="text-stone-500 mb-6 max-w-xl mx-auto">
+            Läxhjälpen är helt gratis med begränsad daglig användning. Abonnemangsplaner med mer användning är under planering.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 max-w-lg mx-auto">
+            <div className="bg-emerald-50 rounded-2xl p-4">
+              <div className="text-2xl font-bold text-emerald-700">5</div>
+              <div className="text-xs text-emerald-600">AI-frågor/dag</div>
+            </div>
+            <div className="bg-blue-50 rounded-2xl p-4">
+              <div className="text-2xl font-bold text-blue-700">2</div>
+              <div className="text-xs text-blue-600">Bildanalyser/dag</div>
+            </div>
+            <div className="bg-purple-50 rounded-2xl p-4">
+              <div className="text-2xl font-bold text-purple-700">2</div>
+              <div className="text-xs text-purple-600">Illustrationer/dag</div>
+            </div>
           </div>
+          <p className="text-sm text-stone-500">
+            Gillar du appen? Du kan stötta projektet via Swish inne i appen.
+          </p>
         </section>
 
         {/* Final CTA */}

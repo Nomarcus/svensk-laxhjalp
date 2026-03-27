@@ -227,7 +227,7 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
     }
   };
 
-  const sendMessage = async (e: React.FormEvent | string) => {
+  const sendMessage = async (e: React.FormEvent | string, displayText?: string) => {
     if (typeof e !== 'string') e.preventDefault();
     const messageText = typeof e === 'string' ? e : input.trim();
     if ((!messageText && !image) || loading || !auth.currentUser || !childId || !activeSessionId) return;
@@ -238,13 +238,16 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
     setLoading(true);
     setError(null);
 
+    // Use displayText for the visible user message if provided (e.g. "Visa facit" instead of the full prompt)
+    const visibleText = displayText || messageText || 'Analysera denna bild.';
+
     try {
       const messagesRef = collection(db, 'users', ownerId, 'children', childId, 'chatSessions', activeSessionId, 'messages');
 
       try {
         await addDoc(messagesRef, {
           role: 'user',
-          content: messageText || 'Analysera denna bild.',
+          content: visibleText,
           timestamp: serverTimestamp(),
           attachments: currentImage ? [currentImage] : [],
         });
@@ -252,7 +255,7 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
         if (err.message?.includes('exceeds the maximum allowed size')) {
           await addDoc(messagesRef, {
             role: 'user',
-            content: (messageText || 'Analysera denna bild.') + ' (Bilden var för stor för att sparas i historiken)',
+            content: visibleText + ' (Bilden var för stor för att sparas i historiken)',
             timestamp: serverTimestamp(),
             attachments: [],
           });
@@ -358,13 +361,13 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
                 onSaveToLibrary={saveToLibrary}
                 onGenerateImage={handleGenerateImage}
                 onAskCurriculum={(content) => {
-                  sendMessage(`Förklara hur det du just berättade om kopplas till den svenska läroplanen (Lgr22). Vilka centrala innehåll och kunskapskrav berörs? Ge konkreta kopplingar så jag som förälder förstår varför mitt barn lär sig detta.\n\nDin förklaring var:\n${content.slice(0, 500)}`);
+                  sendMessage(`Förklara hur det du just berättade om kopplas till den svenska läroplanen (Lgr22). Vilka centrala innehåll och kunskapskrav berörs? Ge konkreta kopplingar så jag som förälder förstår varför mitt barn lär sig detta.\n\nDin förklaring var:\n${content.slice(0, 500)}`, 'Koppling till läroplanen');
                 }}
                 onAskFacit={(content) => {
-                  sendMessage(`Ge mig ett komplett facit med alla svar utskrivna för uppgiften du just förklarade. Skriv tydligt varje fråga/deluppgift följt av det korrekta svaret. Detta är till föräldern — inte till eleven. Formatera det snyggt med numrering.\n\nDin förklaring var:\n${content.slice(0, 500)}`);
+                  sendMessage(`Ge mig ett komplett facit med alla svar utskrivna för uppgiften du just förklarade. Skriv tydligt varje fråga/deluppgift följt av det korrekta svaret. Detta är till föräldern — inte till eleven. Formatera det snyggt med numrering.\n\nDin förklaring var:\n${content.slice(0, 500)}`, 'Visa facit');
                 }}
                 onAskFordjupning={(content) => {
-                  sendMessage(`Baserat på din förklaring, ge förslag på relaterade ämnen och kopplingar som kan fördjupa mitt barns förståelse. Ge 2-3 konkreta förslag på vad vi kan utforska vidare, med en kort förklaring av hur det kopplar till det vi just pratat om. Skriv det så att jag som förälder kan ta upp det med mitt barn.\n\nDin förklaring var:\n${content.slice(0, 500)}`);
+                  sendMessage(`Baserat på din förklaring, ge förslag på relaterade ämnen och kopplingar som kan fördjupa mitt barns förståelse. Ge 2-3 konkreta förslag på vad vi kan utforska vidare, med en kort förklaring av hur det kopplar till det vi just pratat om. Skriv det så att jag som förälder kan ta upp det med mitt barn.\n\nDin förklaring var:\n${content.slice(0, 500)}`, 'Fördjupning');
                 }}
                 onAutoCreateTask={onCreateTaskFromPhoto ? handleAutoCreateTask : undefined}
                 creatingAutoTask={creatingAutoTask}

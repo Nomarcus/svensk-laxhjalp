@@ -62,7 +62,7 @@ export default function ChatHeader({
           title="Enkel svenska — svar skrivs med enkla ord och korta meningar"
         >
           <Languages size={14} />
-          <span className="hidden sm:inline">Enkel svenska</span>
+          <span>Enkel svenska</span>
         </button>
         <button
           onClick={onNewSession}
