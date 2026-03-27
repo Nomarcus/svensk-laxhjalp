@@ -4,16 +4,16 @@ import { BookOpen, MessageSquare, Calendar, Sparkles, ShieldCheck, Zap, ChevronD
 function CollapsibleSection({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-black/5 overflow-hidden">
+    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-black/5 dark:border-white/5 overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between p-5 md:p-6 text-left hover:bg-stone-50 transition-colors"
+        className="w-full flex items-center justify-between p-5 md:p-6 text-left hover:bg-stone-50 dark:hover:bg-slate-800 transition-colors"
       >
-        <h3 className="text-lg font-medium text-stone-900 pr-4">{title}</h3>
-        <ChevronDown size={20} className={`text-stone-400 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+        <h3 className="text-lg font-medium text-stone-900 dark:text-stone-100 pr-4">{title}</h3>
+        <ChevronDown size={20} className={`text-stone-400 dark:text-stone-500 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="px-5 md:px-6 pb-5 md:pb-6 pt-0 text-sm text-stone-600 leading-relaxed space-y-4">
+        <div className="px-5 md:px-6 pb-5 md:pb-6 pt-0 text-sm text-stone-600 dark:text-stone-300 leading-relaxed space-y-4">
           {children}
         </div>
       )}
@@ -56,15 +56,15 @@ export default function Info() {
   ];
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 bg-[#F5F5F0]">
+    <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 bg-[#F5F5F0] dark:bg-slate-950">
       <div className="max-w-3xl mx-auto space-y-10 py-6">
         {/* Header */}
         <header className="text-center space-y-4">
           <div className="inline-flex p-3 bg-emerald-100 rounded-2xl text-emerald-600 mb-2">
             <BookOpen size={32} />
           </div>
-          <h1 className="text-4xl font-serif italic text-stone-900">Hur fungerar Föräldrahjälpen?</h1>
-          <p className="text-lg text-stone-600 max-w-xl mx-auto">
+          <h1 className="text-4xl font-serif italic text-stone-900 dark:text-stone-100">Hur fungerar Föräldrahjälpen?</h1>
+          <p className="text-lg text-stone-600 dark:text-stone-300 max-w-xl mx-auto">
             En komplett guide till alla funktioner i appen. Lär dig hur du får ut mest av AI-läxhjälpen, planeringen och alla verktyg.
           </p>
         </header>
@@ -72,12 +72,12 @@ export default function Info() {
         {/* Feature overview cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {features.map((f, i) => (
-            <div key={i} className="bg-white p-5 rounded-2xl shadow-sm border border-black/5 hover:shadow-md transition-all">
-              <div className="w-10 h-10 bg-stone-50 rounded-xl flex items-center justify-center mb-3">
+            <div key={i} className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-black/5 dark:border-white/5 hover:shadow-md transition-all">
+              <div className="w-10 h-10 bg-stone-50 dark:bg-slate-800 rounded-xl flex items-center justify-center mb-3">
                 {f.icon}
               </div>
-              <h3 className="text-base font-medium text-stone-900 mb-1">{f.title}</h3>
-              <p className="text-sm text-stone-500 leading-relaxed">{f.description}</p>
+              <h3 className="text-base font-medium text-stone-900 dark:text-stone-100 mb-1">{f.title}</h3>
+              <p className="text-sm text-stone-500 dark:text-stone-400 leading-relaxed">{f.description}</p>
             </div>
           ))}
         </div>
@@ -110,7 +110,7 @@ export default function Info() {
 
         {/* Detailed collapsible sections */}
         <div>
-          <h2 className="text-2xl font-serif italic text-stone-900 mb-5 text-center">Detaljerad guide till alla funktioner</h2>
+          <h2 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 mb-5 text-center">Detaljerad guide till alla funktioner</h2>
           <div className="space-y-3">
 
             <CollapsibleSection title="AI-assistenten — hur den förklarar läxor">
@@ -275,27 +275,27 @@ export default function Info() {
             <CollapsibleSection title="Vanliga frågor (FAQ)">
               <div className="space-y-5">
                 <div>
-                  <p className="font-medium text-stone-900 mb-1">Är detta fusk?</p>
+                  <p className="font-medium text-stone-900 dark:text-stone-100 mb-1">Är detta fusk?</p>
                   <p>Nej. Föräldrahjälpen hjälper dig som förälder att förstå uppgiften så att du kan vägleda ditt barn. AI:n ger pedagogiska förklaringar, inte färdiga svar. Det handlar om att bygga förståelse tillsammans med barnet.</p>
                 </div>
                 <div>
-                  <p className="font-medium text-stone-900 mb-1">Vilka årskurser stöds?</p>
+                  <p className="font-medium text-stone-900 dark:text-stone-100 mb-1">Vilka årskurser stöds?</p>
                   <p>Alla årskurser i grundskolan, från åk 1 till åk 9. AI:n anpassar språket och förklaringarna efter den årskurs du har angett för ditt barn.</p>
                 </div>
                 <div>
-                  <p className="font-medium text-stone-900 mb-1">Sparas mina chattar?</p>
+                  <p className="font-medium text-stone-900 dark:text-stone-100 mb-1">Sparas mina chattar?</p>
                   <p>Ja, chattar sparas säkert per barn i molnet (Firebase) och är bara tillgängliga för dig och eventuellt en delad förälder. Du kan se tidigare konversationer och fortsätta där du slutade.</p>
                 </div>
                 <div>
-                  <p className="font-medium text-stone-900 mb-1">Kan jag använda appen på flera enheter?</p>
+                  <p className="font-medium text-stone-900 dark:text-stone-100 mb-1">Kan jag använda appen på flera enheter?</p>
                   <p>Ja, eftersom appen är webbaserad fungerar den på alla enheter med en modern webbläsare: mobil, surfplatta och dator. Allt synkas automatiskt.</p>
                 </div>
                 <div>
-                  <p className="font-medium text-stone-900 mb-1">Hur exakt är AI:n?</p>
+                  <p className="font-medium text-stone-900 dark:text-stone-100 mb-1">Hur exakt är AI:n?</p>
                   <p>AI:n bygger på Google Gemini och ger generellt sett mycket bra svar, men det är alltid en AI och kan göra misstag. Använd facit-funktionen för att dubbelkolla svar i matematik, och kontakta oss om du hittar felaktigheter.</p>
                 </div>
                 <div>
-                  <p className="font-medium text-stone-900 mb-1">Kan jag avbryta mitt abonnemang?</p>
+                  <p className="font-medium text-stone-900 dark:text-stone-100 mb-1">Kan jag avbryta mitt abonnemang?</p>
                   <p>Ja, du kan avbryta när som helst via abonnemangsportalen. Ditt abonnemang gäller till slutet av den betalda perioden och går sedan automatiskt ner till gratisplanen.</p>
                 </div>
               </div>
@@ -305,7 +305,7 @@ export default function Info() {
         </div>
 
         {/* Footer */}
-        <footer className="text-center text-stone-400 text-sm pb-8 space-y-1">
+        <footer className="text-center text-stone-400 dark:text-stone-500 text-sm pb-8 space-y-1">
           <p>Föräldrahjälpen — AI-driven läxhjälp kopplad till svenska läroplanen Lgr22</p>
           <p>Stöd i matematik, svenska, engelska, NO och SO för grundskolan åk 1-9</p>
         </footer>

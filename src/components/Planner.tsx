@@ -402,7 +402,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
       <button
         type="button"
         onClick={() => plannerCameraRef.current?.click()}
-        className="w-full flex items-center justify-center gap-2 py-3 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl font-medium hover:bg-amber-100 transition-all"
+        className="w-full flex items-center justify-center gap-2 py-3 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/30 rounded-xl font-medium hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-all"
       >
         <Camera size={18} />
         Fota läxan
@@ -417,18 +417,18 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
       />
       {taskImage && (
         <div className="relative">
-          <img src={taskImage} alt="Läxbild" className="w-full max-h-40 object-cover rounded-xl border border-black/5" />
-          <button type="button" onClick={() => setTaskImage(null)} className="absolute top-1 right-1 p-1 bg-white/90 rounded-full text-stone-500 hover:text-red-500">✕</button>
+          <img src={taskImage} alt="Läxbild" className="w-full max-h-40 object-cover rounded-xl border border-black/5 dark:border-white/5" />
+          <button type="button" onClick={() => setTaskImage(null)} className="absolute top-1 right-1 p-1 bg-white/90 dark:bg-slate-900/90 rounded-full text-stone-500 dark:text-stone-400 hover:text-red-500">✕</button>
         </div>
       )}
       {/* Task type toggle */}
-      <div className="flex bg-stone-100 rounded-xl p-1">
+      <div className="flex bg-stone-100 dark:bg-slate-700 rounded-xl p-1">
         <button
           type="button"
           onClick={() => setNewTaskType('homework')}
           className={cn(
             "flex-1 py-2 rounded-lg text-xs font-medium transition-all",
-            newTaskType === 'homework' ? "bg-white shadow-sm text-emerald-700" : "text-stone-400"
+            newTaskType === 'homework' ? "bg-white dark:bg-slate-900 shadow-sm text-emerald-700" : "text-stone-400 dark:text-stone-500"
           )}
         >
           Läxa
@@ -438,37 +438,37 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
           onClick={() => setNewTaskType('exam')}
           className={cn(
             "flex-1 py-2 rounded-lg text-xs font-medium transition-all",
-            newTaskType === 'exam' ? "bg-purple-600 text-white shadow-sm" : "text-stone-400"
+            newTaskType === 'exam' ? "bg-purple-600 text-white shadow-sm" : "text-stone-400 dark:text-stone-500"
           )}
         >
           Prov
         </button>
       </div>
       <div>
-        <label className="block text-xs font-medium text-stone-400 uppercase tracking-widest mb-1">Ämne</label>
+        <label className="block text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1">Ämne</label>
         <input
           type="text"
           autoFocus={inModal}
           value={newSubject}
           onChange={(e) => setNewSubject(e.target.value)}
           placeholder="t.ex. Matematik"
-          className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 transition-all"
+          className="w-full bg-stone-50 dark:bg-slate-800 border-none rounded-xl px-4 py-3 text-sm dark:text-stone-100 focus:ring-2 focus:ring-emerald-500/20 transition-all"
         />
       </div>
       <div>
-        <label className="block text-xs font-medium text-stone-400 uppercase tracking-widest mb-1">Beskrivning</label>
+        <label className="block text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1">Beskrivning</label>
         <textarea
           value={newDesc}
           onChange={(e) => setNewDesc(e.target.value)}
           placeholder="Vad ska göras?"
           rows={inModal ? 3 : 2}
-          className="w-full bg-stone-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 transition-all resize-none"
+          className="w-full bg-stone-50 dark:bg-slate-800 border-none rounded-xl px-4 py-3 text-sm dark:text-stone-100 focus:ring-2 focus:ring-emerald-500/20 transition-all resize-none"
         />
       </div>
 
       {/* Inlämningsdag (single select) */}
       <div>
-        <label className="block text-xs font-medium text-stone-400 uppercase tracking-widest mb-2">
+        <label className="block text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-2">
           Inlämningsdag
         </label>
         <div className="flex flex-wrap gap-1.5">
@@ -480,8 +480,8 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
               className={cn(
                 "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border capitalize",
                 newDueDay === day
-                  ? "bg-amber-50 border-amber-200 text-amber-700"
-                  : "bg-stone-50 border-stone-100 text-stone-400 hover:bg-stone-100",
+                  ? "bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-400"
+                  : "bg-stone-50 dark:bg-slate-800 border-stone-100 dark:border-slate-700 text-stone-400 dark:text-stone-500 hover:bg-stone-100 dark:hover:bg-slate-700",
               )}
             >
               {day.slice(0, 3)}
@@ -492,7 +492,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
 
       {/* Arbetsdagar (multi select) */}
       <div>
-        <label className="block text-xs font-medium text-stone-400 uppercase tracking-widest mb-2">
+        <label className="block text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-2">
           Vilka dagar ska barnet jobba med läxan?
         </label>
         <div className="flex flex-wrap gap-1.5">
@@ -504,8 +504,8 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
               className={cn(
                 "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border capitalize",
                 newWorkDays.includes(day)
-                  ? "bg-blue-50 border-blue-200 text-blue-700"
-                  : "bg-stone-50 border-stone-100 text-stone-400 hover:bg-stone-100"
+                  ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950 dark:border-blue-800 dark:text-blue-400"
+                  : "bg-stone-50 dark:bg-slate-800 border-stone-100 dark:border-slate-700 text-stone-400 dark:text-stone-500 hover:bg-stone-100 dark:hover:bg-slate-700"
               )}
             >
               {day.slice(0, 3)}
@@ -516,7 +516,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
 
       {/* Minutes per day */}
       <div>
-        <label className="block text-xs font-medium text-stone-400 uppercase tracking-widest mb-1">
+        <label className="block text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1">
           Tid per dag (minuter)
         </label>
         <div className="flex items-center gap-2">
@@ -553,24 +553,24 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
   );
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 bg-[#F5F5F0]">
+    <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 bg-[#F5F5F0] dark:bg-slate-950">
       <div className="max-w-4xl mx-auto space-y-8">
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div className="flex items-center justify-between w-full md:w-auto">
             <div className="flex items-center gap-4">
               <div>
-                <h2 className="text-3xl font-serif italic mb-1">Veckans Läxor</h2>
-                <div className="flex items-center gap-2 text-stone-500">
+                <h2 className="text-3xl font-serif italic mb-1 dark:text-stone-100">Veckans Läxor</h2>
+                <div className="flex items-center gap-2 text-stone-500 dark:text-stone-400">
                   <button
                     onClick={() => setViewDate(prev => subWeeks(prev, 1))}
-                    className="p-1 hover:bg-stone-200 rounded-full transition-colors"
+                    className="p-1 hover:bg-stone-200 dark:hover:bg-slate-700 rounded-full transition-colors"
                   >
                     <ChevronLeft size={16} />
                   </button>
                   <span className="text-sm font-medium">Vecka {viewWeek}, {viewYear}</span>
                   <button
                     onClick={() => setViewDate(prev => addWeeks(prev, 1))}
-                    className="p-1 hover:bg-stone-200 rounded-full transition-colors"
+                    className="p-1 hover:bg-stone-200 dark:hover:bg-slate-700 rounded-full transition-colors"
                   >
                     <ChevronRight size={16} />
                   </button>
@@ -601,19 +601,19 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                   "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all shadow-sm border",
                   hideCompleted
                     ? "bg-amber-50 border-amber-200 text-amber-700"
-                    : "bg-white border-black/5 text-stone-400 hover:bg-stone-50"
+                    : "bg-white dark:bg-slate-900 border-black/5 dark:border-white/5 text-stone-400 dark:text-stone-500 hover:bg-stone-50 dark:hover:bg-slate-800"
                 )}
                 title={hideCompleted ? "Visa klarmarkerade" : "Dölj klarmarkerade"}
               >
                 {hideCompleted ? <EyeOff size={16} /> : <Eye size={16} />}
                 <span className="hidden sm:inline">{hideCompleted ? 'Visa klarmarkerade' : 'Dölj klarmarkerade'}</span>
               </button>
-              <div className="flex bg-white rounded-xl p-1 shadow-sm border border-black/5">
+              <div className="flex bg-white dark:bg-slate-900 rounded-xl p-1 shadow-sm border border-black/5 dark:border-white/5">
                 <button
                   onClick={() => setViewMode('list')}
                   className={cn(
                     "p-2 rounded-lg transition-all",
-                    viewMode === 'list' ? "bg-emerald-600 text-white shadow-sm" : "text-stone-400 hover:bg-stone-50"
+                    viewMode === 'list' ? "bg-emerald-600 text-white shadow-sm" : "text-stone-400 dark:text-stone-500 hover:bg-stone-50 dark:hover:bg-slate-800"
                   )}
                   title="Listvy"
                 >
@@ -623,7 +623,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                   onClick={() => setViewMode('calendar')}
                   className={cn(
                     "p-2 rounded-lg transition-all",
-                    viewMode === 'calendar' ? "bg-emerald-600 text-white shadow-sm" : "text-stone-400 hover:bg-stone-50"
+                    viewMode === 'calendar' ? "bg-emerald-600 text-white shadow-sm" : "text-stone-400 dark:text-stone-500 hover:bg-stone-50 dark:hover:bg-slate-800"
                   )}
                   title="Kalendervy"
                 >
@@ -632,14 +632,14 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
               </div>
             </div>
           </div>
-          <div className="flex bg-white rounded-xl p-1 shadow-sm border border-black/5 overflow-x-auto">
+          <div className="flex bg-white dark:bg-slate-900 rounded-xl p-1 shadow-sm border border-black/5 dark:border-white/5 overflow-x-auto">
             {DAYS.map((day) => (
               <button
                 key={day}
                 onClick={() => setSelectedDay(day)}
                 className={cn(
                   "px-4 py-2 rounded-lg text-sm capitalize transition-all whitespace-nowrap",
-                  selectedDay === day ? "bg-emerald-600 text-white shadow-sm" : "text-stone-500 hover:bg-stone-50"
+                  selectedDay === day ? "bg-emerald-600 text-white shadow-sm" : "text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800"
                 )}
               >
                 {day.slice(0, 3)}
@@ -650,12 +650,12 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
 
         {/* Progress Bar */}
         {totalCount > 0 && (
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-black/5">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-black/5 dark:border-white/5">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">Framsteg</span>
-              <span className="text-xs font-bold text-emerald-600">{completedCount} av {totalCount} klara ({Math.round(progress)}%)</span>
+              <span className="text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest">Framsteg</span>
+              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{completedCount} av {totalCount} klara ({Math.round(progress)}%)</span>
             </div>
-            <div className="h-2 bg-stone-100 rounded-full overflow-hidden">
+            <div className="h-2 bg-stone-100 dark:bg-slate-700 rounded-full overflow-hidden">
               <div
                 className="h-full bg-emerald-500 transition-all duration-500 ease-out"
                 style={{ width: `${progress}%` }}
@@ -667,15 +667,15 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
         {/* Add Task Modal */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
-            <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl border border-black/5 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 w-full max-w-md shadow-2xl border border-black/5 dark:border-white/5 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-serif italic flex items-center gap-2">
+                <h3 className="text-xl font-serif italic flex items-center gap-2 dark:text-stone-100">
                   <Plus size={20} className="text-emerald-600" />
                   Lägg till läxa — <span className="capitalize">{selectedDay}</span>
                 </h3>
                 <button
                   onClick={() => { setShowAddModal(false); resetForm(); }}
-                  className="p-2 hover:bg-stone-100 rounded-full text-stone-400 transition-colors"
+                  className="p-2 hover:bg-stone-100 dark:hover:bg-slate-700 rounded-full text-stone-400 dark:text-stone-500 transition-colors"
                 >
                   <Plus size={20} className="rotate-45" />
                 </button>
@@ -686,7 +686,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                   <button
                     type="button"
                     onClick={() => { setShowAddModal(false); resetForm(); }}
-                    className="flex-1 py-4 bg-stone-100 text-stone-600 rounded-2xl font-medium hover:bg-stone-200 transition-all"
+                    className="flex-1 py-4 bg-stone-100 dark:bg-slate-800 text-stone-600 dark:text-stone-300 rounded-2xl font-medium hover:bg-stone-200 dark:hover:bg-slate-700 transition-all"
                   >
                     Avbryt
                   </button>
@@ -707,8 +707,8 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Add Task Form */}
             <div className="lg:col-span-1">
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-black/5 sticky top-8">
-                <h3 className="font-medium mb-4 flex items-center gap-2">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-black/5 dark:border-white/5 sticky top-8">
+                <h3 className="font-medium mb-4 flex items-center gap-2 dark:text-stone-100">
                   <Plus size={18} className="text-emerald-600" />
                   Lägg till läxa — <span className="capitalize">{selectedDay}</span>
                 </h3>
@@ -733,14 +733,14 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
 
                 return (
                   <section key={day} className="space-y-3">
-                    <h4 className="text-xs font-bold text-stone-400 uppercase tracking-[0.2em] px-2 flex items-center gap-2">
+                    <h4 className="text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-[0.2em] px-2 flex items-center gap-2">
                       {day}
-                      <div className="h-px flex-1 bg-black/5" />
+                      <div className="h-px flex-1 bg-black/5 dark:bg-white/5" />
                     </h4>
                     <div className="space-y-1.5">
                       {dayTasks.length === 0 ? (
-                        <div className="bg-white/50 border border-dashed border-black/10 rounded-xl p-6 text-center">
-                          <p className="text-sm text-stone-400 italic">Inga läxor inlagda för {day}.</p>
+                        <div className="bg-white/50 dark:bg-slate-900/50 border border-dashed border-black/10 dark:border-white/10 rounded-xl p-6 text-center">
+                          <p className="text-sm text-stone-400 dark:text-stone-500 italic">Inga läxor inlagda för {day}.</p>
                         </div>
                       ) : (
                         dayTasks.map((task) => (
@@ -748,7 +748,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                             key={task.id}
                             onClick={() => openTaskDetail(task)}
                             className={cn(
-                              "bg-white rounded-xl px-3 py-2 shadow-sm border border-black/5 flex items-center gap-3 transition-all group cursor-pointer hover:shadow-md",
+                              "bg-white dark:bg-slate-900 rounded-xl px-3 py-2 shadow-sm border border-black/5 dark:border-white/5 flex items-center gap-3 transition-all group cursor-pointer hover:shadow-md",
                               isDayCompleted(task, day) && "opacity-60"
                             )}
                           >
@@ -820,12 +820,12 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
             </div>
           </div>
         ) : (
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-black/5 overflow-x-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-black/5 dark:border-white/5 overflow-x-auto">
             <div className="min-w-[1000px]">
               <div className="grid grid-cols-7 gap-4 mb-6">
                 {DAYS.map(day => (
                   <div key={day} className="text-center">
-                    <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">{day.slice(0, 3)}</span>
+                    <span className="text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest">{day.slice(0, 3)}</span>
                   </div>
                 ))}
               </div>
@@ -837,7 +837,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                       key={day}
                       onDragOver={handleDragOver}
                       onDrop={(e) => handleDrop(e, day)}
-                      className="bg-stone-50/50 rounded-2xl p-3 border border-black/5 flex flex-col gap-2 min-h-[150px] transition-colors hover:bg-emerald-50/30"
+                      className="bg-stone-50/50 dark:bg-slate-800/50 rounded-2xl p-3 border border-black/5 dark:border-white/5 flex flex-col gap-2 min-h-[150px] transition-colors hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10"
                     >
                       {dayTasks.map(task => {
                         const isDeadline = isDueOnDay(task, day);
@@ -857,7 +857,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                                     ? "bg-red-50 border-red-200 text-stone-700 ring-2 ring-red-300/50"
                                     : task.workDays?.includes(day)
                                       ? "bg-blue-50 border-blue-200 text-stone-700"
-                                      : "bg-white border-black/5 text-stone-700"
+                                      : "bg-white dark:bg-slate-800 border-black/5 dark:border-white/5 text-stone-700 dark:text-stone-200"
                             )}
                           >
                             {task.taskType === 'exam' && !isDayCompleted(task, day) && (
@@ -949,22 +949,22 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
       {/* Task Detail Modal */}
       {selectedTask && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in" onClick={() => setSelectedTask(null)}>
-          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-black/5 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="p-6 border-b border-black/5">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-lg shadow-2xl border border-black/5 dark:border-white/5 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-black/5 dark:border-white/5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     "p-2 rounded-xl",
-                    selectedTask.completed ? "bg-stone-100 text-stone-400" : "bg-emerald-50 text-emerald-600"
+                    selectedTask.completed ? "bg-stone-100 dark:bg-slate-700 text-stone-400 dark:text-stone-500" : "bg-emerald-50 text-emerald-600"
                   )}>
                     {getSubjectIcon(selectedTask.subject)}
                   </div>
                   <div>
-                    <h3 className="text-xl font-serif italic">{selectedTask.subject}</h3>
-                    <p className="text-xs text-stone-400 capitalize">{selectedTask.day}</p>
+                    <h3 className="text-xl font-serif italic dark:text-stone-100">{selectedTask.subject}</h3>
+                    <p className="text-xs text-stone-400 dark:text-stone-500 capitalize">{selectedTask.day}</p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedTask(null)} className="p-2 hover:bg-stone-100 rounded-full text-stone-400 transition-colors">
+                <button onClick={() => setSelectedTask(null)} className="p-2 hover:bg-stone-100 dark:hover:bg-slate-700 rounded-full text-stone-400 dark:text-stone-500 transition-colors">
                   <X size={20} />
                 </button>
               </div>
@@ -974,22 +974,22 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
               {/* Task image */}
               {selectedTask.imageUrl && (
                 <div>
-                  <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">Foto av läxan</label>
-                  <img src={selectedTask.imageUrl} alt="Läxbild" className="w-full max-h-64 object-contain rounded-xl border border-black/5 bg-stone-50" />
+                  <label className="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-2">Foto av läxan</label>
+                  <img src={selectedTask.imageUrl} alt="Läxbild" className="w-full max-h-64 object-contain rounded-xl border border-black/5 dark:border-white/5 bg-stone-50 dark:bg-slate-800" />
                 </div>
               )}
 
               {/* Description */}
               {selectedTask.description && (
                 <div>
-                  <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">Beskrivning</label>
-                  <p className="text-sm text-stone-600 leading-relaxed">{selectedTask.description}</p>
+                  <label className="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1">Beskrivning</label>
+                  <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed">{selectedTask.description}</p>
                 </div>
               )}
 
               {/* Editable: Inlämningsdag */}
               <div>
-                <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">
+                <label className="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-2">
                   Inlämningsdag
                 </label>
                 <div className="flex flex-wrap gap-1.5">
@@ -1001,8 +1001,8 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                       className={cn(
                         "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border capitalize",
                         editDueDay === day
-                          ? "bg-red-50 border-red-300 text-red-700 ring-1 ring-red-300"
-                          : "bg-stone-50 border-stone-100 text-stone-400 hover:bg-stone-100"
+                          ? "bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-800 text-red-700 dark:text-red-400 ring-1 ring-red-300 dark:ring-red-800"
+                          : "bg-stone-50 dark:bg-slate-800 border-stone-100 dark:border-slate-700 text-stone-400 dark:text-stone-500 hover:bg-stone-100 dark:hover:bg-slate-700"
                       )}
                     >
                       {day.slice(0, 3)}
@@ -1013,7 +1013,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
 
               {/* Editable: Arbetsdagar */}
               <div>
-                <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">
+                <label className="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-2">
                   Arbetsdagar
                 </label>
                 <div className="flex flex-wrap gap-1.5">
@@ -1025,8 +1025,8 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                       className={cn(
                         "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border capitalize",
                         editWorkDays.includes(day)
-                          ? "bg-blue-50 border-blue-200 text-blue-700"
-                          : "bg-stone-50 border-stone-100 text-stone-400 hover:bg-stone-100"
+                          ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400"
+                          : "bg-stone-50 dark:bg-slate-800 border-stone-100 dark:border-slate-700 text-stone-400 dark:text-stone-500 hover:bg-stone-100 dark:hover:bg-slate-700"
                       )}
                     >
                       {day.slice(0, 3)}
@@ -1038,7 +1038,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
               {/* AI Notes */}
               {selectedTask.aiNotes && selectedTask.aiNotes.length > 0 && (
                 <div>
-                  <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">AI-anteckningar</label>
+                  <label className="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-2">AI-anteckningar</label>
                   <div className="space-y-2">
                     {selectedTask.aiNotes.map((note, i) => (
                       <div key={i} className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-sm text-emerald-800">
