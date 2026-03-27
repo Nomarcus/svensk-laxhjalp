@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, Clock, Construction, MessageCircle, Image, Palette, BookOpen, Sparkles, FileText } from 'lucide-react';
+import { Heart, Clock, Construction, MessageCircle, Image, Palette, BookOpen, Sparkles, FileText, Send, Mail } from 'lucide-react';
 import { auth } from '../firebase';
 
 interface UsageData {
@@ -140,7 +140,93 @@ export default function Subscription() {
             <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">Swish-nummer läggs till inom kort</p>
           </div>
         </div>
+        {/* Kontaktformulär */}
+        <ContactForm />
       </div>
+    </div>
+  );
+}
+
+function ContactForm() {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSending(true);
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, message }),
+      });
+      if (res.ok) {
+        setSent(true);
+        setName('');
+        setEmail('');
+        setMessage('');
+      }
+    } catch (err) {
+      console.error('Failed to send message:', err);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-black/5 dark:border-white/5">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+          <Mail size={24} />
+        </div>
+        <div>
+          <h3 className="font-medium text-lg dark:text-stone-100">Kontakta oss</h3>
+          <p className="text-sm text-stone-400">Frågor, feedback eller förslag</p>
+        </div>
+      </div>
+      {sent ? (
+        <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/30 text-emerald-700 dark:text-emerald-300 text-sm rounded-xl px-4 py-3 text-center">
+          Tack för ditt meddelande! Vi återkommer så snart vi kan.
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <input
+            type="text"
+            placeholder="Ditt namn"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            required
+            className="w-full px-4 py-2.5 rounded-xl border border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-700 dark:text-stone-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 dark:focus:ring-emerald-900/50 outline-none transition-all text-sm"
+          />
+          <input
+            type="email"
+            placeholder="Din e-post"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            required
+            className="w-full px-4 py-2.5 rounded-xl border border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-700 dark:text-stone-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 dark:focus:ring-emerald-900/50 outline-none transition-all text-sm"
+          />
+          <textarea
+            placeholder="Ditt meddelande..."
+            value={message}
+            onChange={e => setMessage(e.target.value)}
+            required
+            rows={4}
+            className="w-full px-4 py-2.5 rounded-xl border border-stone-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-stone-700 dark:text-stone-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 dark:focus:ring-emerald-900/50 outline-none transition-all text-sm resize-none"
+          />
+          <button
+            type="submit"
+            disabled={sending}
+            className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white py-2.5 px-6 rounded-xl font-medium hover:bg-emerald-700 transition-all active:scale-[0.98] disabled:opacity-50 text-sm"
+          >
+            <Send size={16} />
+            {sending ? 'Skickar...' : 'Skicka meddelande'}
+          </button>
+        </form>
+      )}
     </div>
   );
 }
