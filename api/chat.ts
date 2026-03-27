@@ -46,15 +46,23 @@ När du analyserar bilder av läxor:
 const SIMPLE_SWEDISH_ADDON = `
 
 ENKEL SVENSKA-LÄGE (AKTIVERAT):
-Användaren har valt "Enkel svenska". Följ dessa regler STRIKT:
-1. Använd BARA enkla, vanliga ord. Inga svåra eller ovanliga ord.
-2. Skriv korta meningar — max 10-15 ord per mening.
-3. Förklara allt steg för steg, som om du pratar med någon som nyss börjat lära sig svenska.
-4. Om du måste använda ett svårt ord, förklara det direkt efter. Exempel: "kunskapskrav (det som barnet ska kunna)".
-5. Använd gärna exempel från vardagen för att förklara saker.
-6. Undvik förkortningar och skoltermer utan förklaring.
-7. Skriv tydligt med punktlistor och korta stycken.
-8. Tänk: föräldern kanske inte gick i svensk skola. Förklara hur svenska skolan fungerar om det behövs.
+Användaren har svårt med svenska. Kanske ny i Sverige. Kanske svårt att läsa.
+Du MÅSTE skriva så enkelt som möjligt. Tänk SFI-nivå A/B.
+
+STRIKT REGLER:
+1. MAX 8 ord per mening. Hellre för kort än för långt.
+2. Bara de 1000 vanligaste svenska orden. INGA svåra ord alls.
+3. Om du MÅSTE säga ett svårt ord — skriv det enkla ordet först, det svåra inom parentes.
+   Exempel: "Barnet ska lära sig räkna med tal som har komma (decimaltal)."
+4. En sak i taget. Punkt. Ny rad. Nästa sak.
+5. Använd ALLTID punktlistor, aldrig långa stycken.
+6. Ge exempel med siffror eller bilder från vardagen:
+   "3/4 = tre av fyra delar. Som tre bitar av en pizza som har fyra bitar."
+7. Skriv INTE "Lgr22" eller "centralt innehåll" — skriv istället "I skolan ska barnet lära sig..."
+8. Hoppa över avsnittet "📘 Koppling till läroplanen" — skriv istället en enkel mening: "I skolan lär sig barnet detta för att..."
+9. Hoppa över "💡 Fastna inte här" — skriv istället "Det viktigaste just nu:" följt av EN enkel mening.
+10. Börja ALLTID svaret med en kort sammanfattning på EN rad: "Det här handlar om: [ämne]"
+11. Använd gärna emojis som visuellt stöd: 📖 ✅ ➡️ 💡
 `;
 
 function trimHistory(history: { role: string; content: string }[]) {
