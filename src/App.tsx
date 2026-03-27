@@ -16,6 +16,7 @@ import PrivacyPolicy from './components/PrivacyPolicy';
 import Subscription from './components/Subscription';
 import Contact from './components/Contact';
 import CookieConsent from './components/CookieConsent';
+import Terms from './components/Terms';
 import { useTheme } from './hooks/useTheme';
 
 export default function App() {
@@ -27,6 +28,7 @@ export default function App() {
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [showChildManager, setShowChildManager] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const [plannerPrefill, setPlannerPrefill] = useState<{ subject: string; description: string; workDays?: string[]; dueDay?: string; minutesPerDay?: number; imageUrl?: string } | null>(null);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
   const [chatFromTask, setChatFromTask] = useState<{ taskId: string; subject: string; description: string; imageUrl?: string } | null>(null);
@@ -173,8 +175,12 @@ export default function App() {
     return <PrivacyPolicy onBack={() => setShowPrivacy(false)} />;
   }
 
+  if (showTerms) {
+    return <Terms onBack={() => setShowTerms(false)} />;
+  }
+
   if (!user) {
-    return <Auth onShowPrivacy={() => setShowPrivacy(true)} />;
+    return <Auth onShowPrivacy={() => setShowPrivacy(true)} onShowTerms={() => setShowTerms(true)} />;
   }
 
   const selectedChild = children.find(c => c.id === selectedChildId);
@@ -192,6 +198,7 @@ export default function App() {
         subscriptionTier={subscription.tier}
         onShowInstallGuide={() => setShowInstallGuide(true)}
         onShowPrivacy={() => setShowPrivacy(true)}
+        onShowTerms={() => setShowTerms(true)}
         dark={dark}
         onToggleDark={toggleDark}
       >

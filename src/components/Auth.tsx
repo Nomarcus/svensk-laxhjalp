@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Mail, Eye, EyeOff, ArrowLeft, UserCircle, MessageSquare, Camera, Calendar, Sparkles, Library, CheckCircle, ChevronLeft, ChevronRight, Shield, GraduationCap, Users, Star } from 'lucide-react';
-import { signInWithGoogle, signInWithEmail, signUpWithEmail, signInAsGuest, resetPassword } from '../firebase';
+import { BookOpen, Mail, Eye, EyeOff, ArrowLeft, MessageSquare, Camera, Calendar, Sparkles, Library, CheckCircle, ChevronLeft, ChevronRight, Shield, GraduationCap, Users, Star, FileText } from 'lucide-react';
+import { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword } from '../firebase';
 
 interface AuthProps {
   onShowPrivacy?: () => void;
+  onShowTerms?: () => void;
 }
 
 type AuthView = 'main' | 'email-login' | 'email-signup' | 'reset-password';
@@ -81,7 +82,7 @@ function AppSlideshow() {
   );
 }
 
-export default function Auth({ onShowPrivacy }: AuthProps) {
+export default function Auth({ onShowPrivacy, onShowTerms }: AuthProps) {
   const [view, setView] = useState<AuthView>('main');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -157,18 +158,6 @@ export default function Auth({ onShowPrivacy }: AuthProps) {
     try {
       await resetPassword(email);
       setResetSent(true);
-    } catch (err) {
-      handleError(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGuestLogin = async () => {
-    setError('');
-    setLoading(true);
-    try {
-      await signInAsGuest();
     } catch (err) {
       handleError(err);
     } finally {
@@ -353,15 +342,6 @@ export default function Auth({ onShowPrivacy }: AuthProps) {
                 <Mail size={20} className="text-emerald-600" />
                 Logga in med e-post
               </button>
-              <div className="flex items-center gap-3 py-2">
-                <div className="flex-1 h-px bg-stone-200" />
-                <span className="text-xs text-stone-400 uppercase tracking-wider">eller</span>
-                <div className="flex-1 h-px bg-stone-200" />
-              </div>
-              <button onClick={handleGuestLogin} disabled={loading} className="w-full flex items-center justify-center gap-3 bg-stone-50 border border-stone-150 py-3 px-6 rounded-2xl text-sm text-stone-500 hover:bg-stone-100 hover:text-stone-700 transition-all active:scale-[0.98] disabled:opacity-50">
-                <UserCircle size={18} />
-                Testa som gäst
-              </button>
             </div>
 
             <div className="mt-8 pt-6 border-t border-black/5 grid grid-cols-2 gap-4">
@@ -374,10 +354,12 @@ export default function Auth({ onShowPrivacy }: AuthProps) {
                 <p className="text-xs text-stone-500">Anpassat efter svensk läroplan Lgr22.</p>
               </div>
             </div>
-            {onShowPrivacy && (
+            {(onShowPrivacy || onShowTerms) && (
               <p className="mt-4 text-xs text-stone-400">
-                Genom att logga in godkänner du vår{' '}
-                <button onClick={onShowPrivacy} className="underline hover:text-emerald-600 transition-colors">integritetspolicy</button>.
+                Genom att logga in godkänner du våra{' '}
+                {onShowTerms && <button onClick={onShowTerms} className="underline hover:text-emerald-600 transition-colors">användarvillkor</button>}
+                {onShowTerms && onShowPrivacy && ' och '}
+                {onShowPrivacy && <button onClick={onShowPrivacy} className="underline hover:text-emerald-600 transition-colors">integritetspolicy</button>}.
               </p>
             )}
           </div>
@@ -540,9 +522,14 @@ export default function Auth({ onShowPrivacy }: AuthProps) {
         <footer className="text-center text-stone-400 text-sm pt-4 pb-8 space-y-2">
           <p>Föräldrahjälpen — AI-driven läxhjälp kopplad till svenska läroplanen Lgr22</p>
           <p>Hjälp med läxor i matematik, svenska, engelska, NO och SO för grundskolan åk 1-9</p>
-          {onShowPrivacy && (
-            <button onClick={onShowPrivacy} className="underline hover:text-emerald-600 transition-colors">Integritetspolicy</button>
-          )}
+          <div className="flex items-center justify-center gap-4">
+            {onShowPrivacy && (
+              <button onClick={onShowPrivacy} className="underline hover:text-emerald-600 transition-colors">Integritetspolicy</button>
+            )}
+            {onShowTerms && (
+              <button onClick={onShowTerms} className="underline hover:text-emerald-600 transition-colors">Användarvillkor</button>
+            )}
+          </div>
         </footer>
       </div>
     </div>
