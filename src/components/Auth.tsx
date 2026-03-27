@@ -9,72 +9,96 @@ interface AuthProps {
 
 type AuthView = 'main' | 'email-login' | 'email-signup' | 'reset-password';
 
-// App screenshot mockups for the slideshow
+// App screenshot slideshow
 const slides = [
   {
-    title: "AI-driven läxhjälp",
-    description: "Ställ frågor om vilken läxa som helst och få pedagogiska förklaringar anpassade efter barnets årskurs.",
-    mockup: "chat",
+    title: "AI-assistent",
+    description: "Ställ frågor och få pedagogiska svar anpassade efter barnets årskurs.",
+    image: "/screenshots/chat.png",
     color: "from-emerald-500 to-emerald-700",
   },
   {
-    title: "Fota läxan med mobilen",
-    description: "Ta en bild på läxan — AI:n analyserar texten och förklarar uppgiften steg för steg.",
-    mockup: "camera",
+    title: "Detaljerade förklaringar",
+    description: "AI:n förklarar steg för steg med koppling till läroplanen Lgr22.",
+    image: "/screenshots/explanation.png",
     color: "from-blue-500 to-blue-700",
   },
   {
     title: "Smart veckoplanering",
-    description: "Planera läxor med kalender, deadlines och arbetsdagar. Dela planeringen med en annan förälder.",
-    mockup: "planner",
+    description: "Planera läxor med kalender, deadlines och arbetsdagar.",
+    image: "/screenshots/planner.png",
     color: "from-amber-500 to-amber-700",
   },
   {
-    title: "Kopplat till läroplanen",
-    description: "Varje svar kopplas till Lgr22 så du förstår varför barnet lär sig just detta.",
-    mockup: "lgr22",
+    title: "AI-genererade illustrationer",
+    description: "Pedagogiska bilder som gör det enklare att förstå svåra koncept.",
+    image: "/screenshots/illustration.png",
     color: "from-purple-500 to-purple-700",
   },
 ];
 
 function AppSlideshow() {
   const [current, setCurrent] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   useEffect(() => {
-    const timer = setInterval(() => setCurrent(c => (c + 1) % slides.length), 5000);
+    const timer = setInterval(() => {
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setCurrent(c => (c + 1) % slides.length);
+        setIsTransitioning(false);
+      }, 300);
+    }, 5000);
     return () => clearInterval(timer);
   }, []);
 
-  const slide = slides[current];
-
-  const mockupIcons: Record<string, React.ReactNode> = {
-    chat: <MessageSquare size={48} className="text-white/80" />,
-    camera: <Camera size={48} className="text-white/80" />,
-    planner: <Calendar size={48} className="text-white/80" />,
-    lgr22: <GraduationCap size={48} className="text-white/80" />,
+  const goTo = (index: number) => {
+    if (index === current) return;
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setCurrent(index);
+      setIsTransitioning(false);
+    }, 300);
   };
+
+  const slide = slides[current];
 
   return (
     <div className="relative">
-      <div className={`bg-gradient-to-br ${slide.color} rounded-3xl p-8 md:p-12 text-white transition-all duration-500 min-h-[280px] flex flex-col justify-center`}>
-        <div className="flex items-start gap-6">
-          <div className="hidden md:flex w-24 h-24 bg-white/20 rounded-2xl items-center justify-center shrink-0 backdrop-blur-sm">
-            {mockupIcons[slide.mockup]}
+      {/* Screenshot card */}
+      <div className="bg-white rounded-3xl shadow-lg border border-black/5 overflow-hidden">
+        {/* Image area */}
+        <div className="relative overflow-hidden bg-stone-100">
+          <img
+            src={slide.image}
+            alt={slide.title}
+            className={`w-full h-[280px] md:h-[380px] object-cover object-top transition-all duration-300 ${isTransitioning ? 'opacity-0 scale-[1.02]' : 'opacity-100 scale-100'}`}
+          />
+          {/* Gradient overlay at bottom */}
+          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent" />
+        </div>
+        {/* Caption */}
+        <div className={`px-6 pb-5 pt-2 transition-all duration-300 ${isTransitioning ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'}`}>
+          <div className="flex items-center gap-2 mb-1">
+            <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${slide.color}`} />
+            <h3 className="text-lg font-serif italic text-stone-900">{slide.title}</h3>
           </div>
-          <div className="flex-1">
-            <h3 className="text-2xl md:text-3xl font-serif italic mb-3">{slide.title}</h3>
-            <p className="text-white/90 text-lg leading-relaxed">{slide.description}</p>
-          </div>
+          <p className="text-sm text-stone-500 leading-relaxed">{slide.description}</p>
         </div>
       </div>
-      <div className="flex items-center justify-center gap-3 mt-4">
-        <button onClick={() => setCurrent(c => (c - 1 + slides.length) % slides.length)} className="p-1.5 rounded-full text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all">
+      {/* Navigation dots */}
+      <div className="flex items-center justify-center gap-3 mt-5">
+        <button onClick={() => goTo((current - 1 + slides.length) % slides.length)} className="p-1.5 rounded-full text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all">
           <ChevronLeft size={20} />
         </button>
         {slides.map((_, i) => (
-          <button key={i} onClick={() => setCurrent(i)} className={`w-2.5 h-2.5 rounded-full transition-all ${i === current ? 'bg-emerald-600 scale-110' : 'bg-stone-300 hover:bg-stone-400'}`} />
+          <button
+            key={i}
+            onClick={() => goTo(i)}
+            className={`h-2 rounded-full transition-all duration-300 ${i === current ? 'bg-emerald-600 w-6' : 'bg-stone-300 hover:bg-stone-400 w-2'}`}
+          />
         ))}
-        <button onClick={() => setCurrent(c => (c + 1) % slides.length)} className="p-1.5 rounded-full text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all">
+        <button onClick={() => goTo((current + 1) % slides.length)} className="p-1.5 rounded-full text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all">
           <ChevronRight size={20} />
         </button>
       </div>
