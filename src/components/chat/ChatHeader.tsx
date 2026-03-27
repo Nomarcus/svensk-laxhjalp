@@ -24,14 +24,14 @@ export default function ChatHeader({
   onToggleSimpleSwedish,
 }: ChatHeaderProps) {
   return (
-    <div className="px-4 py-3 md:px-8 md:py-4 bg-white border-b border-black/5 flex items-center justify-between">
+    <div className="px-4 py-3 md:px-8 md:py-4 bg-white dark:bg-slate-900 border-b border-black/5 dark:border-white/5 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600">
+        <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg flex items-center justify-center text-emerald-600 dark:text-emerald-400">
           <MessageSquare size={18} />
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-medium text-stone-900">Chatt med {childName}</h2>
+            <h2 className="text-sm font-medium text-stone-900 dark:text-stone-100">Chatt med {childName}</h2>
             {sessions.length > 1 && (
               <select
                 value={activeSessionId || ''}

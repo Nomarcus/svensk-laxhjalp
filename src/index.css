@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Cormorant Garamond", serif;
@@ -15,20 +17,25 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* Dark mode base */
+.dark {
+  color-scheme: dark;
+}
+
 .markdown-body {
-  @apply text-stone-700 leading-relaxed;
+  @apply text-stone-700 dark:text-stone-300 leading-relaxed;
 }
 
 .markdown-body h1 {
-  @apply text-4xl font-serif italic text-stone-900 mt-10 mb-6 border-b border-black/5 pb-3;
+  @apply text-4xl font-serif italic text-stone-900 dark:text-stone-100 mt-10 mb-6 border-b border-black/5 dark:border-white/10 pb-3;
 }
 
 .markdown-body h2 {
-  @apply text-3xl font-serif italic text-stone-900 mt-8 mb-4;
+  @apply text-3xl font-serif italic text-stone-900 dark:text-stone-100 mt-8 mb-4;
 }
 
 .markdown-body h3 {
-  @apply text-2xl font-serif italic text-stone-900 mt-6 mb-3;
+  @apply text-2xl font-serif italic text-stone-900 dark:text-stone-100 mt-6 mb-3;
 }
 
 .markdown-body p {
@@ -44,9 +51,9 @@
 }
 
 .markdown-body strong {
-  @apply font-semibold text-stone-900;
+  @apply font-semibold text-stone-900 dark:text-stone-100;
 }
 
 .markdown-body blockquote {
-  @apply border-l-4 border-emerald-200 pl-4 italic text-stone-500 my-4;
+  @apply border-l-4 border-emerald-200 dark:border-emerald-700 pl-4 italic text-stone-500 dark:text-stone-400 my-4;
 }

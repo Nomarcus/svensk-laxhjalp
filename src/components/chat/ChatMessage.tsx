@@ -68,7 +68,7 @@ export default function ChatMessage({
       <div
         className={cn(
           'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
-          msg.role === 'user' ? 'bg-stone-200 text-stone-600' : 'bg-emerald-600 text-white'
+          msg.role === 'user' ? 'bg-stone-200 dark:bg-slate-700 text-stone-600 dark:text-stone-300' : 'bg-emerald-600 text-white'
         )}
       >
         {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
@@ -88,7 +88,7 @@ export default function ChatMessage({
             'px-4 py-3 rounded-2xl text-[15px] leading-relaxed relative group/msg',
             msg.role === 'user'
               ? 'bg-emerald-600 text-white rounded-tr-none'
-              : 'bg-white border border-black/5 shadow-sm rounded-tl-none'
+              : 'bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 shadow-sm rounded-tl-none'
           )}
         >
           <div className="markdown-body prose prose-stone prose-sm max-w-none">

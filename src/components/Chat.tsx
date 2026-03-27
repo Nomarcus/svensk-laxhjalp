@@ -286,7 +286,7 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
 
   return (
     <div
-      className="flex-1 flex flex-col min-h-0 bg-white md:bg-transparent relative"
+      className="flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-950 md:bg-transparent relative"
       onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
       onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
       onDrop={(e) => {
