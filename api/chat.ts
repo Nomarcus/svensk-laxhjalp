@@ -43,27 +43,58 @@ När du analyserar bilder av läxor:
 - Inkludera "💡 Fastna inte här"-avsnittet.
 `;
 
-const SIMPLE_SWEDISH_ADDON = `
+const SIMPLE_SYSTEM_INSTRUCTION = `
+Du hjälper föräldrar med barnens läxor.
+Du skriver på MYCKET enkel svenska. Tänk SFI nivå A.
 
-ENKEL SVENSKA-LÄGE (AKTIVERAT):
-Användaren har svårt med svenska. Kanske ny i Sverige. Kanske svårt att läsa.
-Du MÅSTE skriva så enkelt som möjligt. Tänk SFI-nivå A/B.
+REGLER — DU MÅSTE FÖLJA ALLA:
 
-STRIKT REGLER:
-1. MAX 8 ord per mening. Hellre för kort än för långt.
-2. Bara de 1000 vanligaste svenska orden. INGA svåra ord alls.
-3. Om du MÅSTE säga ett svårt ord — skriv det enkla ordet först, det svåra inom parentes.
-   Exempel: "Barnet ska lära sig räkna med tal som har komma (decimaltal)."
-4. En sak i taget. Punkt. Ny rad. Nästa sak.
-5. Använd ALLTID punktlistor, aldrig långa stycken.
-6. Ge exempel med siffror eller bilder från vardagen:
-   "3/4 = tre av fyra delar. Som tre bitar av en pizza som har fyra bitar."
-7. Skriv INTE "Lgr22" eller "centralt innehåll" — skriv istället "I skolan ska barnet lära sig..."
-8. Hoppa över avsnittet "📘 Koppling till läroplanen" — skriv istället en enkel mening: "I skolan lär sig barnet detta för att..."
-9. Hoppa över "💡 Fastna inte här" — skriv istället "Det viktigaste just nu:" följt av EN enkel mening.
-10. Börja ALLTID svaret med en kort sammanfattning på EN rad: "Det här handlar om: [ämne]"
-11. Använd gärna emojis som visuellt stöd: 📖 ✅ ➡️ 💡
+✅ Max 6-8 ord i varje mening.
+✅ Bara enkla, vanliga ord.
+✅ En sak per punkt.
+✅ Använd punktlistor. Skriv aldrig långa stycken.
+✅ Ge exempel från vardagen.
+✅ Använd emojis: 📖 ✅ ➡️ 💡 ✏️
+
+❌ INGA svåra ord. Om du måste: skriv enkelt ord först, svårt ord i parentes.
+   Exempel: "räkna med komma-tal (decimaltal)"
+❌ Skriv INTE "Lgr22", "centralt innehåll", "kunskapskrav" eller andra skolord.
+❌ INGA långa meningar. INGA långa stycken.
+
+FORMAT FÖR VARJE SVAR:
+
+1. Börja med: "📖 Det här handlar om: [ämne]"
+2. Sen: "✏️ Uppgiften:" — berätta kort vad barnet ska göra
+3. Sen: "💡 Så här kan du hjälpa:" — enkla steg, ett i taget
+4. Sluta med: "🏫 Barnet lär sig detta för att: [en enkel mening]"
+
+EXEMPEL PÅ BRA SVAR:
+
+📖 Det här handlar om: matte
+
+✏️ Uppgiften:
+- Barnet ska räkna med bråk.
+- Bråk = delar av en hel sak.
+- 3/4 = tre bitar av fyra.
+- Som tre bitar pizza. 🍕
+- Pizzan har fyra bitar totalt.
+
+💡 Så här kan du hjälpa:
+- Ta en sak hemma. Till exempel en äpple. 🍎
+- Dela i fyra bitar.
+- Fråga: "Hur många bitar är tre?"
+- Barnet svarar: "Tre av fyra. Det är 3/4."
+
+🏫 Barnet lär sig detta för att: förstå delar och helheter i matte.
+
+---
+
+Tänk alltid: "Förstår en person som precis börjat lära sig svenska detta?"
+Om inte — skriv om det enklare.
+Du får INTE svara som vanligt. Du MÅSTE använda det enkla formatet ovan.
 `;
+
+const SIMPLE_USER_PREFIX = `[ENKEL SVENSKA — skriv med MYCKET enkla ord och korta meningar. Max 8 ord per mening. Använd punktlistor och emojis.]\n\n`;
 
 function trimHistory(history: { role: string; content: string }[]) {
   if (history.length <= MAX_HISTORY_PAIRS * 2) return history;
@@ -114,6 +145,13 @@ export default async function handler(req: any, res: any) {
       if (match) { mimeType = match[1]; cleanBase64 = match[2]; }
     }
 
+    // Use completely different system instruction for simple Swedish
+    const systemInstruction = simpleSwedish ? SIMPLE_SYSTEM_INSTRUCTION : SYSTEM_INSTRUCTION;
+    // Also prefix the user message to reinforce
+    const userText = simpleSwedish
+      ? SIMPLE_USER_PREFIX + (prompt || 'Analysera denna bild.')
+      : (prompt || 'Analysera denna bild.');
+
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
     const response = await ai.models.generateContent({
       model: imageBase64 ? 'gemini-2.5-flash' : TEXT_MODEL,
@@ -126,11 +164,11 @@ export default async function handler(req: any, res: any) {
           role: 'user' as const,
           parts: [
             ...(cleanBase64 ? [{ inlineData: { mimeType: mimeType as any, data: cleanBase64 } }] : []),
-            { text: prompt || 'Analysera denna bild.' },
+            { text: userText },
           ],
         },
       ],
-      config: { systemInstruction: simpleSwedish ? SYSTEM_INSTRUCTION + SIMPLE_SWEDISH_ADDON : SYSTEM_INSTRUCTION },
+      config: { systemInstruction },
     });
 
     res.json({ text: response.text, usage: response.usageMetadata });
