@@ -29,9 +29,10 @@ export async function generateHomeworkHelp(
   prompt: string,
   history: { role: 'user' | 'model'; content: string }[] = [],
   imageBase64?: string,
-  simpleSwedish?: boolean
+  simpleSwedish?: boolean,
+  language?: string
 ): Promise<string> {
-  const data = await apiRequest('chat', { prompt, history, imageBase64, simpleSwedish });
+  const data = await apiRequest('chat', { prompt, history, imageBase64, simpleSwedish, language });
   return data.text;
 }
 

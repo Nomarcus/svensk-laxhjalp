@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Send, Image as ImageIcon, Camera, X, Mic, MicOff } from 'lucide-react';
 import { compressImage } from '../../utils/image';
 
@@ -16,6 +17,7 @@ const SpeechRecognitionAPI = typeof window !== 'undefined'
   : null;
 
 export default function ChatInput({ input, setInput, image, setImage, loading, onSubmit }: ChatInputProps) {
+  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -92,7 +94,7 @@ export default function ChatInput({ input, setInput, image, setImage, loading, o
             type="button"
             onClick={() => cameraInputRef.current?.click()}
             className="p-2 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-colors"
-            title="Fota läxan"
+            title={t('chat.takePhoto')}
           >
             <Camera size={20} />
           </button>
@@ -100,7 +102,7 @@ export default function ChatInput({ input, setInput, image, setImage, loading, o
             type="button"
             onClick={() => fileInputRef.current?.click()}
             className="p-2 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors"
-            title="Välj bild"
+            title={t('chat.chooseImage')}
           >
             <ImageIcon size={20} />
           </button>
@@ -113,7 +115,7 @@ export default function ChatInput({ input, setInput, image, setImage, loading, o
                   ? 'text-red-600 bg-red-50 animate-pulse'
                   : 'text-stone-400 hover:text-red-600 hover:bg-red-50'
               }`}
-              title={isListening ? 'Stoppa inspelning' : 'Tala in din fråga'}
+              title={isListening ? t('chat.stopRecording') : t('chat.speakQuestion')}
             >
               {isListening ? <MicOff size={20} /> : <Mic size={20} />}
             </button>
@@ -137,7 +139,7 @@ export default function ChatInput({ input, setInput, image, setImage, loading, o
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onPaste={handlePaste}
-            placeholder="Ställ en fråga eller fota läxan med kameraknappen..."
+            placeholder={t('chat.inputPlaceholder')}
             className="flex-1 bg-transparent border-none focus:ring-0 py-2 px-2 resize-none max-h-32 min-h-[40px] text-[15px] text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500"
             rows={1}
             onKeyDown={(e) => {
@@ -157,11 +159,11 @@ export default function ChatInput({ input, setInput, image, setImage, loading, o
         </div>
         {isListening && (
           <p className="text-xs text-center text-red-500 mt-2 animate-pulse font-medium">
-            🎙️ Lyssnar... Tala nu
+            {t('chat.listening')}
           </p>
         )}
         <p className="text-[10px] text-center text-stone-400 mt-2 uppercase tracking-widest">
-          AI-genererat innehåll kan vara felaktigt. Kontrollera alltid med läraren.
+          {t('chat.aiDisclaimer')}
         </p>
       </form>
     </div>

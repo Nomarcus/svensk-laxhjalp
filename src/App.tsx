@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { auth, onAuthStateChanged, User, db, OperationType, handleFirestoreError } from './firebase';
 import { doc, setDoc, serverTimestamp, collection, onSnapshot, query, orderBy, collectionGroup, where } from 'firebase/firestore';
 import Auth from './components/Auth';
@@ -34,6 +35,7 @@ export default function App() {
   const [chatFromTask, setChatFromTask] = useState<{ taskId: string; subject: string; description: string; imageUrl?: string } | null>(null);
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const { dark, toggle: toggleDark } = useTheme();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -213,15 +215,15 @@ export default function App() {
             <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-sm mb-6">
               <Plus size={40} className="text-emerald-600" />
             </div>
-            <h2 className="text-2xl font-serif italic mb-2">Välkommen till Läxhjälpen!</h2>
+            <h2 className="text-2xl font-serif italic mb-2">{t('welcome.title')}</h2>
             <p className="text-stone-500 max-w-md mb-8">
-              Börja med att lägga till ett barn för att komma igång med läxhjälp och planering.
+              {t('welcome.description')}
             </p>
             <button
               onClick={() => setShowChildManager(true)}
               className="px-8 py-3 bg-emerald-600 text-white rounded-2xl font-medium shadow-lg hover:bg-emerald-700 transition-all"
             >
-              Lägg till barn
+              {t('welcome.addChild')}
             </button>
           </div>
         ) : (

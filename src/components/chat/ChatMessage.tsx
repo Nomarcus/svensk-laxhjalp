@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { User, Bot, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '../../utils/cn';
@@ -37,12 +38,14 @@ export default function ChatMessage({
   hasImage,
   creatingAutoTask,
 }: ChatMessageProps) {
+  const { t } = useTranslation();
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
   const handlePrint = (content: string) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
-    printWindow.document.write(`<!DOCTYPE html><html lang="sv"><head><meta charset="utf-8"><title>Läxhjälpen — Facit</title><style>
+    const printTitle = t('chat.printTitle');
+    printWindow.document.write(`<!DOCTYPE html><html lang="sv"><head><meta charset="utf-8"><title>${printTitle}</title><style>
       body { font-family: Georgia, serif; max-width: 700px; margin: 40px auto; padding: 20px; color: #1a1a1a; line-height: 1.7; }
       h1 { font-size: 18px; color: #059669; border-bottom: 2px solid #059669; padding-bottom: 8px; }
       h2, h3 { color: #333; margin-top: 20px; }
@@ -51,9 +54,9 @@ export default function ChatMessage({
       .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #ddd; font-size: 12px; color: #999; text-align: center; }
       @media print { body { margin: 20px; } }
     </style></head><body>
-      <h1>📚 Läxhjälpen — Facit</h1>
+      <h1>📚 ${printTitle}</h1>
       <div>${content.replace(/\n/g, '<br>')}</div>
-      <div class="footer">Utskrivet från Läxhjälpen — ${new Date().toLocaleDateString('sv-SE')}</div>
+      <div class="footer">${printTitle} — ${new Date().toLocaleDateString('sv-SE')}</div>
     </body></html>`);
     printWindow.document.close();
     printWindow.print();
@@ -99,7 +102,7 @@ export default function ChatMessage({
               <button
                 onClick={() => onShare(msg)}
                 className="p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm text-stone-400 hover:text-emerald-600 transition-all border border-black/5"
-                title="Dela"
+                title={t('chat.share')}
               >
                 <Share2 size={14} />
               </button>
@@ -110,7 +113,7 @@ export default function ChatMessage({
                   'p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm transition-all border border-black/5',
                   savedMessageIds.has(msg.id) ? 'text-emerald-600' : 'text-stone-400 hover:text-emerald-600'
                 )}
-                title="Spara i bibliotek"
+                title={t('chat.saveToLibrary')}
               >
                 {savedMessageIds.has(msg.id) ? <Check size={14} /> : <BookmarkPlus size={14} />}
               </button>
@@ -157,7 +160,7 @@ export default function ChatMessage({
                 ) : (
                   <ImageIcon size={12} />
                 )}
-                {generatingImageId === msg.id ? 'Skapar illustration...' : 'Illustrera förklaringen'}
+                {generatingImageId === msg.id ? t('chat.creatingIllustration') : t('chat.illustrate')}
               </button>
             )}
             {onAskCurriculum && (
@@ -166,7 +169,7 @@ export default function ChatMessage({
                 className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-blue-600 transition-colors px-2 py-1 rounded-md hover:bg-blue-50"
               >
                 <GraduationCap size={12} />
-                Koppling till läroplanen
+                {t('chat.curriculumLink')}
               </button>
             )}
             {onAskFacit && (
@@ -175,7 +178,7 @@ export default function ChatMessage({
                 className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-red-600 transition-colors px-2 py-1 rounded-md hover:bg-red-50"
               >
                 <ClipboardList size={12} />
-                Visa facit
+                {t('chat.showAnswerKey')}
               </button>
             )}
             {onAskFordjupning && (
@@ -184,7 +187,7 @@ export default function ChatMessage({
                 className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-yellow-600 transition-colors px-2 py-1 rounded-md hover:bg-yellow-50"
               >
                 <Lightbulb size={12} />
-                Fördjupning
+                {t('chat.deepDive')}
               </button>
             )}
             {hasImage && onAutoCreateTask && (
@@ -194,7 +197,7 @@ export default function ChatMessage({
                 className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-teal-600 transition-colors px-2 py-1 rounded-md hover:bg-teal-50 disabled:opacity-50"
               >
                 {creatingAutoTask ? <Loader2 size={12} className="animate-spin" /> : <ScanLine size={12} />}
-                {creatingAutoTask ? 'Skapar läxa...' : 'Skapa läxa med AI'}
+                {creatingAutoTask ? t('chat.creatingTask') : t('chat.createTaskAi')}
               </button>
             )}
             <button
@@ -202,7 +205,7 @@ export default function ChatMessage({
               className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-purple-600 transition-colors px-2 py-1 rounded-md hover:bg-purple-50"
             >
               <Printer size={12} />
-              Skriv ut svaret
+              {t('chat.printAnswer')}
             </button>
             {onAddToPlanner && (
               <button
@@ -210,7 +213,7 @@ export default function ChatMessage({
                 className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-amber-600 transition-colors px-2 py-1 rounded-md hover:bg-amber-50"
               >
                 <CalendarPlus size={12} />
-                Lägg till i planeringen
+                {t('chat.addToPlanner')}
               </button>
             )}
             {onCreateTask && (
@@ -219,7 +222,7 @@ export default function ChatMessage({
                 className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-emerald-600 transition-colors px-2 py-1 rounded-md hover:bg-emerald-50"
               >
                 <PlusCircle size={12} />
-                Skapa läxa
+                {t('chat.createTask')}
               </button>
             )}
           </div>

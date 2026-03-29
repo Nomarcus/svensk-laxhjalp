@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Image as ImageIcon, Loader2, Bot, X, Calculator, BookOpen, Languages, Beaker, Globe, Book, Check } from 'lucide-react';
 import { db, auth, OperationType, handleFirestoreError } from '../firebase';
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, deleteDoc, doc, updateDoc, arrayUnion } from 'firebase/firestore';
@@ -23,6 +24,7 @@ interface ChatProps {
 }
 
 export default function Chat({ childId, childName, ownerId, tasks = [], taskContext, onTaskContextUsed, onCreateTask, onCreateTaskFromPhoto }: ChatProps) {
+  const { t, i18n } = useTranslation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -119,7 +121,7 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
 
   const clearChat = async () => {
     if (!auth.currentUser || !childId || !activeSessionId) return;
-    if (!window.confirm('Är du säker på att du vill rensa denna chatt?')) return;
+    if (!window.confirm(t('chat.clearChatConfirm'))) return;
     try {
       await deleteDoc(doc(db, 'users', ownerId, 'children', childId, 'chatSessions', activeSessionId));
       setActiveSessionId(null);
@@ -133,7 +135,7 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
     try {
       const libraryRef = collection(db, 'users', ownerId, 'children', childId, 'library');
       await addDoc(libraryRef, {
-        title: message.content.split('\n')[0].replace(/[#*]/g, '').slice(0, 50) || 'Sparad förklaring',
+        title: message.content.split('\n')[0].replace(/[#*]/g, '').slice(0, 50) || t('chat.saved'),
         content: message.content,
         type: message.generatedImage ? 'image' : 'text',
         imageUrl: message.generatedImage || null,
@@ -175,10 +177,10 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
   const handleShare = async (message: Message) => {
     try {
       if (navigator.share) {
-        await navigator.share({ title: 'Läxhjälp Förklaring', text: message.content, url: window.location.href });
+        await navigator.share({ title: t('chat.printTitle'), text: message.content, url: window.location.href });
       } else {
         await navigator.clipboard.writeText(message.content);
-        alert('Text kopierad till urklipp!');
+        alert(t('chat.textCopied'));
       }
     } catch (err) {
       console.error('Error sharing:', err);
@@ -239,7 +241,7 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
     setError(null);
 
     // Use displayText for the visible user message if provided (e.g. "Visa facit" instead of the full prompt)
-    const visibleText = displayText || messageText || 'Analysera denna bild.';
+    const visibleText = displayText || messageText || t('chat.analyzeImage');
 
     try {
       const messagesRef = collection(db, 'users', ownerId, 'children', childId, 'chatSessions', activeSessionId, 'messages');
@@ -255,7 +257,7 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
         if (err.message?.includes('exceeds the maximum allowed size')) {
           await addDoc(messagesRef, {
             role: 'user',
-            content: visibleText + ' (Bilden var för stor för att sparas i historiken)',
+            content: visibleText + ' ' + t('chat.imageTooLarge'),
             timestamp: serverTimestamp(),
             attachments: [],
           });
@@ -266,21 +268,22 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
 
       const history = messages.map(m => ({ role: m.role, content: m.content }));
       const response = await generateHomeworkHelp(
-        messageText || 'Analysera denna bild.',
+        messageText || t('chat.analyzeImage'),
         history,
         currentImage?.split(',')[1],
-        simpleSwedish
+        simpleSwedish,
+        i18n.language
       );
 
       await addDoc(messagesRef, { role: 'model', content: response, timestamp: serverTimestamp() });
     } catch (err: any) {
       const msg = err.message || '';
       if (msg.includes('Uppgradera') || msg.includes('Pro-abonnemang') || msg.includes('gratis')) {
-        setError(`${msg} 👉 Gå till Abonnemang för att uppgradera.`);
+        setError(`${msg} 👉 ${t('chat.goToSubscription')}`);
       } else if (msg.includes('RESOURCE_EXHAUSTED')) {
-        setError('AI-tjänsten är tillfälligt överbelastad. Vänta en stund och försök igen.');
+        setError(t('chat.aiOverloaded'));
       } else {
-        setError(msg || 'Ett oväntat fel uppstod. Försök igen senare.');
+        setError(msg || t('chat.unexpectedError'));
       }
     } finally {
       setLoading(false);
@@ -316,8 +319,8 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
             <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 mx-auto mb-4">
               <ImageIcon size={32} />
             </div>
-            <h3 className="text-xl font-serif italic text-emerald-900">Släpp bilden här</h3>
-            <p className="text-emerald-600/60 text-sm">för att analysera läxan</p>
+            <h3 className="text-xl font-serif italic text-emerald-900">{t('chat.dropImageHere')}</h3>
+            <p className="text-emerald-600/60 text-sm">{t('chat.toAnalyzeHomework')}</p>
           </div>
         </div>
       )}
@@ -361,13 +364,13 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
                 onSaveToLibrary={saveToLibrary}
                 onGenerateImage={handleGenerateImage}
                 onAskCurriculum={(content) => {
-                  sendMessage(`Förklara hur det du just berättade om kopplas till den svenska läroplanen (Lgr22). Vilka centrala innehåll och kunskapskrav berörs? Ge konkreta kopplingar så jag som förälder förstår varför mitt barn lär sig detta.\n\nDin förklaring var:\n${content.slice(0, 500)}`, 'Koppling till läroplanen');
+                  sendMessage(`Förklara hur det du just berättade om kopplas till den svenska läroplanen (Lgr22). Vilka centrala innehåll och kunskapskrav berörs? Ge konkreta kopplingar så jag som förälder förstår varför mitt barn lär sig detta.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.curriculumLink'));
                 }}
                 onAskFacit={(content) => {
-                  sendMessage(`Ge mig ett komplett facit med alla svar utskrivna för uppgiften du just förklarade. Skriv tydligt varje fråga/deluppgift följt av det korrekta svaret. Detta är till föräldern — inte till eleven. Formatera det snyggt med numrering.\n\nDin förklaring var:\n${content.slice(0, 500)}`, 'Visa facit');
+                  sendMessage(`Ge mig ett komplett facit med alla svar utskrivna för uppgiften du just förklarade. Skriv tydligt varje fråga/deluppgift följt av det korrekta svaret. Detta är till föräldern — inte till eleven. Formatera det snyggt med numrering.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKey'));
                 }}
                 onAskFordjupning={(content) => {
-                  sendMessage(`Baserat på din förklaring, ge förslag på relaterade ämnen och kopplingar som kan fördjupa mitt barns förståelse. Ge 2-3 konkreta förslag på vad vi kan utforska vidare, med en kort förklaring av hur det kopplar till det vi just pratat om. Skriv det så att jag som förälder kan ta upp det med mitt barn.\n\nDin förklaring var:\n${content.slice(0, 500)}`, 'Fördjupning');
+                  sendMessage(`Baserat på din förklaring, ge förslag på relaterade ämnen och kopplingar som kan fördjupa mitt barns förståelse. Ge 2-3 konkreta förslag på vad vi kan utforska vidare, med en kort förklaring av hur det kopplar till det vi just pratat om. Skriv det så att jag som förälder kan ta upp det med mitt barn.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.deepDive'));
                 }}
                 onAutoCreateTask={onCreateTaskFromPhoto ? handleAutoCreateTask : undefined}
                 creatingAutoTask={creatingAutoTask}
@@ -394,7 +397,7 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
             </div>
             <div className="bg-white dark:bg-slate-900 border border-black/5 dark:border-white/5 shadow-sm rounded-2xl rounded-tl-none px-4 py-3 flex items-center gap-2">
               <Loader2 size={16} className="animate-spin text-emerald-600" />
-              <span className="text-sm text-stone-500 italic">Tänker...</span>
+              <span className="text-sm text-stone-500 italic">{t('chat.thinking')}</span>
             </div>
           </div>
         )}
@@ -416,16 +419,16 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
           <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-black/5 animate-in zoom-in-95 duration-200 max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="p-6 border-b border-black/5">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-serif italic">Koppla till en läxa</h3>
+                <h3 className="text-lg font-serif italic">{t('chat.linkToTask')}</h3>
                 <button onClick={() => setTaskPickerContent(null)} className="p-2 hover:bg-stone-100 rounded-full text-stone-400 transition-colors">
                   <X size={18} />
                 </button>
               </div>
-              <p className="text-sm text-stone-500 mt-1">Välj vilken läxa du vill spara AI-svaret till</p>
+              <p className="text-sm text-stone-500 mt-1">{t('chat.chooseTask')}</p>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {tasks.filter(t => !t.completed).length === 0 ? (
-                <p className="text-sm text-stone-400 text-center py-8 italic">Inga aktiva läxor att koppla till.</p>
+                <p className="text-sm text-stone-400 text-center py-8 italic">{t('chat.noActiveTasks')}</p>
               ) : (
                 tasks.filter(t => !t.completed).map(task => (
                   <button
@@ -451,7 +454,7 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
                     {linkedTaskIds.has(task.id) ? (
                       <div className="flex items-center gap-1 text-emerald-600">
                         <Check size={16} />
-                        <span className="text-xs font-medium">Sparat</span>
+                        <span className="text-xs font-medium">{t('chat.saved')}</span>
                       </div>
                     ) : (
                       <span className="text-xs text-stone-400 capitalize">{task.day}</span>

@@ -1,8 +1,10 @@
 import React from 'react';
 import { LogOut, MessageSquare, Calendar, BookOpen, User as UserIcon, ChevronDown, Settings, Info, Library, Crown, Download, Users, X, Menu, Moon, Sun, Mail, Shield, FileText } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { logout, User } from '../firebase';
 import { cn } from '../utils/cn';
 import type { Child, SubscriptionTier } from '../types';
+import LanguageSwitcher from './LanguageSwitcher';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -37,6 +39,7 @@ export default function Layout({
   dark,
   onToggleDark,
 }: LayoutProps) {
+  const { t } = useTranslation();
   const [showChildSelect, setShowChildSelect] = React.useState(false);
   const [showMobileMenu, setShowMobileMenu] = React.useState(false);
   const selectedChild = childrenList.find(c => c.id === selectedChildId);
@@ -57,9 +60,9 @@ export default function Layout({
             <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white">
               <BookOpen size={20} />
             </div>
-            <h1 className="font-serif italic text-xl">Läxhjälp</h1>
+            <h1 className="font-serif italic text-xl">{t('app.name')}</h1>
           </div>
-          <p className="text-xs text-stone-500 dark:text-stone-400 uppercase tracking-widest font-medium">Föräldraassistans</p>
+          <p className="text-xs text-stone-500 dark:text-stone-400 uppercase tracking-widest font-medium">{t('app.subtitle')}</p>
         </div>
 
         {/* Child Selector */}
@@ -74,10 +77,10 @@ export default function Layout({
                   <UserIcon size={16} className="text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div className="text-left min-w-0">
-                  <p className="text-xs text-stone-400 font-medium uppercase tracking-wider">Barn</p>
+                  <p className="text-xs text-stone-400 font-medium uppercase tracking-wider">{t('child.label')}</p>
                   <div className="flex items-center gap-1.5">
                     <p className="text-sm font-semibold truncate">
-                      {selectedChild ? selectedChild.name : 'Välj barn...'}
+                      {selectedChild ? selectedChild.name : t('child.select')}
                     </p>
                     {selectedChild && (isSharedChild(selectedChild) || hasSharing(selectedChild)) && (
                       <Users size={12} className="text-blue-500 shrink-0" />
@@ -110,7 +113,7 @@ export default function Layout({
                     </div>
                     <span className="flex-1">{child.name}</span>
                     {isSharedChild(child) && (
-                      <span className="text-[10px] bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded-full">Delad med dig</span>
+                      <span className="text-[10px] bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded-full">{t('child.sharedWithYou')}</span>
                     )}
                     {!isSharedChild(child) && hasSharing(child) && (
                       <Users size={12} className="text-blue-400" />
@@ -126,7 +129,7 @@ export default function Layout({
                   className="w-full flex items-center gap-3 px-4 py-2 text-stone-500 dark:text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all text-left text-sm"
                 >
                   <Settings size={16} />
-                  <span>Hantera barn...</span>
+                  <span>{t('child.manage')}</span>
                 </button>
               </div>
             )}
@@ -135,10 +138,10 @@ export default function Layout({
 
         <nav className="flex-1 p-4 space-y-2">
           {[
-            { id: 'chat' as const, icon: <MessageSquare size={20} />, label: 'AI-Assistent' },
-            { id: 'planner' as const, icon: <Calendar size={20} />, label: 'Läxplanering' },
-            { id: 'library' as const, icon: <Library size={20} />, label: 'Resursbibliotek' },
-            { id: 'info' as const, icon: <Info size={20} />, label: 'Hur det fungerar' },
+            { id: 'chat' as const, icon: <MessageSquare size={20} />, label: t('nav.aiAssistant') },
+            { id: 'planner' as const, icon: <Calendar size={20} />, label: t('nav.planner') },
+            { id: 'library' as const, icon: <Library size={20} />, label: t('nav.library') },
+            { id: 'info' as const, icon: <Info size={20} />, label: t('nav.info') },
           ].map(item => (
             <button
               key={item.id}
@@ -164,7 +167,7 @@ export default function Layout({
             )}
           >
             <Crown size={20} />
-            <span>Abonnemang</span>
+            <span>{t('nav.subscription')}</span>
             <span className={cn(
               "ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider",
               subscriptionTier === 'pro'
@@ -173,7 +176,7 @@ export default function Layout({
                   ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
                   : "bg-stone-100 dark:bg-slate-800 text-stone-500 dark:text-stone-400"
             )}>
-              {subscriptionTier === 'pro' ? 'Pro' : subscriptionTier === 'plus' ? 'Plus' : 'Gratis'}
+              {subscriptionTier === 'pro' ? t('subscription.pro') : subscriptionTier === 'plus' ? t('subscription.plus') : t('subscription.free')}
             </span>
           </button>
           <button
@@ -186,11 +189,12 @@ export default function Layout({
             )}
           >
             <Mail size={20} />
-            <span>Kontakta oss</span>
+            <span>{t('nav.contact')}</span>
           </button>
         </nav>
 
         <div className="p-4 border-t border-black/5 dark:border-white/5 mt-auto">
+          <LanguageSwitcher compact />
           {/* Dark mode toggle */}
           {onToggleDark && (
             <button
@@ -198,7 +202,7 @@ export default function Layout({
               className="w-full flex items-center gap-3 px-4 py-2 mb-2 text-stone-500 dark:text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all"
             >
               {dark ? <Sun size={18} /> : <Moon size={18} />}
-              <span className="text-sm">{dark ? 'Ljust läge' : 'Mörkt läge'}</span>
+              <span className="text-sm">{dark ? t('nav.lightMode') : t('nav.darkMode')}</span>
             </button>
           )}
           {onShowInstallGuide && (
@@ -207,7 +211,7 @@ export default function Layout({
               className="w-full flex items-center gap-3 px-4 py-2 mb-2 text-stone-500 dark:text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all"
             >
               <Download size={18} />
-              <span className="text-sm">Installera appen</span>
+              <span className="text-sm">{t('nav.installApp')}</span>
             </button>
           )}
           {onShowPrivacy && (
@@ -216,7 +220,7 @@ export default function Layout({
               className="w-full flex items-center gap-3 px-4 py-2 mb-2 text-stone-500 dark:text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all"
             >
               <Shield size={18} />
-              <span className="text-sm">GDPR & Integritet</span>
+              <span className="text-sm">{t('nav.gdpr')}</span>
             </button>
           )}
           {onShowTerms && (
@@ -225,7 +229,7 @@ export default function Layout({
               className="w-full flex items-center gap-3 px-4 py-2 mb-2 text-stone-500 dark:text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all"
             >
               <FileText size={18} />
-              <span className="text-sm">Användarvillkor</span>
+              <span className="text-sm">{t('nav.terms')}</span>
             </button>
           )}
           <div className="flex items-center gap-3 px-4 py-3 mb-2">
@@ -237,7 +241,7 @@ export default function Layout({
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user.displayName || 'Användare'}</p>
+              <p className="text-sm font-medium truncate">{user.displayName || t('common.user')}</p>
               <p className="text-xs text-stone-500 dark:text-stone-400 truncate">{user.email}</p>
             </div>
           </div>
@@ -246,7 +250,7 @@ export default function Layout({
             className="w-full flex items-center gap-3 px-4 py-2 text-stone-500 dark:text-stone-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
           >
             <LogOut size={18} />
-            <span className="text-sm">Logga ut</span>
+            <span className="text-sm">{t('nav.logout')}</span>
           </button>
         </div>
       </aside>
@@ -257,7 +261,7 @@ export default function Layout({
           <div className="w-7 h-7 bg-emerald-600 rounded-lg flex items-center justify-center text-white">
             <BookOpen size={16} />
           </div>
-          <span className="font-serif italic text-lg">Läxhjälp</span>
+          <span className="font-serif italic text-lg">{t('app.name')}</span>
         </div>
         <div className="flex items-center gap-2">
           {selectedChild && (
@@ -286,9 +290,9 @@ export default function Layout({
       {/* Mobile Bottom Navigation */}
       <nav className="md:hidden flex items-center bg-white dark:bg-slate-900 border-t border-black/5 dark:border-white/5 shrink-0 safe-area-bottom">
         {[
-          { id: 'chat' as const, icon: <MessageSquare size={20} />, label: 'AI-Hjälp' },
-          { id: 'planner' as const, icon: <Calendar size={20} />, label: 'Planering' },
-          { id: 'library' as const, icon: <Library size={20} />, label: 'Bibliotek' },
+          { id: 'chat' as const, icon: <MessageSquare size={20} />, label: t('nav.aiHelp') },
+          { id: 'planner' as const, icon: <Calendar size={20} />, label: t('nav.plannerShort') },
+          { id: 'library' as const, icon: <Library size={20} />, label: t('nav.libraryShort') },
         ].map(item => (
           <button
             key={item.id}
@@ -310,7 +314,7 @@ export default function Layout({
           )}
         >
           <Menu size={20} />
-          <span className="text-[10px] font-medium">Mer</span>
+          <span className="text-[10px] font-medium">{t('nav.more')}</span>
         </button>
       </nav>
 
@@ -320,7 +324,7 @@ export default function Layout({
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowMobileMenu(false)} />
           <div className="relative ml-auto w-[300px] max-w-[85vw] bg-white dark:bg-slate-900 h-full flex flex-col animate-in slide-in-from-right duration-200">
             <div className="flex items-center justify-between p-4 border-b border-black/5 dark:border-white/5">
-              <h2 className="font-serif italic text-lg">Meny</h2>
+              <h2 className="font-serif italic text-lg">{t('nav.menu')}</h2>
               <button onClick={() => setShowMobileMenu(false)} className="p-2 hover:bg-stone-100 dark:hover:bg-slate-800 rounded-full transition-colors">
                 <X size={20} className="text-stone-400" />
               </button>
@@ -328,7 +332,7 @@ export default function Layout({
 
             {/* Child Selector in mobile menu */}
             <div className="p-4 border-b border-black/5 dark:border-white/5">
-              <p className="text-[10px] font-medium text-stone-400 uppercase tracking-widest mb-2">Välj barn</p>
+              <p className="text-[10px] font-medium text-stone-400 uppercase tracking-widest mb-2">{t('child.label')}</p>
               <div className="space-y-1">
                 {childrenList.map((child) => (
                   <button
@@ -349,7 +353,7 @@ export default function Layout({
                     </div>
                     <span className="flex-1 text-sm">{child.name}</span>
                     {isSharedChild(child) && (
-                      <span className="text-[9px] bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded-full">Delad</span>
+                      <span className="text-[9px] bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded-full">{t('child.shared')}</span>
                     )}
                     {!isSharedChild(child) && hasSharing(child) && (
                       <Users size={12} className="text-blue-400" />
@@ -361,7 +365,7 @@ export default function Layout({
                   className="w-full flex items-center gap-3 px-3 py-2.5 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-xl transition-all text-left text-sm"
                 >
                   <Settings size={16} />
-                  <span>Hantera barn...</span>
+                  <span>{t('child.manage')}</span>
                 </button>
               </div>
             </div>
@@ -375,7 +379,7 @@ export default function Layout({
                 )}
               >
                 <Info size={18} />
-                <span>Hur det fungerar</span>
+                <span>{t('nav.info')}</span>
               </button>
               <button
                 onClick={() => handleTabChange('subscription')}
@@ -385,12 +389,12 @@ export default function Layout({
                 )}
               >
                 <Crown size={18} />
-                <span>Abonnemang</span>
+                <span>{t('nav.subscription')}</span>
                 <span className={cn(
                   "ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
                   "bg-stone-100 dark:bg-slate-800 text-stone-500 dark:text-stone-400"
                 )}>
-                  Gratis
+                  {subscriptionTier === 'pro' ? t('subscription.pro') : subscriptionTier === 'plus' ? t('subscription.plus') : t('subscription.free')}
                 </span>
               </button>
               <button
@@ -401,7 +405,7 @@ export default function Layout({
                 )}
               >
                 <Mail size={18} />
-                <span>Kontakta oss</span>
+                <span>{t('nav.contact')}</span>
               </button>
               {onShowInstallGuide && (
                 <button
@@ -409,7 +413,7 @@ export default function Layout({
                   className="w-full flex items-center gap-3 px-3 py-3 text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800 rounded-xl transition-all text-sm"
                 >
                   <Download size={18} />
-                  <span>Installera appen</span>
+                  <span>{t('nav.installApp')}</span>
                 </button>
               )}
               {onShowPrivacy && (
@@ -418,7 +422,7 @@ export default function Layout({
                   className="w-full flex items-center gap-3 px-3 py-3 text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800 rounded-xl transition-all text-sm"
                 >
                   <Shield size={18} />
-                  <span>GDPR & Integritet</span>
+                  <span>{t('nav.gdpr')}</span>
                 </button>
               )}
               {onShowTerms && (
@@ -427,16 +431,17 @@ export default function Layout({
                   className="w-full flex items-center gap-3 px-3 py-3 text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800 rounded-xl transition-all text-sm"
                 >
                   <FileText size={18} />
-                  <span>Användarvillkor</span>
+                  <span>{t('nav.terms')}</span>
                 </button>
               )}
+              <LanguageSwitcher compact />
               {onToggleDark && (
                 <button
                   onClick={() => { onToggleDark(); }}
                   className="w-full flex items-center gap-3 px-3 py-3 text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800 rounded-xl transition-all text-sm"
                 >
                   {dark ? <Sun size={18} /> : <Moon size={18} />}
-                  <span>{dark ? 'Ljust läge' : 'Mörkt läge'}</span>
+                  <span>{dark ? t('nav.lightMode') : t('nav.darkMode')}</span>
                 </button>
               )}
             </div>
@@ -451,7 +456,7 @@ export default function Layout({
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{user.displayName || 'Användare'}</p>
+                  <p className="text-sm font-medium truncate">{user.displayName || t('common.user')}</p>
                   <p className="text-xs text-stone-500 dark:text-stone-400 truncate">{user.email}</p>
                 </div>
               </div>
@@ -460,7 +465,7 @@ export default function Layout({
                 className="w-full flex items-center gap-3 px-3 py-2.5 text-stone-500 dark:text-stone-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all text-sm"
               >
                 <LogOut size={18} />
-                <span>Logga ut</span>
+                <span>{t('nav.logout')}</span>
               </button>
             </div>
           </div>

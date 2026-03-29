@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Mail, Send, MessageCircle, Lightbulb, Bug } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function Contact() {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
@@ -38,21 +40,20 @@ export default function Contact() {
     <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 bg-[#F5F5F0] dark:bg-slate-950">
       <div className="max-w-lg mx-auto space-y-6">
         <header className="text-center">
-          <h2 className="text-3xl font-serif italic mb-2 dark:text-stone-100">Kontakta oss</h2>
-          <p className="text-stone-500 dark:text-stone-400">Vi vill gärna höra från dig!</p>
+          <h2 className="text-3xl font-serif italic mb-2 dark:text-stone-100">{t('contact.title')}</h2>
+          <p className="text-stone-500 dark:text-stone-400">{t('contact.description')}</p>
         </header>
 
         {/* Förklarande text */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-black/5 dark:border-white/5">
           <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed mb-4">
-            Föräldrahjälpen är ett projekt som ständigt utvecklas. Din feedback hjälper oss att göra appen bättre
-            för alla svenska föräldrar. Hör av dig om du har frågor, idéer eller stöter på problem.
+            {t('contact.intro')}
           </p>
           <div className="space-y-3">
             {[
-              { icon: <Lightbulb size={16} />, text: 'Förslag på nya funktioner eller förbättringar' },
-              { icon: <Bug size={16} />, text: 'Rapportera problem eller fel i appen' },
-              { icon: <MessageCircle size={16} />, text: 'Frågor om hur appen fungerar' },
+              { icon: <Lightbulb size={16} />, text: t('contact.suggestion') },
+              { icon: <Bug size={16} />, text: t('contact.reportBug') },
+              { icon: <MessageCircle size={16} />, text: t('contact.question') },
             ].map((item, i) => (
               <div key={i} className="flex items-center gap-3">
                 <span className="text-emerald-600 dark:text-emerald-400">{item.icon}</span>
@@ -69,34 +70,34 @@ export default function Contact() {
               <Mail size={24} />
             </div>
             <div>
-              <h3 className="font-medium text-lg dark:text-stone-100">Skicka meddelande</h3>
-              <p className="text-sm text-stone-400">Vi svarar så snart vi kan</p>
+              <h3 className="font-medium text-lg dark:text-stone-100">{t('contact.send')}</h3>
+              <p className="text-sm text-stone-400">{t('contact.replyNote')}</p>
             </div>
           </div>
 
           {sent ? (
             <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/30 text-emerald-700 dark:text-emerald-300 text-sm rounded-xl px-4 py-6 text-center">
-              <p className="font-medium mb-1">Tack för ditt meddelande!</p>
-              <p className="text-emerald-600/70 dark:text-emerald-400/70">Vi återkommer så snart vi kan.</p>
+              <p className="font-medium mb-1">{t('contact.thankYou')}</p>
+              <p className="text-emerald-600/70 dark:text-emerald-400/70">{t('contact.thankYouDesc')}</p>
               <button
                 onClick={() => setSent(false)}
                 className="mt-4 text-sm text-emerald-600 dark:text-emerald-400 underline hover:no-underline"
               >
-                Skicka ett nytt meddelande
+                {t('contact.sendAnother')}
               </button>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-3">
               {error && (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 text-red-700 dark:text-red-300 text-sm rounded-xl px-4 py-3 text-center">
-                  Något gick fel. Försök igen eller maila direkt till marcus.mpai@gmail.com
+                  {t('contact.error')}
                 </div>
               )}
               <div>
-                <label className="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1 ml-1">Ditt namn</label>
+                <label className="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1 ml-1">{t('contact.name')}</label>
                 <input
                   type="text"
-                  placeholder="Förnamn Efternamn"
+                  placeholder={t('contact.namePlaceholder')}
                   value={name}
                   onChange={e => setName(e.target.value)}
                   required
@@ -104,10 +105,10 @@ export default function Contact() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1 ml-1">Din e-post</label>
+                <label className="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1 ml-1">{t('contact.email')}</label>
                 <input
                   type="email"
-                  placeholder="namn@exempel.se"
+                  placeholder={t('contact.emailPlaceholder')}
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   required
@@ -115,9 +116,9 @@ export default function Contact() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1 ml-1">Meddelande</label>
+                <label className="block text-xs font-medium text-stone-500 dark:text-stone-400 mb-1 ml-1">{t('contact.message')}</label>
                 <textarea
-                  placeholder="Beskriv din fråga, idé eller problem..."
+                  placeholder={t('contact.messagePlaceholder')}
                   value={message}
                   onChange={e => setMessage(e.target.value)}
                   required
@@ -131,14 +132,14 @@ export default function Contact() {
                 className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white py-3 px-6 rounded-xl font-medium hover:bg-emerald-700 transition-all active:scale-[0.98] disabled:opacity-50 text-sm"
               >
                 <Send size={16} />
-                {sending ? 'Skickar...' : 'Skicka meddelande'}
+                {sending ? t('contact.sending') : t('contact.send')}
               </button>
             </form>
           )}
         </div>
 
         <p className="text-center text-xs text-stone-400 dark:text-stone-500">
-          Du kan också nå oss direkt på <span className="font-medium text-stone-500 dark:text-stone-400">marcus.mpai@gmail.com</span>
+          {t('contact.directEmail')} <span className="font-medium text-stone-500 dark:text-stone-400">marcus.mpai@gmail.com</span>
         </p>
       </div>
     </div>

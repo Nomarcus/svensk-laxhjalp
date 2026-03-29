@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Bot } from 'lucide-react';
 
 interface ChatEmptyStateProps {
@@ -5,27 +6,28 @@ interface ChatEmptyStateProps {
   onSendStarter: (text: string) => void;
 }
 
-const starters = [
-  'Förklara fotosyntesen enkelt',
-  'Hjälp med multiplikationstabellen',
-  'Hur skriver man en bra berättelse?',
-  'Vad är ett verb?',
-  'Berätta om rymden',
-];
-
 export default function ChatEmptyState({ childName, onSendStarter }: ChatEmptyStateProps) {
+  const { t } = useTranslation();
+
+  const starters = [
+    t('chatEmpty.starter1'),
+    t('chatEmpty.starter2'),
+    t('chatEmpty.starter3'),
+    t('chatEmpty.starter4'),
+    t('chatEmpty.starter5'),
+  ];
+
   return (
     <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto py-12">
       <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 mb-6">
         <Bot size={32} />
       </div>
-      <h2 className="text-2xl font-serif italic mb-2">Hjälp {childName} med läxan</h2>
+      <h2 className="text-2xl font-serif italic mb-2">{t('chatEmpty.helpWith', { name: childName })}</h2>
       <p className="text-stone-500 mb-4">
-        Skriv en fråga eller ta ett foto på läxan så förklarar jag hur du kan hjälpa {childName}.
-        Du får pedagogiska tips anpassade efter svensk skola — inga färdiga svar, bara stöd för dig som förälder.
+        {t('chatEmpty.description', { name: childName })}
       </p>
       <p className="text-stone-400 text-sm mb-8">
-        Prova att klicka på ett förslag nedan:
+        {t('chatEmpty.tryClicking')}
       </p>
       <div className="flex flex-wrap justify-center gap-2">
         {starters.map((starter, i) => (

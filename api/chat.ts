@@ -133,7 +133,7 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { prompt, history = [], imageBase64, simpleSwedish } = req.body;
+    const { prompt, history = [], imageBase64, simpleSwedish, language } = req.body;
     if (!prompt && !imageBase64) {
       return res.status(400).json({ error: 'Meddelande eller bild krävs.' });
     }
@@ -146,7 +146,15 @@ export default async function handler(req: any, res: any) {
     }
 
     // Use completely different system instruction for simple Swedish
-    const systemInstruction = simpleSwedish ? SIMPLE_SYSTEM_INSTRUCTION : SYSTEM_INSTRUCTION;
+    let systemInstruction = simpleSwedish ? SIMPLE_SYSTEM_INSTRUCTION : SYSTEM_INSTRUCTION;
+
+    // Add language instruction for non-Swedish languages
+    const LANGUAGE_NAMES: Record<string, string> = {
+      ar: 'Arabic', en: 'English',
+    };
+    if (language && language !== 'sv' && LANGUAGE_NAMES[language]) {
+      systemInstruction += `\n\nIMPORTANT: The user's interface language is ${LANGUAGE_NAMES[language]}. You MUST respond in ${LANGUAGE_NAMES[language]}. Keep Swedish school terms (like "Lgr22", subject names) in Swedish but write all explanations, instructions and text in ${LANGUAGE_NAMES[language]}.`;
+    }
     // Also prefix the user message to reinforce
     const userText = simpleSwedish
       ? SIMPLE_USER_PREFIX + (prompt || 'Analysera denna bild.')
