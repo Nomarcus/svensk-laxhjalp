@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Shield, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const COOKIE_CONSENT_KEY = 'cookie-consent-accepted';
 
 export default function CookieConsent() {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -28,9 +30,9 @@ export default function CookieConsent() {
             <Shield size={20} className="text-emerald-600" />
           </div>
           <div>
-            <p className="text-sm text-stone-700 font-medium mb-1">Cookies & integritet</p>
+            <p className="text-sm text-stone-700 font-medium mb-1">{t('cookie.title')}</p>
             <p className="text-xs text-stone-500 leading-relaxed">
-              Vi använder endast nödvändiga cookies för inloggning via Firebase. Inga spårningscookies eller tredjepartscookies används. Genom att fortsätta godkänner du detta.
+              {t('cookie.description')}
             </p>
           </div>
         </div>
@@ -39,12 +41,12 @@ export default function CookieConsent() {
             onClick={accept}
             className="flex-1 sm:flex-none px-5 py-2 bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-emerald-700 transition-all active:scale-[0.98]"
           >
-            Jag förstår
+            {t('cookie.accept')}
           </button>
           <button
             onClick={accept}
             className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-xl transition-all"
-            title="Stäng"
+            title={t('cookie.close')}
           >
             <X size={16} />
           </button>

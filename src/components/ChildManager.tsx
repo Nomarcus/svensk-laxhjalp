@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { db, auth, OperationType, handleFirestoreError } from '../firebase';
 import { collection, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { Plus, Trash2, User as UserIcon, X, Check, Share2, Mail } from 'lucide-react';
@@ -16,6 +17,7 @@ interface ChildManagerProps {
 }
 
 export default function ChildManager({ onClose }: ChildManagerProps) {
+  const { t } = useTranslation();
   const [children, setChildren] = useState<ChildWithSharing[]>([]);
   const [newName, setNewName] = useState('');
   const [newGrade, setNewGrade] = useState('');
@@ -61,7 +63,7 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
 
   const deleteChild = async (id: string) => {
     if (!auth.currentUser) return;
-    if (!window.confirm('Är du säker på att du vill ta bort detta barn? All historik kommer att raderas.')) return;
+    if (!window.confirm(t('childManager.removeConfirm'))) return;
 
     try {
       await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'children', id));
@@ -78,7 +80,7 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
     if (!child) return;
 
     const sharedWith = [...(child.sharedWith || []), newShareEmail.trim().toLowerCase()];
-    
+
     try {
       const childRef = doc(db, 'users', auth.currentUser.uid, 'children', sharingChildId);
       await updateDoc(childRef, { sharedWith });
@@ -107,7 +109,7 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
         <div className="p-6 border-b border-stone-100 flex items-center justify-between">
-          <h2 className="text-xl font-serif italic">Hantera Barn</h2>
+          <h2 className="text-xl font-serif italic">{t('childManager.title')}</h2>
           <button onClick={onClose} className="p-2 hover:bg-stone-100 rounded-full transition-colors">
             <X size={20} className="text-stone-400" />
           </button>
@@ -119,7 +121,7 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
               <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <UserIcon size={32} className="text-stone-300" />
               </div>
-              <p className="text-stone-500 text-sm italic">Inga barn tillagda än.</p>
+              <p className="text-stone-500 text-sm italic">{t('childManager.empty')}</p>
             </div>
           )}
 
@@ -147,7 +149,7 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
                             ? "bg-blue-50 text-blue-500"
                             : "text-stone-400 hover:text-blue-600 hover:bg-blue-50"
                       )}
-                      title="Dela med förälder"
+                      title={t('childManager.shareWithParent')}
                     >
                       <Share2 size={16} />
                       {(child.sharedWith?.length || 0) > 0 && (
@@ -157,7 +159,7 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
                     <button
                       onClick={() => deleteChild(child.id)}
                       className="p-2 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                      title="Ta bort"
+                      title={t('childManager.remove')}
                     >
                       <Trash2 size={18} />
                     </button>
@@ -168,16 +170,16 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
                   <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 space-y-4 animate-in slide-in-from-top-2">
                     <div>
                       <div className="flex items-center gap-2 text-blue-800 font-medium text-sm">
-                        <Share2 size={16} /> Dela med annan förälder
+                        <Share2 size={16} /> {t('childManager.shareTitle')}
                       </div>
                       <p className="text-xs text-blue-600/70 mt-1">
-                        Den andra föräldern får tillgång till läxplanering, AI-chatt och allt material.
+                        {t('childManager.shareDesc')}
                       </p>
                     </div>
 
                     {(child.sharedWith?.length || 0) > 0 && (
                       <div className="space-y-2">
-                        <p className="text-[10px] font-medium text-blue-400 uppercase tracking-widest">Delas med</p>
+                        <p className="text-[10px] font-medium text-blue-400 uppercase tracking-widest">{t('childManager.sharedWith')}</p>
                         {child.sharedWith?.map(email => (
                           <div key={email} className="flex items-center justify-between bg-white px-3 py-2 rounded-xl text-sm border border-blue-100">
                             <div className="flex items-center gap-2">
@@ -202,7 +204,7 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
                         <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
                         <input
                           type="email"
-                          placeholder="Förälderns e-postadress"
+                          placeholder={t('childManager.parentEmail')}
                           value={newShareEmail}
                           onChange={(e) => setNewShareEmail(e.target.value)}
                           className="w-full bg-white border border-blue-100 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500/20 transition-all"
@@ -213,11 +215,11 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
                         disabled={!newShareEmail.trim()}
                         className="px-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all text-sm font-medium"
                       >
-                        Bjud in
+                        {t('childManager.invite')}
                       </button>
                     </form>
                     <p className="text-[10px] text-blue-500/60">
-                      Föräldern måste skapa ett konto med samma e-postadress för att se barnet.
+                      {t('childManager.shareInfo')}
                     </p>
                   </div>
                 )}
@@ -231,14 +233,14 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
                 <input
                   autoFocus
                   type="text"
-                  placeholder="Barnets namn"
+                  placeholder={t('childManager.childName')}
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   className="w-full bg-stone-50 border-none rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-emerald-500/20 transition-all"
                 />
                 <input
                   type="text"
-                  placeholder="Klass (valfritt)"
+                  placeholder={t('childManager.grade')}
                   value={newGrade}
                   onChange={(e) => setNewGrade(e.target.value)}
                   className="w-full bg-stone-50 border-none rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-emerald-500/20 transition-all"
@@ -250,14 +252,14 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
                   disabled={!newName.trim()}
                   className="flex-1 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                 >
-                  <Check size={16} /> Spara
+                  <Check size={16} /> {t('childManager.save')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsAdding(false)}
                   className="flex-1 py-2 bg-stone-100 text-stone-600 rounded-xl text-sm font-medium hover:bg-stone-200 transition-all"
                 >
-                  Avbryt
+                  {t('childManager.cancel')}
                 </button>
               </div>
             </form>
@@ -266,7 +268,7 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
               onClick={() => setIsAdding(true)}
               className="w-full py-4 border-2 border-dashed border-stone-200 rounded-2xl text-stone-400 hover:text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all flex items-center justify-center gap-2 text-sm font-medium"
             >
-              <Plus size={18} /> Lägg till barn
+              <Plus size={18} /> {t('childManager.addChild')}
             </button>
           )}
         </div>
@@ -276,7 +278,7 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
             onClick={onClose}
             className="w-full py-3 bg-stone-900 text-white rounded-2xl font-medium hover:bg-stone-800 transition-all"
           >
-            Klar
+            {t('childManager.done')}
           </button>
         </div>
       </div>

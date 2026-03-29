@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, CheckCircle2, Circle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, LayoutList, Calendar, Calculator, BookOpen, Languages, Beaker, Globe, Book, Clock, CalendarCheck, Camera, MessageSquare, X, Image as ImageIcon, Eye, EyeOff, Sparkles, Loader2, GraduationCap } from 'lucide-react';
 import { db, auth, OperationType, handleFirestoreError } from '../firebase';
 import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc, where, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -22,6 +23,7 @@ interface PlannerProps {
 const DAYS = ['måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag', 'söndag'];
 
 export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOpenAiForTask }: PlannerProps) {
+  const { t } = useTranslation();
   const plannerCameraRef = useRef<HTMLInputElement>(null);
   const [viewDate, setViewDate] = useState(new Date());
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -431,7 +433,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
             newTaskType === 'homework' ? "bg-white dark:bg-slate-900 shadow-sm text-emerald-700" : "text-stone-400 dark:text-stone-500"
           )}
         >
-          Läxa
+          {t('planner.typeHomework')}
         </button>
         <button
           type="button"
@@ -441,11 +443,11 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
             newTaskType === 'exam' ? "bg-purple-600 text-white shadow-sm" : "text-stone-400 dark:text-stone-500"
           )}
         >
-          Prov
+          {t('planner.typeTest')}
         </button>
       </div>
       <div>
-        <label className="block text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1">Ämne</label>
+        <label className="block text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1">{t('planner.subject')}</label>
         <input
           type="text"
           autoFocus={inModal}
@@ -456,7 +458,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
         />
       </div>
       <div>
-        <label className="block text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1">Beskrivning</label>
+        <label className="block text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1">{t('planner.description')}</label>
         <textarea
           value={newDesc}
           onChange={(e) => setNewDesc(e.target.value)}
@@ -469,7 +471,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
       {/* Inlämningsdag (single select) */}
       <div>
         <label className="block text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-2">
-          Inlämningsdag
+          {t('planner.dueDate')}
         </label>
         <div className="flex flex-wrap gap-1.5">
           {DAYS.map(day => (
@@ -493,7 +495,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
       {/* Arbetsdagar (multi select) */}
       <div>
         <label className="block text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-2">
-          Vilka dagar ska barnet jobba med läxan?
+          {t('planner.workDays')}
         </label>
         <div className="flex flex-wrap gap-1.5">
           {DAYS.map(day => (
@@ -517,7 +519,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
       {/* Minutes per day */}
       <div>
         <label className="block text-xs font-medium text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1">
-          Tid per dag (minuter)
+          {t('planner.minutesPerDay')}
         </label>
         <div className="flex items-center gap-2">
           <input
@@ -559,7 +561,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
           <div className="flex items-center justify-between w-full md:w-auto">
             <div className="flex items-center gap-4">
               <div>
-                <h2 className="text-3xl font-serif italic mb-1 dark:text-stone-100">Veckans Läxor</h2>
+                <h2 className="text-3xl font-serif italic mb-1 dark:text-stone-100">{t('planner.weeklyHomework')}</h2>
                 <div className="flex items-center gap-2 text-stone-500 dark:text-stone-400">
                   <button
                     onClick={() => setViewDate(prev => subWeeks(prev, 1))}

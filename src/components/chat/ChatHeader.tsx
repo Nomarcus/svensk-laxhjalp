@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { MessageSquare, Plus, Trash2, Languages } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import type { ChatSession } from '../../types';
@@ -23,6 +24,7 @@ export default function ChatHeader({
   simpleSwedish,
   onToggleSimpleSwedish,
 }: ChatHeaderProps) {
+  const { t } = useTranslation();
   return (
     <div className="px-4 py-3 md:px-8 md:py-4 bg-white dark:bg-slate-900 border-b border-black/5 dark:border-white/5 flex items-center justify-between">
       <div className="flex items-center gap-3">
@@ -31,7 +33,7 @@ export default function ChatHeader({
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-medium text-stone-900 dark:text-stone-100">Chatt med {childName}</h2>
+            <h2 className="text-sm font-medium text-stone-900 dark:text-stone-100">{t('chat.chatWith', { name: childName })}</h2>
             {sessions.length > 1 && (
               <select
                 value={activeSessionId || ''}
@@ -46,7 +48,7 @@ export default function ChatHeader({
               </select>
             )}
           </div>
-          <p className="text-[10px] text-stone-500 uppercase tracking-wider">Aktiv session</p>
+          <p className="text-[10px] text-stone-500 uppercase tracking-wider">{t('chat.activeSession')}</p>
         </div>
       </div>
       <div className="flex items-center gap-2">
@@ -59,22 +61,22 @@ export default function ChatHeader({
               ? "bg-blue-100 text-blue-700"
               : "bg-stone-50 text-stone-400 hover:bg-stone-100 hover:text-stone-600"
           )}
-          title="Enkel svenska — svar skrivs med enkla ord och korta meningar"
+          title={t('chat.simpleSwedishTooltip')}
         >
           <Languages size={14} />
-          <span>Enkel svenska</span>
+          <span>{t('chat.simpleSwedish')}</span>
         </button>
         <button
           onClick={onNewSession}
           className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-medium hover:bg-emerald-100 transition-all"
         >
           <Plus size={14} />
-          <span>Ny chatt</span>
+          <span>{t('chat.newChat')}</span>
         </button>
         <button
           onClick={onClearChat}
           className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-          title="Rensa chatt"
+          title={t('chat.clearChat')}
         >
           <Trash2 size={18} />
         </button>

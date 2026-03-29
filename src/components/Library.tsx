@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { db, auth, OperationType, handleFirestoreError } from '../firebase';
 import { collection, query, onSnapshot, deleteDoc, doc, orderBy, collectionGroup, getDocs } from 'firebase/firestore';
 import { Trash2, BookOpen, Image as ImageIcon, ExternalLink, Share2, Search, Plus, MessageSquare } from 'lucide-react';
@@ -12,6 +13,7 @@ interface LibraryProps {
 }
 
 export default function Library({ childId, ownerId }: LibraryProps) {
+  const { t } = useTranslation();
   const [items, setItems] = useState<LibraryItem[]>([]);
   const [chatImages, setChatImages] = useState<LibraryItem[]>([]);
   const [search, setSearch] = useState('');
@@ -91,7 +93,7 @@ export default function Library({ childId, ownerId }: LibraryProps) {
     e.stopPropagation();
     const shareData = {
       title: item.title,
-      text: item.content || 'Kolla in den här förklaringen!',
+      text: item.content || t('library.shareText'),
       url: window.location.href
     };
 
@@ -100,7 +102,7 @@ export default function Library({ childId, ownerId }: LibraryProps) {
         await navigator.share(shareData);
       } else {
         await navigator.clipboard.writeText(`${item.title}\n\n${item.content || ''}`);
-        alert('Länk och text kopierad till urklipp!');
+        alert(t('library.copiedToClipboard'));
       }
     } catch (err) {
       console.error('Error sharing:', err);
@@ -127,8 +129,8 @@ export default function Library({ childId, ownerId }: LibraryProps) {
           <header className="flex flex-col gap-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h2 className="text-3xl font-serif italic mb-1">Resursbibliotek</h2>
-                <p className="text-stone-500 dark:text-stone-400 text-sm">Alla förklaringar, illustrationer och bilder.</p>
+                <h2 className="text-3xl font-serif italic mb-1">{t('library.title')}</h2>
+                <p className="text-stone-500 dark:text-stone-400 text-sm">{t('library.subtitle')}</p>
               </div>
               <div className="relative max-w-xs w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500" size={18} />
@@ -136,13 +138,13 @@ export default function Library({ childId, ownerId }: LibraryProps) {
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Sök i biblioteket..."
+                  placeholder={t('library.searchPlaceholder')}
                   className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-black/5 dark:border-white/5 rounded-xl text-sm dark:text-stone-200 focus:ring-2 focus:ring-emerald-500/20 transition-all"
                 />
               </div>
             </div>
             <div className="flex gap-2">
-              {([['all', 'Alla'], ['images', 'Bilder'], ['text', 'Förklaringar']] as const).map(([key, label]) => (
+              {([['all', t('library.all')], ['images', t('library.images')], ['text', t('library.texts')]] as [['all', string], ['images', string], ['text', string]]).map(([key, label]) => (
                 <button
                   key={key}
                   onClick={() => setFilter(key)}
@@ -164,9 +166,9 @@ export default function Library({ childId, ownerId }: LibraryProps) {
               <div className="w-16 h-16 bg-stone-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-stone-300 dark:text-stone-400 mx-auto mb-4">
                 <BookOpen size={32} />
               </div>
-              <h3 className="text-lg font-medium text-stone-900 dark:text-stone-100 mb-2">Biblioteket är tomt</h3>
+              <h3 className="text-lg font-medium text-stone-900 dark:text-stone-100 mb-2">{t('library.empty')}</h3>
               <p className="text-stone-500 dark:text-stone-400 max-w-xs mx-auto text-sm">
-                Spara förklaringar från chatten för att se dem här senare.
+                {t('library.emptyDesc')}
               </p>
             </div>
           ) : (
@@ -208,13 +210,13 @@ export default function Library({ childId, ownerId }: LibraryProps) {
                     )}
                     <div className="flex items-center justify-between pt-4 border-t border-black/5 mt-auto">
                       <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">
-                        {item.subject || 'Allmänt'}
+                        {item.subject || t('library.general')}
                       </span>
                       <div className="flex items-center gap-1">
                         <button 
                           onClick={(e) => handleShare(item, e)}
                           className="p-2 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
-                          title="Dela"
+                          title={t('library.share')}
                         >
                           <Share2 size={16} />
                         </button>
@@ -222,7 +224,7 @@ export default function Library({ childId, ownerId }: LibraryProps) {
                           <button
                             onClick={(e) => deleteItem(item.id, e)}
                             className="p-2 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                            title="Ta bort"
+                            title={t('library.delete')}
                           >
                             <Trash2 size={16} />
                           </button>
@@ -248,7 +250,7 @@ export default function Library({ childId, ownerId }: LibraryProps) {
                 </div>
                 <div>
                   <h3 className="text-xl font-serif italic">{selectedItem.title}</h3>
-                  <p className="text-xs text-stone-400 uppercase tracking-widest font-medium">{selectedItem.subject || 'Allmänt'}</p>
+                  <p className="text-xs text-stone-400 uppercase tracking-widest font-medium">{selectedItem.subject || t('library.general')}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -257,7 +259,7 @@ export default function Library({ childId, ownerId }: LibraryProps) {
                   className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-sm font-medium hover:bg-emerald-100 transition-all"
                 >
                   <Share2 size={16} />
-                  <span>Dela</span>
+                  <span>{t('library.share')}</span>
                 </button>
                 <button 
                   onClick={() => setSelectedItem(null)}

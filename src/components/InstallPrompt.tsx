@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Download, X, Share, MoreVertical, Plus, ExternalLink, Monitor } from 'lucide-react';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -22,6 +23,7 @@ function isInStandaloneMode(): boolean {
 
 // Auto-popup banner
 export default function InstallPrompt() {
+  const { t } = useTranslation();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
@@ -61,20 +63,20 @@ export default function InstallPrompt() {
           <Download size={20} />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-medium text-stone-900">Installera Läxhjälpen</h3>
-          <p className="text-xs text-stone-500 mt-0.5">Lägg till appen på din hemskärm för snabb åtkomst.</p>
+          <h3 className="text-sm font-medium text-stone-900">{t('install.title')}</h3>
+          <p className="text-xs text-stone-500 mt-0.5">{t('install.description')}</p>
           <div className="flex items-center gap-2 mt-3">
             <button
               onClick={handleInstall}
               className="px-4 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition-all"
             >
-              Installera
+              {t('install.install')}
             </button>
             <button
               onClick={handleDismiss}
               className="px-3 py-1.5 text-stone-500 text-xs hover:text-stone-700 transition-all"
             >
-              Inte nu
+              {t('install.notNow')}
             </button>
           </div>
         </div>
@@ -88,6 +90,7 @@ export default function InstallPrompt() {
 
 // Full install guide modal
 export function InstallGuide({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
   const platform = detectPlatform();
   const [nativePrompt, setNativePrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
@@ -117,10 +120,10 @@ export function InstallGuide({ onClose }: { onClose: () => void }) {
           <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600 mx-auto mb-4">
             <Download size={28} />
           </div>
-          <h2 className="text-xl font-serif italic mb-2">Redan installerad!</h2>
-          <p className="text-stone-500 text-sm mb-6">Du kör redan Läxhjälpen som app.</p>
+          <h2 className="text-xl font-serif italic mb-2">{t('install.alreadyInstalled')}</h2>
+          <p className="text-stone-500 text-sm mb-6">{t('install.alreadyInstalledDesc')}</p>
           <button onClick={onClose} className="w-full py-3 bg-emerald-600 text-white rounded-2xl font-medium hover:bg-emerald-700 transition-all">
-            Stäng
+            {t('install.close')}
           </button>
         </div>
       </div>
@@ -133,7 +136,7 @@ export function InstallGuide({ onClose }: { onClose: () => void }) {
         {/* Header */}
         <div className="p-6 pb-4">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-serif italic">Installera appen</h2>
+            <h2 className="text-xl font-serif italic">{t('install.installApp')}</h2>
             <button onClick={onClose} className="p-2 hover:bg-stone-100 rounded-full text-stone-400 transition-colors">
               <X size={20} />
             </button>
@@ -146,7 +149,7 @@ export function InstallGuide({ onClose }: { onClose: () => void }) {
               className="w-full py-3.5 bg-emerald-600 text-white rounded-2xl font-medium shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 mb-4"
             >
               <Download size={18} />
-              Installera direkt
+              {t('install.installNow')}
             </button>
           )}
         </div>
@@ -155,49 +158,49 @@ export function InstallGuide({ onClose }: { onClose: () => void }) {
         <div className="px-6 pb-6">
           {platform === 'ios' && (
             <div className="space-y-4">
-              <p className="text-sm text-stone-500 mb-2">Följ dessa steg i Safari:</p>
+              <p className="text-sm text-stone-500 mb-2">{t('install.iosIntro')}</p>
               <Step n={1} icon={<Share size={16} />}>
-                Tryck på <strong>Dela-knappen</strong> längst ner (fyrkant med pil upp)
+                {t('install.iosStep1')}
               </Step>
               <Step n={2} icon={<Plus size={16} />}>
-                Scrolla ner och tryck <strong>Lägg till på hemskärm</strong>
+                {t('install.iosStep2')}
               </Step>
               <Step n={3}>
-                Tryck <strong>Lägg till</strong> uppe till höger
+                {t('install.iosStep3')}
               </Step>
               <p className="text-xs text-stone-400 mt-4 p-3 bg-stone-50 rounded-xl">
-                Använder du Chrome på iPhone? Öppna <strong>foraldrahjalpen.se</strong> i Safari — bara Safari kan installera appar på iOS.
+                {t('install.iosNote')}
               </p>
             </div>
           )}
 
           {platform === 'android' && !nativePrompt && (
             <div className="space-y-4">
-              <p className="text-sm text-stone-500 mb-2">Följ dessa steg:</p>
+              <p className="text-sm text-stone-500 mb-2">{t('install.androidIntro')}</p>
               <Step n={1} icon={<MoreVertical size={16} />}>
-                Tryck på <strong>menyn</strong> (tre prickar uppe till höger)
+                {t('install.androidStep1')}
               </Step>
               <Step n={2}>
-                Välj <strong>Lägg till på startskärm</strong> eller <strong>Installera app</strong>
+                {t('install.androidStep2')}
               </Step>
               <Step n={3}>
-                Tryck <strong>Installera</strong> i dialogrutan
+                {t('install.androidStep3')}
               </Step>
             </div>
           )}
 
           {platform === 'desktop' && !nativePrompt && (
             <div className="space-y-4">
-              <p className="text-sm text-stone-500 mb-2">Följ dessa steg:</p>
+              <p className="text-sm text-stone-500 mb-2">{t('install.desktopIntro')}</p>
 
               {/* Chrome */}
               <div className="space-y-3">
                 <p className="text-xs font-bold text-stone-400 uppercase tracking-widest">Chrome</p>
                 <Step n={1} icon={<Download size={16} />}>
-                  Klicka på <strong>installera-ikonen</strong> i adressfältet (till höger) — den ser ut som en datorskärm med en nedåtpil
+                  {t('install.chromeStep1')}
                 </Step>
                 <Step n={2}>
-                  Klicka <strong>Installera</strong> i dialogrutan som visas
+                  {t('install.chromeStep2')}
                 </Step>
               </div>
 
@@ -205,30 +208,30 @@ export function InstallGuide({ onClose }: { onClose: () => void }) {
               <div className="space-y-3 pt-2 border-t border-black/5">
                 <p className="text-xs font-bold text-stone-400 uppercase tracking-widest">Microsoft Edge</p>
                 <Step n={1} icon={<Monitor size={16} />}>
-                  Leta efter <strong>app-ikonen</strong> i adressfältet — en liten datorskärm med en nedåtpil (<span className="inline-flex items-center align-middle mx-0.5 text-stone-500"><Monitor size={14} /></span>)
+                  {t('install.edgeStep1')}
                 </Step>
                 <Step n={2}>
-                  Klicka på ikonen och välj <strong>Installera</strong>
+                  {t('install.edgeStep2')}
                 </Step>
               </div>
 
               <p className="text-xs text-stone-400 mt-4 p-3 bg-stone-50 rounded-xl">
-                Ingen installera-ikon? Klicka på menyn (⋯) och välj <strong>"Appar" → "Installera den här webbplatsen som en app"</strong>.
+                {t('install.desktopNote')}
               </p>
             </div>
           )}
 
           {platform === 'unknown' && !nativePrompt && (
             <div className="space-y-4">
-              <p className="text-sm text-stone-500 mb-2">Öppna sidan i Chrome, Edge eller Safari och följ dessa steg:</p>
+              <p className="text-sm text-stone-500 mb-2">{t('install.unknownIntro')}</p>
               <Step n={1}>
-                Öppna webbläsarens meny
+                {t('install.unknownStep1')}
               </Step>
               <Step n={2}>
-                Välj <strong>Installera</strong> eller <strong>Lägg till på hemskärm</strong>
+                {t('install.unknownStep2')}
               </Step>
               <Step n={3}>
-                Bekräfta installationen
+                {t('install.unknownStep3')}
               </Step>
             </div>
           )}
@@ -238,7 +241,7 @@ export function InstallGuide({ onClose }: { onClose: () => void }) {
         <div className="px-6 pb-5 pt-2 border-t border-black/5">
           <div className="flex items-center gap-2 text-xs text-stone-400">
             <ExternalLink size={12} />
-            <span>Appen fungerar offline och uppdateras automatiskt</span>
+            <span>{t('install.offlineNote')}</span>
           </div>
         </div>
       </div>
