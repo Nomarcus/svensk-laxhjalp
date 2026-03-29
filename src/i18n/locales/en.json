@@ -489,7 +489,8 @@
   },
   "language": {
     "label": "Language",
-    "choose": "Choose language"
+    "choose": "Choose language",
+    "betaNotice": "Translation to this language is under development. Some parts may be in Swedish."
   },
   "common": {
     "close": "Close",

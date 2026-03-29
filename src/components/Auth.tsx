@@ -109,7 +109,7 @@ function AppSlideshow() {
 }
 
 export default function Auth({ onShowPrivacy, onShowTerms }: AuthProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [view, setView] = useState<AuthView>('main');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -299,6 +299,12 @@ export default function Auth({ onShowPrivacy, onShowTerms }: AuthProps) {
         <div className="absolute top-4 right-4 z-10">
           <LanguageSwitcher />
         </div>
+        {i18n.language === 'ar' && (
+          <div className="absolute top-16 left-4 right-4 z-10 bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2 text-amber-800 text-sm">
+            <span>⚠️</span>
+            {t('language.betaNotice')}
+          </div>
+        )}
         {/* Left side: Marketing hero */}
         <div className="flex-1 lg:w-1/2 flex flex-col justify-center p-6 md:p-10 lg:p-14 xl:p-20">
           <div className="max-w-lg mx-auto w-full">
