@@ -186,7 +186,9 @@
     "textCopied": "Text copied to clipboard!",
     "printTitle": "Homework Help — Answer Key",
     "printHeading": "Homework Help — Answer Key",
-    "printFooter": "Printed from Homework Help"
+    "printFooter": "Printed from Homework Help",
+    "listen": "Listen",
+    "stopListening": "Stop"
   },
   "chatEmpty": {
     "helpWith": "Help {{name}} with homework",

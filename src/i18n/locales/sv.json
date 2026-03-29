@@ -186,7 +186,9 @@
     "textCopied": "Text kopierad till urklipp!",
     "printTitle": "Läxhjälpen — Facit",
     "printHeading": "Läxhjälpen — Facit",
-    "printFooter": "Utskrivet från Läxhjälpen"
+    "printFooter": "Utskrivet från Läxhjälpen",
+    "listen": "Lyssna",
+    "stopListening": "Stoppa"
   },
   "chatEmpty": {
     "helpWith": "Hjälp {{name}} med läxan",
