@@ -489,7 +489,8 @@
   },
   "language": {
     "label": "Språk",
-    "choose": "Välj språk"
+    "choose": "Välj språk",
+    "betaNotice": "Översättningen till detta språk är under utveckling. Vissa delar kan vara på svenska."
   },
   "common": {
     "close": "Stäng",

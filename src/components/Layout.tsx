@@ -39,7 +39,7 @@ export default function Layout({
   dark,
   onToggleDark,
 }: LayoutProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [showChildSelect, setShowChildSelect] = React.useState(false);
   const [showMobileMenu, setShowMobileMenu] = React.useState(false);
   const selectedChild = childrenList.find(c => c.id === selectedChildId);
@@ -284,6 +284,12 @@ export default function Layout({
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        {i18n.language === 'ar' && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-2 flex items-center gap-2 text-amber-800 dark:text-amber-200 text-sm shrink-0">
+            <span>⚠️</span>
+            {t('language.betaNotice')}
+          </div>
+        )}
         {children}
       </main>
 
