@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Bot, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine, X } from 'lucide-react';
+import { User, Bot, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine, X, Volume2, Square } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '../../utils/cn';
 import type { Message } from '../../types';
@@ -20,6 +20,10 @@ interface ChatMessageProps {
   onCreateTask?: (content: string) => void;
   hasImage?: boolean;
   creatingAutoTask?: boolean;
+  onSpeak?: (content: string) => void;
+  onStopSpeaking?: () => void;
+  isSpeaking?: boolean;
+  speechSupported?: boolean;
 }
 
 export default function ChatMessage({
@@ -37,6 +41,10 @@ export default function ChatMessage({
   onCreateTask,
   hasImage,
   creatingAutoTask,
+  onSpeak,
+  onStopSpeaking,
+  isSpeaking,
+  speechSupported,
 }: ChatMessageProps) {
   const { t } = useTranslation();
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
@@ -149,6 +157,20 @@ export default function ChatMessage({
         )}
         {msg.role === 'model' && (
           <div className="flex flex-wrap gap-2 mt-1">
+            {speechSupported && (
+              <button
+                onClick={() => isSpeaking ? onStopSpeaking?.() : onSpeak?.(msg.content)}
+                className={cn(
+                  "flex items-center gap-1.5 text-[10px] transition-colors px-2 py-1 rounded-md",
+                  isSpeaking
+                    ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30"
+                    : "text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
+                )}
+              >
+                {isSpeaking ? <Square size={12} /> : <Volume2 size={12} />}
+                {isSpeaking ? t('chat.stopListening') : t('chat.listen')}
+              </button>
+            )}
             {!msg.generatedImage && (
               <button
                 onClick={() => onGenerateImage(msg.id, msg.content)}
