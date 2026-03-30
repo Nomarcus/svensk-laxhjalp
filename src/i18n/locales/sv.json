@@ -188,7 +188,11 @@
     "printHeading": "Läxhjälpen — Facit",
     "printFooter": "Utskrivet från Läxhjälpen",
     "listen": "Lyssna",
-    "stopListening": "Stoppa"
+    "stopListening": "Stopp",
+    "pause": "Paus",
+    "resume": "Fortsätt",
+    "nextChunk": "Nästa",
+    "chunkProgress": "Stycke {{current}} av {{total}}"
   },
   "chatEmpty": {
     "helpWith": "Hjälp {{name}} med läxan",

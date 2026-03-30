@@ -188,7 +188,11 @@
     "printHeading": "Homework Help — Answer Key",
     "printFooter": "Printed from Homework Help",
     "listen": "Listen",
-    "stopListening": "Stop"
+    "stopListening": "Stop",
+    "pause": "Pause",
+    "resume": "Continue",
+    "nextChunk": "Next",
+    "chunkProgress": "Part {{current}} of {{total}}"
   },
   "chatEmpty": {
     "helpWith": "Help {{name}} with homework",

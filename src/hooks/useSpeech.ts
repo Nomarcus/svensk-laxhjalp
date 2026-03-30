@@ -24,51 +24,138 @@ function stripMarkdown(text: string): string {
     .trim();
 }
 
+function splitIntoChunks(text: string): string[] {
+  const plain = stripMarkdown(text);
+  return plain
+    .split(/\n\n+/)
+    .map(chunk => chunk.trim())
+    .filter(chunk => chunk.length > 0);
+}
+
 export function useSpeech() {
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const [currentChunk, setCurrentChunk] = useState(0);
+  const [totalChunks, setTotalChunks] = useState(0);
+  const chunksRef = useRef<string[]>([]);
+  const langRef = useRef<string>('sv');
+  const pausedMidChunkRef = useRef(false);
   const isSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
 
-  const stop = useCallback(() => {
-    if (!isSupported) return;
+  const speakChunk = useCallback((index: number) => {
+    if (!isSupported || index >= chunksRef.current.length) {
+      setIsSpeaking(false);
+      setIsPaused(false);
+      setCurrentChunk(0);
+      setTotalChunks(0);
+      chunksRef.current = [];
+      return;
+    }
+
     window.speechSynthesis.cancel();
-    setIsSpeaking(false);
-    utteranceRef.current = null;
+    pausedMidChunkRef.current = false;
+
+    const utterance = new SpeechSynthesisUtterance(chunksRef.current[index]);
+    const targetLang = LANG_MAP[langRef.current] || LANG_MAP.sv;
+    utterance.lang = targetLang;
+    utterance.rate = 0.9;
+
+    const voices = window.speechSynthesis.getVoices();
+    const voice = voices.find(v => v.lang.startsWith(targetLang.split('-')[0]));
+    if (voice) utterance.voice = voice;
+
+    utterance.onstart = () => {
+      setIsSpeaking(true);
+      setIsPaused(false);
+      setCurrentChunk(index);
+    };
+
+    utterance.onend = () => {
+      // Auto-pause after each chunk — user clicks "Fortsätt" for next
+      pausedMidChunkRef.current = false;
+      setIsSpeaking(false);
+      if (index + 1 < chunksRef.current.length) {
+        setIsPaused(true);
+        setCurrentChunk(index);
+      } else {
+        // Last chunk done
+        setIsPaused(false);
+        setCurrentChunk(0);
+        setTotalChunks(0);
+        chunksRef.current = [];
+      }
+    };
+
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      setIsPaused(false);
+    };
+
+    window.speechSynthesis.speak(utterance);
   }, [isSupported]);
 
   const speak = useCallback((text: string, lang: string = 'sv') => {
     if (!isSupported) return;
-
-    // Stop any current speech first
     window.speechSynthesis.cancel();
 
-    const plainText = stripMarkdown(text);
-    const utterance = new SpeechSynthesisUtterance(plainText);
-    utterance.lang = LANG_MAP[lang] || LANG_MAP.sv;
-    utterance.rate = 0.9;
+    const chunks = splitIntoChunks(text);
+    if (chunks.length === 0) return;
 
-    // Try to find a matching voice
-    const voices = window.speechSynthesis.getVoices();
-    const targetLang = LANG_MAP[lang] || LANG_MAP.sv;
-    const voice = voices.find(v => v.lang.startsWith(targetLang.split('-')[0]));
-    if (voice) utterance.voice = voice;
+    chunksRef.current = chunks;
+    langRef.current = lang;
+    setTotalChunks(chunks.length);
+    setCurrentChunk(0);
+    setIsPaused(false);
+    pausedMidChunkRef.current = false;
+    speakChunk(0);
+  }, [isSupported, speakChunk]);
 
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => { setIsSpeaking(false); utteranceRef.current = null; };
-    utterance.onerror = () => { setIsSpeaking(false); utteranceRef.current = null; };
+  const next = useCallback(() => {
+    if (!isSupported) return;
+    const nextIndex = currentChunk + 1;
+    if (nextIndex < chunksRef.current.length) {
+      speakChunk(nextIndex);
+    }
+  }, [isSupported, currentChunk, speakChunk]);
 
-    utteranceRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
+  const pause = useCallback(() => {
+    if (!isSupported) return;
+    window.speechSynthesis.pause();
+    pausedMidChunkRef.current = true;
+    setIsPaused(true);
+    setIsSpeaking(false);
   }, [isSupported]);
 
-  // Cleanup on unmount
+  const resume = useCallback(() => {
+    if (!isSupported) return;
+    if (pausedMidChunkRef.current) {
+      // Resume mid-chunk
+      window.speechSynthesis.resume();
+      pausedMidChunkRef.current = false;
+      setIsPaused(false);
+      setIsSpeaking(true);
+    } else {
+      // Paused between chunks — play next chunk
+      next();
+    }
+  }, [isSupported, next]);
+
+  const stop = useCallback(() => {
+    if (!isSupported) return;
+    window.speechSynthesis.cancel();
+    pausedMidChunkRef.current = false;
+    setIsSpeaking(false);
+    setIsPaused(false);
+    setCurrentChunk(0);
+    setTotalChunks(0);
+    chunksRef.current = [];
+  }, [isSupported]);
+
   useEffect(() => {
     return () => {
-      if (isSupported) {
-        window.speechSynthesis.cancel();
-      }
+      if (isSupported) window.speechSynthesis.cancel();
     };
   }, [isSupported]);
 
-  return { speak, stop, isSpeaking, isSupported };
+  return { speak, stop, pause, resume, next, isSpeaking, isPaused, isSupported, currentChunk, totalChunks };
 }

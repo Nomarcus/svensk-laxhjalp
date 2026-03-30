@@ -52,12 +52,13 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
     });
   };
 
-  // Reset speaking state when speech ends
+  // Reset speaking state when all chunks are done
+  const isActive = speech.isSpeaking || speech.isPaused;
   useEffect(() => {
-    if (!speech.isSpeaking && speakingMessageId) {
+    if (!isActive && speakingMessageId) {
       setSpeakingMessageId(null);
     }
-  }, [speech.isSpeaking, speakingMessageId]);
+  }, [isActive, speakingMessageId]);
 
   useEffect(() => {
     if (!auth.currentUser || !childId) return;
@@ -382,9 +383,27 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
                 onAskFordjupning={(content) => {
                   sendMessage(`Baserat på din förklaring, ge förslag på relaterade ämnen och kopplingar som kan fördjupa mitt barns förståelse. Ge 2-3 konkreta förslag på vad vi kan utforska vidare, med en kort förklaring av hur det kopplar till det vi just pratat om. Skriv det så att jag som förälder kan ta upp det med mitt barn.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.deepDive'));
                 }}
-                onSpeak={(content) => { speech.speak(content, i18n.language); setSpeakingMessageId(msg.id); }}
-                onStopSpeaking={() => { speech.stop(); setSpeakingMessageId(null); }}
-                isSpeaking={speakingMessageId === msg.id && speech.isSpeaking}
+                speechState={speakingMessageId === msg.id ? {
+                  isSpeaking: speech.isSpeaking,
+                  isPaused: speech.isPaused,
+                  currentChunk: speech.currentChunk,
+                  totalChunks: speech.totalChunks,
+                  onSpeak: () => { speech.speak(msg.content, i18n.language); setSpeakingMessageId(msg.id); },
+                  onPause: speech.pause,
+                  onResume: speech.resume,
+                  onNext: speech.next,
+                  onStop: () => { speech.stop(); setSpeakingMessageId(null); },
+                } : {
+                  isSpeaking: false,
+                  isPaused: false,
+                  currentChunk: 0,
+                  totalChunks: 0,
+                  onSpeak: () => { speech.stop(); speech.speak(msg.content, i18n.language); setSpeakingMessageId(msg.id); },
+                  onPause: speech.pause,
+                  onResume: speech.resume,
+                  onNext: speech.next,
+                  onStop: () => { speech.stop(); setSpeakingMessageId(null); },
+                }}
                 speechSupported={speech.isSupported}
                 onAutoCreateTask={onCreateTaskFromPhoto ? handleAutoCreateTask : undefined}
                 creatingAutoTask={creatingAutoTask}
