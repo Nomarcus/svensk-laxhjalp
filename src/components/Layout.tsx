@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, MessageSquare, Calendar, BookOpen, User as UserIcon, ChevronDown, Settings, Info, Library, Crown, Download, Users, X, Menu, Moon, Sun, Mail, Shield, FileText } from 'lucide-react';
+import { LogOut, MessageSquare, Calendar, BookOpen, User as UserIcon, ChevronDown, Settings, Info, Library, Crown, Download, Users, X, Menu, Moon, Sun, Mail, Shield, FileText, Share2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { logout, User } from '../firebase';
 import { cn } from '../utils/cn';
@@ -49,6 +49,24 @@ export default function Layout({
   const handleTabChange = (tab: typeof activeTab) => {
     setActiveTab(tab);
     setShowMobileMenu(false);
+  };
+
+  const handleShareApp = async () => {
+    const shareData = {
+      title: t('app.fullName'),
+      text: t('library.shareText'),
+      url: window.location.origin,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.origin);
+        alert(t('library.copiedToClipboard'));
+      }
+    } catch (err) {
+      console.error('Error sharing app:', err);
+    }
   };
 
   return (
@@ -214,6 +232,13 @@ export default function Layout({
               <span className="text-sm">{t('nav.installApp')}</span>
             </button>
           )}
+          <button
+            onClick={handleShareApp}
+            className="w-full flex items-center gap-3 px-4 py-2 mb-2 text-stone-500 dark:text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all"
+          >
+            <Share2 size={18} />
+            <span className="text-sm">{t('nav.shareApp')}</span>
+          </button>
           {onShowPrivacy && (
             <button
               onClick={onShowPrivacy}
@@ -422,6 +447,13 @@ export default function Layout({
                   <span>{t('nav.installApp')}</span>
                 </button>
               )}
+              <button
+                onClick={() => { handleShareApp(); setShowMobileMenu(false); }}
+                className="w-full flex items-center gap-3 px-3 py-3 text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800 rounded-xl transition-all text-sm"
+              >
+                <Share2 size={18} />
+                <span>{t('nav.shareApp')}</span>
+              </button>
               {onShowPrivacy && (
                 <button
                   onClick={() => { onShowPrivacy(); setShowMobileMenu(false); }}
