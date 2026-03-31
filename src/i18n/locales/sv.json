@@ -35,6 +35,8 @@
     "getStarted": "Kom igång",
     "createFreeAccount": "Skapa ett gratis konto och börja hjälpa ditt barn med läxorna idag.",
     "loginGoogle": "Logga in med Google",
+    "loginFacebook": "Logga in med Facebook",
+    "loginHotmail": "Logga in med Hotmail",
     "loginEmail": "Logga in med e-post",
     "loginGuest": "Testa anonym inloggning",
     "createAccount": "Skapa konto",
@@ -71,7 +73,7 @@
   },
   "landing": {
     "heroTitle": "AI-driven läxhjälp för svenska föräldrar",
-    "heroDescription": "Vill du förstå ditt barns läxor? Vill du slippa konflikten vid läxtillfällen ? Fota läxan eller ställ en fråga och få pedagogiska förklaringar kopplade till svenska läroplanen Lgr22.",
+    "heroDescription": "Vill du förstå ditt barns läxor? Vill du slippa konflikter vid läxtillfällen ? Fota läxan eller ställ en fråga och få enkla och pedagogiska förklaringar kopplade till svenska läroplanen Lgr22.",
     "freeToStart": "Gratis att starta",
     "linkedToLgr22": "Kopplat till Lgr22",
     "safeAndSecure": "Säkert och tryggt",
