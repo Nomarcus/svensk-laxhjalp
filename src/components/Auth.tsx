@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, Mail, Eye, EyeOff, ArrowLeft, MessageSquare, Camera, Calendar, Sparkles, Library, CheckCircle, ChevronLeft, ChevronRight, Shield, GraduationCap, Users, Star, FileText } from 'lucide-react';
-import { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword } from '../firebase';
+import { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, signInAsGuest } from '../firebase';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from './LanguageSwitcher';
 
@@ -204,6 +204,18 @@ export default function Auth({ onShowPrivacy, onShowTerms }: AuthProps) {
     }
   };
 
+  const handleGuestLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      await signInAsGuest();
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const backButton = (
     <button
       onClick={() => goTo('main')}
@@ -374,6 +386,10 @@ export default function Auth({ onShowPrivacy, onShowTerms }: AuthProps) {
               <button onClick={() => goTo('email-login')} disabled={loading} className="w-full flex items-center justify-center gap-3 bg-white border border-stone-200 py-4 px-6 rounded-2xl font-medium text-stone-700 hover:bg-stone-50 hover:border-stone-300 transition-all shadow-sm active:scale-[0.98] disabled:opacity-50">
                 <Mail size={20} className="text-emerald-600" />
                 {t('auth.loginEmail')}
+              </button>
+              <button onClick={handleGuestLogin} disabled={loading} className="w-full flex items-center justify-center gap-3 bg-emerald-50 border border-emerald-200 py-4 px-6 rounded-2xl font-medium text-emerald-800 hover:bg-emerald-100 hover:border-emerald-300 transition-all shadow-sm active:scale-[0.98] disabled:opacity-50">
+                <Users size={20} className="text-emerald-700" />
+                {t('auth.loginGuest')}
               </button>
             </div>
 
