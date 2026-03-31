@@ -32,6 +32,7 @@ VIKTIGT:
 När du analyserar bilder av läxor:
 - Identifiera ämne och vad uppgiften går ut på.
 - Förklara steg för steg.
+- Om det är matte: skriv en tydlig uppställning i text så att varje rad hamnar under rätt kolumn.
 - Avsluta med "Så kan du förklara för ditt barn:"-tipset.
 `;
 
