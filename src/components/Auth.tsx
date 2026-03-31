@@ -326,25 +326,25 @@ export default function Auth({ onShowPrivacy, onShowTerms }: AuthProps) {
               <div className="w-11 h-11 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-200">
                 <BookOpen size={22} />
               </div>
-              <span className="text-lg font-serif italic text-stone-900">{t('app.fullName')}</span>
+              <span className="text-lg font-serif italic text-stone-900 drop-shadow-[0_2px_6px_rgba(15,23,42,0.12)]">{t('app.fullName')}</span>
             </div>
 
-            <h1 className="text-4xl md:text-5xl font-serif italic text-stone-900 mb-4 leading-tight">
+            <h1 className="text-4xl md:text-5xl font-serif italic text-stone-900 mb-4 leading-tight drop-shadow-[0_4px_14px_rgba(15,23,42,0.18)]">
               {t('landing.heroTitle')}
             </h1>
-            <p className="text-lg text-stone-600 mb-6 leading-relaxed">
+            <p className="text-lg text-stone-600/95 mb-6 leading-relaxed drop-shadow-[0_1px_5px_rgba(15,23,42,0.08)]">
               {t('landing.heroDescription')}
             </p>
 
             {/* Trust badges */}
             <div className="flex flex-wrap gap-3 mb-8">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-sm font-medium">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50/85 text-emerald-700 rounded-full text-sm font-medium border border-emerald-100 shadow-[0_8px_20px_-14px_rgba(5,150,105,0.45)]">
                 <CheckCircle size={14} /> {t('landing.freeToStart')}
               </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50/85 text-blue-700 rounded-full text-sm font-medium border border-blue-100 shadow-[0_8px_20px_-14px_rgba(37,99,235,0.45)]">
                 <GraduationCap size={14} /> {t('landing.linkedToLgr22')}
               </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-full text-sm font-medium">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50/85 text-amber-700 rounded-full text-sm font-medium border border-amber-100 shadow-[0_8px_20px_-14px_rgba(217,119,6,0.45)]">
                 <Shield size={14} /> {t('landing.safeAndSecure')}
               </span>
             </div>
