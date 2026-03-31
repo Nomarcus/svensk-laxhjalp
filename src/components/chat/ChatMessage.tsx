@@ -13,7 +13,9 @@ interface ChatMessageProps {
   onSaveToLibrary: (msg: Message) => void;
   onGenerateImage: (messageId: string, content: string) => void;
   onAskCurriculum?: (content: string) => void;
-  onAskFacit?: (content: string) => void;
+  onAskFacitShort?: (content: string) => void;
+  onAskFacitSteps?: (content: string) => void;
+  onAskFacitParent?: (content: string) => void;
   onAskFordjupning?: (content: string) => void;
   onAutoCreateTask?: (messageId: string, content: string) => void;
   onAddToPlanner?: (content: string) => void;
@@ -42,7 +44,9 @@ export default function ChatMessage({
   onSaveToLibrary,
   onGenerateImage,
   onAskCurriculum,
-  onAskFacit,
+  onAskFacitShort,
+  onAskFacitSteps,
+  onAskFacitParent,
   onAskFordjupning,
   onAutoCreateTask,
   onAddToPlanner,
@@ -55,12 +59,45 @@ export default function ChatMessage({
   const { t } = useTranslation();
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
+  const extractPlainText = (content: string) =>
+    content
+      .replace(/[`*_>#-]/g, ' ')
+      .replace(/\n+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const detectMathType = (content: string): string | null => {
+    const text = content.toLowerCase();
+    if (!/\d/.test(text)) return null;
+    if (text.includes('bråk')) return t('chat.mathTypeFractions');
+    if (text.includes('procent')) return t('chat.mathTypePercent');
+    if (text.includes('ekvation')) return t('chat.mathTypeEquation');
+    if (text.includes('uppställning') || text.includes('kolumn') || text.includes('ställ upp')) return t('chat.mathTypeColumn');
+    if (text.includes('division')) return t('chat.mathTypeDivision');
+    if (text.includes('multiplikation')) return t('chat.mathTypeMultiplication');
+    return t('chat.mathTypeGeneral');
+  };
+
+  const isFacitMessage = (content: string) => {
+    const text = content.toLowerCase();
+    return text.includes('facit') || text.includes('korrekt svar') || text.includes('svar:');
+  };
+
   const handlePrint = (content: string) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
     const printTitle = t('chat.printTitle');
+    const printBody = content
+      .replace(/^###\s+(.*)$/gm, '<h3>$1</h3>')
+      .replace(/^##\s+(.*)$/gm, '<h2>$1</h2>')
+      .replace(/^#\s+(.*)$/gm, '<h1>$1</h1>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/^\s*[-*]\s+(.*)$/gm, '<li>$1</li>')
+      .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+      .replace(/\n/g, '<br>');
+
     printWindow.document.write(`<!DOCTYPE html><html lang="sv"><head><meta charset="utf-8"><title>${printTitle}</title><style>
-      body { font-family: Georgia, serif; max-width: 700px; margin: 40px auto; padding: 20px; color: #1a1a1a; line-height: 1.7; }
+      body { font-family: Inter, Arial, sans-serif; max-width: 760px; margin: 36px auto; padding: 20px; color: #1a1a1a; line-height: 1.7; }
       h1 { font-size: 18px; color: #059669; border-bottom: 2px solid #059669; padding-bottom: 8px; }
       h2, h3 { color: #333; margin-top: 20px; }
       ul, ol { padding-left: 24px; }
@@ -69,7 +106,7 @@ export default function ChatMessage({
       @media print { body { margin: 20px; } }
     </style></head><body>
       <h1>📚 ${printTitle}</h1>
-      <div>${content.replace(/\n/g, '<br>')}</div>
+      <div>${printBody}</div>
       <div class="footer">${printTitle} — ${new Date().toLocaleDateString('sv-SE')}</div>
     </body></html>`);
     printWindow.document.close();
@@ -163,6 +200,12 @@ export default function ChatMessage({
         )}
         {msg.role === 'model' && (
           <div className="flex flex-wrap gap-2 mt-1">
+            {hasImage && detectMathType(msg.content) && (
+              <span className="inline-flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100">
+                <Calculator size={11} />
+                {t('chat.detectedMathType')}: {detectMathType(msg.content)}
+              </span>
+            )}
             {speechSupported && speechState && (
               (speechState.isSpeaking || speechState.isPaused) ? (
                 <div className="flex items-center gap-1 bg-emerald-50 dark:bg-emerald-900/30 rounded-md px-1">
@@ -227,13 +270,40 @@ export default function ChatMessage({
                 {t('chat.curriculumLink')}
               </button>
             )}
-            {onAskFacit && (
+            {onAskFacitShort && (
               <button
-                onClick={() => onAskFacit(msg.content)}
+                onClick={() => onAskFacitShort(msg.content)}
                 className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-red-600 transition-colors px-2 py-1 rounded-md hover:bg-red-50"
               >
                 <ClipboardList size={12} />
-                {t('chat.showAnswerKey')}
+                {t('chat.showAnswerKeyShort')}
+              </button>
+            )}
+            {onAskFacitSteps && (
+              <button
+                onClick={() => onAskFacitSteps(msg.content)}
+                className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-red-600 transition-colors px-2 py-1 rounded-md hover:bg-red-50"
+              >
+                <ClipboardList size={12} />
+                {t('chat.showAnswerKeySteps')}
+              </button>
+            )}
+            {onAskFacitParent && (
+              <button
+                onClick={() => onAskFacitParent(msg.content)}
+                className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-red-600 transition-colors px-2 py-1 rounded-md hover:bg-red-50"
+              >
+                <ClipboardList size={12} />
+                {t('chat.showAnswerKeyParent')}
+              </button>
+            )}
+            {isFacitMessage(msg.content) && onAddToPlanner && (
+              <button
+                onClick={() => onAddToPlanner(msg.content)}
+                className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-amber-600 transition-colors px-2 py-1 rounded-md hover:bg-amber-50"
+              >
+                <CalendarPlus size={12} />
+                {t('chat.saveAnswerKeyToPlanner')}
               </button>
             )}
             {onAskFordjupning && (
@@ -262,7 +332,7 @@ export default function ChatMessage({
               <Printer size={12} />
               {t('chat.printAnswer')}
             </button>
-            {onAddToPlanner && (
+            {onAddToPlanner && !isFacitMessage(msg.content) && (
               <button
                 onClick={() => onAddToPlanner(msg.content)}
                 className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-amber-600 transition-colors px-2 py-1 rounded-md hover:bg-amber-50"

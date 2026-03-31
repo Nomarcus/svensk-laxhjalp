@@ -187,10 +187,17 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
 
   const handleShare = async (message: Message) => {
     try {
+      const plain = message.content
+        .replace(/[`*_>#-]/g, ' ')
+        .replace(/\n+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 320);
+      const shareText = `${t('chat.shareIntro')}\n\n${plain}`;
       if (navigator.share) {
-        await navigator.share({ title: t('chat.printTitle'), text: message.content, url: window.location.href });
+        await navigator.share({ title: t('chat.printTitle'), text: shareText, url: window.location.href });
       } else {
-        await navigator.clipboard.writeText(message.content);
+        await navigator.clipboard.writeText(shareText);
         alert(t('chat.textCopied'));
       }
     } catch (err) {
@@ -377,8 +384,14 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
                 onAskCurriculum={(content) => {
                   sendMessage(`Förklara hur det du just berättade om kopplas till den svenska läroplanen (Lgr22). Vilka centrala innehåll och kunskapskrav berörs? Ge konkreta kopplingar så jag som förälder förstår varför mitt barn lär sig detta.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.curriculumLink'));
                 }}
-                onAskFacit={(content) => {
-                  sendMessage(`Ge mig ett komplett facit med alla svar utskrivna för uppgiften du just förklarade. Skriv tydligt varje fråga/deluppgift följt av det korrekta svaret. Detta är till föräldern — inte till eleven. Formatera det snyggt med numrering.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKey'));
+                onAskFacitShort={(content) => {
+                  sendMessage(`Ge ett KORT facit för uppgiften du just förklarade. Endast slutliga svar per deluppgift i en tydlig numrerad lista. Avsluta med en sektion "Vanliga fel" med 2 korta punkter.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeyShort'));
+                }}
+                onAskFacitSteps={(content) => {
+                  sendMessage(`Ge ett FULLSTÄNDIGT facit steg för steg för uppgiften du just förklarade. För matte: ställ upp talen tydligt rad för rad med korrekta kolumner. Numrera deluppgifter och visa uträkning + slutsvar för varje del. Avsluta med en sektion "Vanliga fel" med 2-3 konkreta punkter.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeySteps'));
+                }}
+                onAskFacitParent={(content) => {
+                  sendMessage(`Ge ett facit anpassat för föräldern: 1) korrekta svar, 2) kort förklaring hur svaret togs fram, 3) vad barnet lätt gör fel. Skriv enkelt, tydligt och numrerat. Avsluta med sektionen "Vanliga fel".\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeyParent'));
                 }}
                 onAskFordjupning={(content) => {
                   sendMessage(`Baserat på din förklaring, ge förslag på relaterade ämnen och kopplingar som kan fördjupa mitt barns förståelse. Ge 2-3 konkreta förslag på vad vi kan utforska vidare, med en kort förklaring av hur det kopplar till det vi just pratat om. Skriv det så att jag som förälder kan ta upp det med mitt barn.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.deepDive'));
