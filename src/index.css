@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Inter:wght@100..900&display=swap');
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -6,8 +7,6 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Cormorant Garamond", serif;
 }
-
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Inter:wght@100..900&display=swap');
 
 /* Safe area insets for mobile notch/home indicator */
 .safe-area-top {
@@ -27,15 +26,15 @@
 }
 
 .markdown-body h1 {
-  @apply text-4xl font-serif italic text-stone-900 dark:text-stone-100 mt-10 mb-6 border-b border-black/5 dark:border-white/10 pb-3;
+  @apply text-4xl font-serif text-stone-900 dark:text-stone-100 mt-10 mb-6 border-b border-black/5 dark:border-white/10 pb-3;
 }
 
 .markdown-body h2 {
-  @apply text-3xl font-serif italic text-stone-900 dark:text-stone-100 mt-8 mb-4;
+  @apply text-3xl font-serif text-stone-900 dark:text-stone-100 mt-8 mb-4;
 }
 
 .markdown-body h3 {
-  @apply text-2xl font-serif italic text-stone-900 dark:text-stone-100 mt-6 mb-3;
+  @apply text-2xl font-serif text-stone-900 dark:text-stone-100 mt-6 mb-3;
 }
 
 .markdown-body p {

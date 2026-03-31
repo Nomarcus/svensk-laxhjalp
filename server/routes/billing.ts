@@ -15,6 +15,10 @@ function getStripe(): Stripe {
   }
   return _stripe;
 }
+function getSubscriptionPeriodEnd(sub: Stripe.Subscription | Stripe.Response<Stripe.Subscription>): string | null {
+  const ts = (sub as any).current_period_end;
+  return typeof ts === 'number' ? new Date(ts * 1000).toISOString() : null;
+}
 
 const CLIENT_URL = process.env.CLIENT_URL || 'https://lead-agent-489101.web.app';
 
@@ -179,7 +183,7 @@ export async function stripeWebhookHandler(req: Request, res: Response) {
             subscriptionStatus: 'active',
             stripeSubscriptionId: subscription.id,
             stripeCustomerId: session.customer as string,
-            currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+            currentPeriodEnd: getSubscriptionPeriodEnd(subscription),
             cancelAtPeriodEnd: subscription.cancel_at_period_end,
           }, { merge: true });
         }
@@ -201,7 +205,7 @@ export async function stripeWebhookHandler(req: Request, res: Response) {
         await admin.firestore().doc(`users/${firebaseUID}`).set({
           tier: subscription.status === 'active' ? 'pro' : 'free',
           subscriptionStatus: statusMap[subscription.status] || 'none',
-          currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+          currentPeriodEnd: getSubscriptionPeriodEnd(subscription),
           cancelAtPeriodEnd: subscription.cancel_at_period_end,
         }, { merge: true });
         break;

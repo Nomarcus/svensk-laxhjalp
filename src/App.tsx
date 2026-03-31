@@ -20,6 +20,11 @@ import CookieConsent from './components/CookieConsent';
 import Terms from './components/Terms';
 import { useTheme } from './hooks/useTheme';
 
+const isFirestorePermissionError = (error: unknown) => {
+  if (!(error instanceof Error)) return false;
+  return error.message.includes('permission-denied') || error.message.includes('insufficient permissions');
+};
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -97,11 +102,13 @@ export default function App() {
     const childrenRef = collection(db, 'users', user.uid, 'children');
     const qOwn = query(childrenRef, orderBy('createdAt', 'asc'));
     
-    // Fetch shared children
-    const qShared = query(
-      collectionGroup(db, 'children'), 
-      where('sharedWith', 'array-contains', user.email)
-    );
+    const canFetchShared = Boolean(user.email);
+    const qShared = canFetchShared
+      ? query(
+        collectionGroup(db, 'children'),
+        where('sharedWith', 'array-contains', user.email!)
+      )
+      : null;
 
     let ownChildren: Child[] = [];
     let sharedChildren: Child[] = [];
@@ -135,7 +142,7 @@ export default function App() {
       handleFirestoreError(error, OperationType.GET, 'children');
     });
 
-    const unsubscribeShared = onSnapshot(qShared, (snapshot) => {
+    const unsubscribeShared = qShared ? onSnapshot(qShared, (snapshot) => {
       sharedChildren = snapshot.docs.map(doc => ({
         id: doc.id,
         ownerId: doc.ref.parent.parent!.id,
@@ -143,9 +150,14 @@ export default function App() {
       })) as Child[];
       updateChildren();
     }, (error) => {
-      // Collection group queries might fail if index is missing, but we'll handle it
-      console.warn('Shared children fetch failed (index might be building):', error);
-    });
+      // Shared query should never break the app for users without sharing permissions.
+      if (isFirestorePermissionError(error)) {
+        sharedChildren = [];
+        updateChildren();
+        return;
+      }
+      console.warn('Shared children fetch failed:', error);
+    }) : () => {};
 
     return () => {
       unsubscribeOwn();

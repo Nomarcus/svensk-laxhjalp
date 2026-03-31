@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Bot, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine, X, Volume2, Square, Pause, Play, SkipForward } from 'lucide-react';
+import { User, Bot, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine, X, Volume2, Square, Pause, Play, SkipForward, Calculator } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '../../utils/cn';
 import type { Message } from '../../types';
@@ -58,13 +58,6 @@ export default function ChatMessage({
 }: ChatMessageProps) {
   const { t } = useTranslation();
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
-
-  const extractPlainText = (content: string) =>
-    content
-      .replace(/[`*_>#-]/g, ' ')
-      .replace(/\n+/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
 
   const detectMathType = (content: string): string | null => {
     const text = content.toLowerCase();
