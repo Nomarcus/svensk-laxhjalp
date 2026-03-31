@@ -5,7 +5,7 @@ import { BookOpen, MessageSquare, Calendar, Sparkles, ShieldCheck, Zap, ChevronD
 function CollapsibleSection({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-black/5 dark:border-white/5 overflow-hidden">
+    <div className="bg-white dark:bg-slate-900 rounded-2xl surface-card dark:border-white/5 overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between p-5 md:p-6 text-left hover:bg-stone-50 dark:hover:bg-slate-800 transition-colors"
@@ -58,7 +58,7 @@ export default function Info() {
   ];
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 bg-[#F5F5F0] dark:bg-slate-950">
+    <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 app-soft-bg dark:bg-slate-950">
       <div className="max-w-3xl mx-auto space-y-10 py-6">
         {/* Header */}
         <header className="text-center space-y-4">
@@ -74,7 +74,7 @@ export default function Info() {
         {/* Feature overview cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {features.map((f, i) => (
-            <div key={i} className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-black/5 dark:border-white/5 hover:shadow-md transition-all">
+            <div key={i} className="bg-white dark:bg-slate-900 p-5 rounded-2xl surface-card dark:border-white/5 hover:shadow-[0_18px_36px_-24px_rgba(15,23,42,0.28)] transition-all">
               <div className="w-10 h-10 bg-stone-50 dark:bg-slate-800 rounded-xl flex items-center justify-center mb-3">
                 {f.icon}
               </div>
@@ -85,7 +85,7 @@ export default function Info() {
         </div>
 
         {/* Quick start */}
-        <section className="bg-emerald-600 rounded-[2rem] p-8 md:p-10 text-white overflow-hidden relative">
+        <section className="bg-emerald-600 rounded-[2rem] p-8 md:p-10 text-white overflow-hidden relative shadow-[0_26px_65px_-32px_rgba(5,150,105,0.65)]">
           <div className="relative z-10 space-y-5">
             <div className="flex items-center gap-2 text-emerald-200 text-sm font-bold uppercase tracking-widest">
               <Zap size={16} />

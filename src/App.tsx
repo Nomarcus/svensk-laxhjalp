@@ -167,7 +167,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F5F5F0] dark:bg-slate-950 flex items-center justify-center">
+      <div className="min-h-screen app-soft-bg dark:bg-slate-950 flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -211,8 +211,8 @@ export default function App() {
         ) : activeTab === 'info' ? (
           <Info />
         ) : children.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-[#F5F5F0]">
-            <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-sm mb-6">
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center app-soft-bg">
+            <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center surface-card mb-6">
               <Plus size={40} className="text-emerald-600" />
             </div>
             <h2 className="text-2xl font-serif italic mb-2">{t('welcome.title')}</h2>
@@ -221,7 +221,7 @@ export default function App() {
             </p>
             <button
               onClick={() => setShowChildManager(true)}
-              className="px-8 py-3 bg-emerald-600 text-white rounded-2xl font-medium shadow-lg hover:bg-emerald-700 transition-all"
+              className="px-8 py-3 bg-emerald-600 text-white rounded-2xl font-medium shadow-[0_18px_40px_-24px_rgba(5,150,105,0.65)] hover:bg-emerald-700 hover:shadow-[0_22px_48px_-24px_rgba(5,150,105,0.7)] transition-all"
             >
               {t('welcome.addChild')}
             </button>

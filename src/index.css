@@ -57,3 +57,23 @@
 .markdown-body blockquote {
   @apply border-l-4 border-emerald-200 dark:border-emerald-700 pl-4 italic text-stone-500 dark:text-stone-400 my-4;
 }
+
+/* Subtle modern depth utilities */
+.app-soft-bg {
+  background:
+    radial-gradient(1200px 500px at 15% -10%, rgba(16, 185, 129, 0.08), transparent 60%),
+    radial-gradient(900px 400px at 90% 10%, rgba(59, 130, 246, 0.06), transparent 60%),
+    linear-gradient(to bottom, #f7f7f2 0%, #f5f5f0 55%, #edf6f1 100%);
+}
+
+.surface-card {
+  box-shadow:
+    0 14px 36px -24px rgba(15, 23, 42, 0.28),
+    0 2px 8px -6px rgba(15, 23, 42, 0.16);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.surface-card-strong {
+  box-shadow: 0 24px 70px -34px rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}

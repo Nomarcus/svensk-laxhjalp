@@ -68,7 +68,7 @@ function AppSlideshow() {
   return (
     <div className="relative">
       {/* Screenshot card */}
-      <div className="bg-white rounded-3xl shadow-lg border border-black/5 overflow-hidden">
+      <div className="bg-white rounded-3xl surface-card overflow-hidden">
         {/* Image area */}
         <div className="relative overflow-hidden bg-stone-100">
           <img
@@ -309,7 +309,7 @@ export default function Auth({ onShowPrivacy, onShowTerms }: AuthProps) {
 
   // Main landing page view
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#F7F7F2] via-[#F5F5F0] to-[#ECF6F1] font-sans relative overflow-hidden">
+    <div className="min-h-screen app-soft-bg font-sans relative overflow-hidden">
       <div className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-emerald-200/30 blur-3xl" />
       <div className="pointer-events-none absolute top-1/3 -left-24 h-72 w-72 rounded-full bg-blue-200/20 blur-3xl" />
       {/* Hero section with login */}
@@ -374,7 +374,7 @@ export default function Auth({ onShowPrivacy, onShowTerms }: AuthProps) {
 
         {/* Right side: Login card */}
         <div className="flex-1 lg:w-1/2 flex items-center justify-center p-6 md:p-10 lg:p-14 xl:p-20 bg-gradient-to-br from-white/70 via-white/40 to-emerald-50/40">
-          <div className="w-full max-w-md bg-white/95 backdrop-blur-sm rounded-[32px] p-10 shadow-[0_24px_70px_-30px_rgba(16,24,40,0.45)] border border-black/[0.06] text-center relative overflow-hidden">
+          <div className="w-full max-w-md bg-white/95 backdrop-blur-sm rounded-[32px] p-10 surface-card-strong text-center relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-2 bg-emerald-600" />
 
             <h2 className="text-2xl font-serif italic text-stone-900 mb-2 mt-2">{t('auth.getStarted')}</h2>
@@ -457,7 +457,7 @@ export default function Auth({ onShowPrivacy, onShowTerms }: AuthProps) {
                 icon: <Calendar size={24} className="text-emerald-600" />,
               },
             ].map((s, i) => (
-              <div key={i} className="bg-white rounded-3xl p-8 shadow-sm border border-black/5 text-center">
+              <div key={i} className="bg-white rounded-3xl p-8 surface-card text-center">
                 <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   {s.icon}
                 </div>
@@ -470,7 +470,7 @@ export default function Auth({ onShowPrivacy, onShowTerms }: AuthProps) {
         </section>
 
         {/* Subjects supported */}
-        <section className="bg-white rounded-[2rem] p-8 md:p-12 shadow-sm border border-black/5">
+        <section className="bg-white rounded-[2rem] p-8 md:p-12 surface-card">
           <h2 className="text-3xl font-serif italic text-stone-900 text-center mb-3">{t('landing.allSubjects')}</h2>
           <p className="text-center text-stone-500 mb-8 max-w-2xl mx-auto">
             {t('landing.allSubjectsDesc')}
@@ -486,7 +486,7 @@ export default function Auth({ onShowPrivacy, onShowTerms }: AuthProps) {
               { subject: t('landing.subjectArts'), examples: t('landing.subjectArtsEx') },
               { subject: t('landing.subjectPE'), examples: t('landing.subjectPEEx') },
             ].map((s, i) => (
-              <div key={i} className="bg-stone-50 rounded-2xl p-4">
+              <div key={i} className="bg-stone-50/95 rounded-2xl p-4 border border-stone-200/70 shadow-[0_10px_22px_-18px_rgba(15,23,42,0.25)]">
                 <h3 className="font-medium text-stone-900 mb-1">{s.subject}</h3>
                 <p className="text-xs text-stone-500">{s.examples}</p>
               </div>
@@ -523,7 +523,7 @@ export default function Auth({ onShowPrivacy, onShowTerms }: AuthProps) {
                 icon: <Shield size={20} className="text-emerald-600" />,
               },
             ].map((item, i) => (
-              <div key={i} className="bg-white rounded-3xl p-6 shadow-sm border border-black/5">
+              <div key={i} className="bg-white rounded-3xl p-6 surface-card">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center">{item.icon}</div>
                   <h3 className="font-medium text-stone-900">{item.title}</h3>
@@ -535,7 +535,7 @@ export default function Auth({ onShowPrivacy, onShowTerms }: AuthProps) {
         </section>
 
         {/* Free to use + support */}
-        <section className="bg-white rounded-[2rem] p-8 md:p-12 shadow-sm border border-black/5 text-center">
+        <section className="bg-white rounded-[2rem] p-8 md:p-12 surface-card text-center">
           <h2 className="text-3xl font-serif italic text-stone-900 mb-3">{t('landing.freeToUse')}</h2>
           <p className="text-stone-500 mb-6 max-w-xl mx-auto">
             {t('landing.freeToUseDesc')}
@@ -560,7 +560,7 @@ export default function Auth({ onShowPrivacy, onShowTerms }: AuthProps) {
         </section>
 
         {/* Final CTA */}
-        <section className="bg-emerald-600 rounded-[2rem] p-8 md:p-14 text-center text-white">
+        <section className="bg-emerald-600 rounded-[2rem] p-8 md:p-14 text-center text-white shadow-[0_26px_65px_-32px_rgba(5,150,105,0.65)]">
           <h2 className="text-3xl md:text-4xl font-serif italic mb-4">{t('landing.readyToHelp')}</h2>
           <p className="text-emerald-100 mb-8 max-w-xl mx-auto text-lg">
             {t('landing.readyToHelpDesc')}
