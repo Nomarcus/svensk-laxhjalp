@@ -57,6 +57,20 @@
   @apply border-l-4 border-emerald-200 dark:border-emerald-700 pl-4 italic text-stone-500 dark:text-stone-400 my-4;
 }
 
+.markdown-body pre {
+  @apply my-3 rounded-xl bg-stone-900 text-stone-100 p-3 overflow-x-auto text-sm leading-relaxed;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.markdown-body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.markdown-body p code,
+.markdown-body li code {
+  @apply px-1.5 py-0.5 rounded bg-stone-100 text-stone-800 dark:bg-stone-800 dark:text-stone-100 text-[0.9em];
+}
+
 /* Subtle modern depth utilities */
 .app-soft-bg {
   background:
