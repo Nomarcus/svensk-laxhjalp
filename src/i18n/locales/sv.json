@@ -35,8 +35,6 @@
     "getStarted": "Kom igång",
     "createFreeAccount": "Skapa ett gratis konto och börja hjälpa ditt barn med läxorna idag.",
     "loginGoogle": "Logga in med Google",
-    "loginFacebook": "Logga in med Facebook",
-    "loginHotmail": "Logga in med Hotmail",
     "loginEmail": "Logga in med e-post",
     "loginGuest": "Testa anonym inloggning",
     "createAccount": "Skapa konto",
@@ -69,6 +67,10 @@
     "invalidCredential": "Fel e-post eller lösenord. Försök igen.",
     "tooManyRequests": "För många försök. Vänta en stund och försök igen.",
     "popupClosed": "Inloggningen avbröts.",
+    "popupBlocked": "Popup blockerades av webbläsaren. Tillåt popupfönster och försök igen.",
+    "providerNotEnabled": "Denna inloggningsmetod är inte aktiverad än. Kontrollera Firebase-inställningarna.",
+    "unauthorizedDomain": "Den här domänen är inte tillåten för inloggning. Lägg till domänen i Firebase Authorized domains.",
+    "accountExistsDifferentProvider": "Kontot finns redan med en annan inloggningsmetod. Logga in med rätt metod först.",
     "generic": "Något gick fel. Försök igen."
   },
   "landing": {

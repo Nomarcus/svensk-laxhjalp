@@ -35,8 +35,6 @@
     "getStarted": "ابدأ الآن",
     "createFreeAccount": "أنشئ حساباً مجانياً وابدأ بمساعدة طفلك في الواجبات اليوم.",
     "loginGoogle": "تسجيل الدخول بـ Google",
-    "loginFacebook": "تسجيل الدخول بـ Facebook",
-    "loginHotmail": "تسجيل الدخول بـ Hotmail",
     "loginEmail": "تسجيل الدخول بالبريد",
     "loginGuest": "تجربة تسجيل دخول مجهول",
     "createAccount": "إنشاء حساب",
@@ -69,6 +67,10 @@
     "invalidCredential": "بريد أو كلمة مرور خاطئة. حاول مرة أخرى.",
     "tooManyRequests": "محاولات كثيرة. انتظر قليلاً وحاول مرة أخرى.",
     "popupClosed": "تم إلغاء تسجيل الدخول.",
+    "popupBlocked": "تم حظر نافذة تسجيل الدخول من المتصفح. اسمح بالنوافذ المنبثقة وحاول مرة أخرى.",
+    "providerNotEnabled": "طريقة تسجيل الدخول هذه غير مفعلة بعد. تحقق من إعدادات Firebase.",
+    "unauthorizedDomain": "هذا النطاق غير مسموح لتسجيل الدخول. أضف النطاق في Firebase Authorized domains.",
+    "accountExistsDifferentProvider": "هذا الحساب موجود بالفعل بطريقة دخول أخرى. سجّل الدخول بالطريقة الصحيحة أولاً.",
     "generic": "حدث خطأ ما. حاول مرة أخرى."
   },
   "chat": {

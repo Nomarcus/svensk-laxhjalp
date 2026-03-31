@@ -35,8 +35,6 @@
     "getStarted": "Get Started",
     "createFreeAccount": "Create a free account and start helping your child with homework today.",
     "loginGoogle": "Sign in with Google",
-    "loginFacebook": "Sign in with Facebook",
-    "loginHotmail": "Sign in with Hotmail",
     "loginEmail": "Sign in with email",
     "loginGuest": "Try anonymous sign in",
     "createAccount": "Create account",
@@ -69,6 +67,10 @@
     "invalidCredential": "Wrong email or password. Try again.",
     "tooManyRequests": "Too many attempts. Wait a moment and try again.",
     "popupClosed": "Sign in was cancelled.",
+    "popupBlocked": "Popup was blocked by the browser. Allow popups and try again.",
+    "providerNotEnabled": "This sign-in method is not enabled yet. Check Firebase settings.",
+    "unauthorizedDomain": "This domain is not authorized for sign-in. Add it to Firebase Authorized domains.",
+    "accountExistsDifferentProvider": "This account already exists with another sign-in method. Sign in with that method first.",
     "generic": "Something went wrong. Try again."
   },
   "landing": {
