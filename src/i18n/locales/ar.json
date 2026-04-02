@@ -196,7 +196,9 @@
     "noAiNotes": "لا ملاحظات AI بعد.",
     "minutes": "دقيقة",
     "masteryPercent": "مدى التقدم (%)",
-    "remainingPercent": "المتبقي {{value}}%"
+    "remainingPercent": "المتبقي {{value}}%",
+    "streakWeeks": "سلسلة أسبوعية ×{{count}}",
+    "streakHint": "خط streak أسبوعي: علام واجباً أو اختباراً كمكتمل مرة واحدة على الأقل كل أسبوع."
   },
   "library": {
     "title": "المكتبة",

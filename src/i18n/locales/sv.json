@@ -274,7 +274,9 @@
     "noAiNotes": "Inga AI-anteckningar än.",
     "minutes": "min",
     "masteryPercent": "Hur långt du har kommit (%)",
-    "remainingPercent": "{{value}}% kvar"
+    "remainingPercent": "{{value}}% kvar",
+    "streakWeeks": "Veckostreak ×{{count}}",
+    "streakHint": "Du håller en veckostreak när du markerar minst en läxa eller ett prov som klart under veckan."
   },
   "library": {
     "title": "Resursbibliotek",

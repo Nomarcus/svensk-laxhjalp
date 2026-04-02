@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Trash2, CheckCircle2, Circle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, LayoutList, Calendar, Calculator, BookOpen, Languages, Beaker, Globe, Book, Clock, CalendarCheck, Camera, MessageSquare, X, Image as ImageIcon, Eye, EyeOff, Sparkles, Loader2, GraduationCap } from 'lucide-react';
-import { db, auth, OperationType, handleFirestoreError } from '../firebase';
-import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc, where, arrayUnion, arrayRemove, getDocs, orderBy, limit } from 'firebase/firestore';
+import { Plus, Trash2, CheckCircle2, Circle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, LayoutList, Calendar, Calculator, BookOpen, Languages, Beaker, Globe, Book, Clock, CalendarCheck, Camera, MessageSquare, X, Image as ImageIcon, Eye, EyeOff, Sparkles, Loader2, GraduationCap, Flame } from 'lucide-react';
+import { db, auth, onAuthStateChanged, OperationType, handleFirestoreError } from '../firebase';
+import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc, where, arrayUnion, arrayRemove, getDocs, orderBy, limit, getDoc, setDoc } from 'firebase/firestore';
 import { format, startOfWeek, addDays, getWeek, getYear, addWeeks, subWeeks } from 'date-fns';
 import { sv } from 'date-fns/locale';
 import { cn } from '../utils/cn';
 import { compressImage } from '../utils/image';
 import type { Task } from '../types';
+import { computeNextStreakOnCompletion, type ParentStreakDoc } from '../utils/parentStreak';
 import { generateStudyPlan, generateExamPrep } from '../services/geminiService';
 import StudyPlanModal from './StudyPlanModal';
 import ExamPrepModal from './ExamPrepModal';
@@ -39,6 +40,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
   const [examPrepTask, setExamPrepTask] = useState<Task | null>(null);
   const [examPrepContent, setExamPrepContent] = useState<string | null>(null);
   const [examPrepLoading, setExamPrepLoading] = useState(false);
+  const [parentStreak, setParentStreak] = useState<ParentStreakDoc | null>(null);
 
   // Form state
   const [newSubject, setNewSubject] = useState('');
@@ -87,6 +89,51 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
 
     return () => unsubscribe();
   }, [viewWeek, viewYear, childId, ownerId]);
+
+  useEffect(() => {
+    if (!childId) {
+      setParentStreak(null);
+      return;
+    }
+    let unsubStreak: (() => void) | undefined;
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      unsubStreak?.();
+      unsubStreak = undefined;
+      if (!user) {
+        setParentStreak(null);
+        return;
+      }
+      const streakRef = doc(db, 'users', user.uid, 'parentStreaks', childId);
+      unsubStreak = onSnapshot(streakRef, (snapshot) => {
+        if (!snapshot.exists()) {
+          setParentStreak(null);
+          return;
+        }
+        setParentStreak(snapshot.data() as ParentStreakDoc);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.GET, `users/${user.uid}/parentStreaks/${childId}`);
+      });
+    });
+    return () => {
+      unsubAuth();
+      unsubStreak?.();
+    };
+  }, [childId]);
+
+  const recordParentWeeklyStreak = async () => {
+    const uid = auth.currentUser?.uid;
+    if (!uid || !childId) return;
+    const streakRef = doc(db, 'users', uid, 'parentStreaks', childId);
+    try {
+      const snap = await getDoc(streakRef);
+      const existing = snap.exists() ? (snap.data() as Partial<ParentStreakDoc>) : undefined;
+      const next = computeNextStreakOnCompletion(existing, new Date());
+      if (!next) return;
+      await setDoc(streakRef, next, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${uid}/parentStreaks/${childId}`);
+    }
+  };
 
   const resetForm = () => {
     setNewSubject('');
@@ -146,7 +193,9 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
 
       // If task only has one day or no day specified, toggle whole task
       if (allDays.size <= 1 || !day) {
+        const willComplete = !task.completed;
         await updateDoc(taskRef, { completed: !task.completed, completedDays: !task.completed ? [...allDays] : [] });
+        if (willComplete) await recordParentWeeklyStreak();
         return;
       }
 
@@ -168,6 +217,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
           completedDays: arrayUnion(day),
           completed: allComplete
         });
+        if (allComplete) await recordParentWeeklyStreak();
       }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${ownerId}/children/${childId}/tasks/${task.id}`);
@@ -738,12 +788,35 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
           </div>
         </header>
 
+        {totalCount === 0 && (parentStreak?.currentStreakWeeks ?? 0) > 0 && (
+          <div className="flex justify-end">
+            <span
+              className="inline-flex items-center gap-1 text-[10px] sm:text-xs text-stone-500 dark:text-stone-400 font-medium"
+              title={t('planner.streakHint')}
+            >
+              <Flame size={12} className="text-amber-600/90 shrink-0" aria-hidden />
+              {t('planner.streakWeeks', { count: parentStreak!.currentStreakWeeks })}
+            </span>
+          </div>
+        )}
+
         {/* Progress Bar */}
         {totalCount > 0 && (
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-black/5 dark:border-white/5">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
               <span className="text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest">Framsteg</span>
-              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{completedCount} av {totalCount} klara ({Math.round(progress)}%)</span>
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                {(parentStreak?.currentStreakWeeks ?? 0) > 0 && (
+                  <span
+                    className="inline-flex items-center gap-1 text-[10px] sm:text-xs text-stone-500 dark:text-stone-400 font-medium"
+                    title={t('planner.streakHint')}
+                  >
+                    <Flame size={12} className="text-amber-600/90 shrink-0" aria-hidden />
+                    {t('planner.streakWeeks', { count: parentStreak!.currentStreakWeeks })}
+                  </span>
+                )}
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{completedCount} av {totalCount} klara ({Math.round(progress)}%)</span>
+              </div>
             </div>
             <div className="h-2 bg-stone-100 dark:bg-slate-700 rounded-full overflow-hidden">
               <div

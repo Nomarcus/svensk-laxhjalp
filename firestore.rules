@@ -77,6 +77,14 @@ service cloud.firestore {
              (!('subject' in data) || data.subject == null || (data.subject is string && data.subject.size() < 100));
     }
 
+    // Parent-owned weekly homework-help streak (per child), client-writable counters only
+    function isValidParentStreak(data) {
+      return data.currentStreakWeeks is int && data.currentStreakWeeks >= 0 && data.currentStreakWeeks <= 520 &&
+             data.bestStreakWeeks is int && data.bestStreakWeeks >= 0 && data.bestStreakWeeks <= 520 &&
+             data.lastActiveWeekKey is string && data.lastActiveWeekKey.size() >= 6 && data.lastActiveWeekKey.size() <= 12 &&
+             data.updatedAt is string && data.updatedAt.size() > 0 && data.updatedAt.size() < 48;
+    }
+
     // Subscription fields that only the server (Admin SDK) can write
     function noSubscriptionTampering(data) {
       return (!('tier' in data) || data.tier == resource.data.tier)
@@ -95,6 +103,12 @@ service cloud.firestore {
       // Usage tracking (read-only for client, server writes via Admin SDK)
       match /usage/{dateId} {
         allow read: if isOwner(userId);
+      }
+
+      match /parentStreaks/{streakChildId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidParentStreak(request.resource.data);
+        allow delete: if isOwner(userId);
       }
 
       match /children/{childId} {

@@ -274,7 +274,9 @@
     "noAiNotes": "No AI notes yet.",
     "minutes": "min",
     "masteryPercent": "How far you've progressed (%)",
-    "remainingPercent": "{{value}}% left"
+    "remainingPercent": "{{value}}% left",
+    "streakWeeks": "Weekly streak ×{{count}}",
+    "streakHint": "Weekly streak: mark at least one homework or test as done during the week."
   },
   "library": {
     "title": "Resource Library",
