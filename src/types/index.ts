@@ -39,6 +39,8 @@ export interface Task {
   dueDay?: string;
   /** Minuter per dag att lägga på läxan */
   minutesPerDay?: number;
+  /** Egen upplevd kunskapsnivå/progress i procent (0-100) */
+  progressPercent?: number;
   /** Foto av läxan (base64 data URI) */
   imageUrl?: string;
   /** Kopplad AI-chattsession */

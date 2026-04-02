@@ -193,7 +193,9 @@
     "askAi": "اسأل AI",
     "aiNotes": "ملاحظات AI",
     "noAiNotes": "لا ملاحظات AI بعد.",
-    "minutes": "دقيقة"
+    "minutes": "دقيقة",
+    "masteryPercent": "مدى التقدم (%)",
+    "remainingPercent": "المتبقي {{value}}%"
   },
   "library": {
     "title": "المكتبة",

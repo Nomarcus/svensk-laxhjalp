@@ -269,7 +269,9 @@
     "askAi": "Fråga AI om hjälp",
     "aiNotes": "AI-anteckningar",
     "noAiNotes": "Inga AI-anteckningar än.",
-    "minutes": "min"
+    "minutes": "min",
+    "masteryPercent": "Hur långt du har kommit (%)",
+    "remainingPercent": "{{value}}% kvar"
   },
   "library": {
     "title": "Resursbibliotek",

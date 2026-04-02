@@ -282,6 +282,15 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
     return <Book size={14} />;
   };
 
+  const getTaskProgressPercent = (task: Task) => {
+    if (typeof task.progressPercent === 'number') {
+      return Math.max(0, Math.min(100, Math.round(task.progressPercent)));
+    }
+    return task.completed ? 100 : 0;
+  };
+
+  const getTaskRemainingPercent = (task: Task) => 100 - getTaskProgressPercent(task);
+
   const completedCount = tasks.filter(t => t.completed).length;
   const totalCount = tasks.length;
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
@@ -347,6 +356,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
   const [editSubject, setEditSubject] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editMinutesPerDay, setEditMinutesPerDay] = useState<number | ''>('');
+  const [editProgressPercent, setEditProgressPercent] = useState<number | ''>('');
   const [editDueDay, setEditDueDay] = useState('');
   const [editWorkDays, setEditWorkDays] = useState<string[]>([]);
   const [editDateType, setEditDateType] = useState<'due' | 'work'>('due');
@@ -356,6 +366,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
     setEditSubject(task.subject || '');
     setEditDescription(task.description || '');
     setEditMinutesPerDay(task.minutesPerDay || '');
+    setEditProgressPercent(getTaskProgressPercent(task));
     setEditDueDay(task.dueDay || '');
     setEditWorkDays(task.workDays || []);
     setEditDateType(task.dateType || 'due');
@@ -369,6 +380,9 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
         subject: editSubject.trim() || selectedTask.subject,
         description: editDescription,
         minutesPerDay: editMinutesPerDay === '' ? null : Number(editMinutesPerDay),
+        progressPercent: editProgressPercent === ''
+          ? getTaskProgressPercent(selectedTask)
+          : Math.max(0, Math.min(100, Number(editProgressPercent))),
         dueDay: editDueDay,
         workDays: editWorkDays,
         dateType: editDateType,
@@ -814,6 +828,9 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                                   {task.minutesPerDay}min
                                 </span>
                               )}
+                              <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                {t('planner.remainingPercent', { value: getTaskRemainingPercent(task) })}
+                              </span>
                               <button
                                 onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
                                 className="p-1 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
@@ -906,6 +923,17 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                                 <CalendarCheck size={8} /> Inl: {task.dueDay.slice(0, 3)}
                               </div>
                             )}
+                            <div className="mt-1">
+                              <div className="h-1.5 bg-stone-200/80 dark:bg-slate-700 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-indigo-500 transition-all"
+                                  style={{ width: `${getTaskProgressPercent(task)}%` }}
+                                />
+                              </div>
+                              <div className="mt-0.5 text-[9px] text-indigo-600">
+                                {t('planner.remainingPercent', { value: getTaskRemainingPercent(task) })}
+                              </div>
+                            </div>
                             <div className="mt-2 flex items-center justify-between">
                               <button
                                 onClick={(e) => { e.stopPropagation(); toggleTask(task, day); }}
@@ -1054,6 +1082,41 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                 </div>
               </div>
 
+              {/* Editable: Task progress */}
+              <div>
+                <label className="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1">
+                  {t('planner.masteryPercent')}
+                </label>
+                <div className="space-y-2">
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={editProgressPercent === '' ? 0 : editProgressPercent}
+                    onChange={(e) => setEditProgressPercent(Number(e.target.value))}
+                    className="w-full accent-indigo-600"
+                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={editProgressPercent}
+                      onChange={(e) => setEditProgressPercent(e.target.value ? Number(e.target.value) : '')}
+                      className="w-24 bg-stone-50 dark:bg-slate-800 border-none rounded-xl px-3 py-2 text-sm dark:text-stone-100 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                    />
+                    <span className="text-sm text-stone-500">%</span>
+                    <span className="text-sm text-indigo-600 ml-auto">
+                      {t('planner.remainingPercent', {
+                        value: 100 - (editProgressPercent === '' ? 0 : Number(editProgressPercent))
+                      })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               {/* Editable: Inlämningsdag */}
               <div>
                 <label className="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-2">
@@ -1123,6 +1186,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                   editSubject.trim() !== (selectedTask.subject || '') ||
                   editDescription !== (selectedTask.description || '') ||
                   editMinutesPerDay !== (selectedTask.minutesPerDay || '') ||
+                  editProgressPercent !== getTaskProgressPercent(selectedTask) ||
                   editDueDay !== (selectedTask.dueDay || '') ||
                   JSON.stringify(editWorkDays) !== JSON.stringify(selectedTask.workDays || [])
                 ) && (

@@ -269,7 +269,9 @@
     "askAi": "Ask AI for help",
     "aiNotes": "AI notes",
     "noAiNotes": "No AI notes yet.",
-    "minutes": "min"
+    "minutes": "min",
+    "masteryPercent": "How far you've progressed (%)",
+    "remainingPercent": "{{value}}% left"
   },
   "library": {
     "title": "Resource Library",
