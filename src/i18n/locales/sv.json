@@ -77,6 +77,8 @@
   "landing": {
     "heroTitle": "AI-driven läxhjälp för svenska föräldrar",
     "heroDescription": "Vill du förstå ditt barns läxor? Vill du slippa konflikter vid läxtillfällen ? Fota läxan eller ställ en fråga och få enkla och pedagogiska förklaringar kopplade till svenska läroplanen Lgr22.",
+    "missionTitle": "Varför jag skapade Läxhjälpen",
+    "missionText": "Alla har olika förutsättningar att hjälpa sina barn med läxan. Med ny teknik vill jag minska det gapet så fler barn får rätt stöd hemma.",
     "freeToStart": "Gratis att starta",
     "linkedToLgr22": "Kopplat till Lgr22",
     "safeAndSecure": "Säkert och tryggt",

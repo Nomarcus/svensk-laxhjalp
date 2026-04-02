@@ -339,6 +339,15 @@ export default function Auth({ onShowPrivacy, onShowTerms }: AuthProps) {
             <p className="text-lg text-stone-600/95 mb-6 leading-relaxed drop-shadow-[0_1px_5px_rgba(15,23,42,0.08)]">
               {t('landing.heroDescription')}
             </p>
+            <div className="mb-6 rounded-2xl border border-emerald-200/80 bg-emerald-50/80 px-4 py-3 shadow-[0_12px_26px_-20px_rgba(5,150,105,0.5)]">
+              <div className="mb-1 flex items-center gap-2 text-emerald-700">
+                <FileText size={16} />
+                <span className="text-sm font-semibold">{t('landing.missionTitle')}</span>
+              </div>
+              <p className="text-sm leading-relaxed text-emerald-900/90">
+                {t('landing.missionText')}
+              </p>
+            </div>
 
             {/* Trust badges */}
             <div className="flex flex-wrap gap-3 mb-8">
