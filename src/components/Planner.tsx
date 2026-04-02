@@ -344,12 +344,18 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   // Edit state for task detail modal
+  const [editSubject, setEditSubject] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editMinutesPerDay, setEditMinutesPerDay] = useState<number | ''>('');
   const [editDueDay, setEditDueDay] = useState('');
   const [editWorkDays, setEditWorkDays] = useState<string[]>([]);
   const [editDateType, setEditDateType] = useState<'due' | 'work'>('due');
 
   const openTaskDetail = (task: Task) => {
     setSelectedTask(task);
+    setEditSubject(task.subject || '');
+    setEditDescription(task.description || '');
+    setEditMinutesPerDay(task.minutesPerDay || '');
     setEditDueDay(task.dueDay || '');
     setEditWorkDays(task.workDays || []);
     setEditDateType(task.dateType || 'due');
@@ -360,6 +366,9 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
     try {
       const taskRef = doc(db, 'users', ownerId, 'children', childId, 'tasks', selectedTask.id);
       await updateDoc(taskRef, {
+        subject: editSubject.trim() || selectedTask.subject,
+        description: editDescription,
+        minutesPerDay: editMinutesPerDay === '' ? null : Number(editMinutesPerDay),
         dueDay: editDueDay,
         workDays: editWorkDays,
         dateType: editDateType,
@@ -981,13 +990,69 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                 </div>
               )}
 
-              {/* Description */}
-              {selectedTask.description && (
-                <div>
-                  <label className="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1">Beskrivning</label>
-                  <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed">{selectedTask.description}</p>
+              {/* Editable: Subject */}
+              <div>
+                <label className="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1">
+                  {t('planner.subject')}
+                </label>
+                <input
+                  type="text"
+                  value={editSubject}
+                  onChange={(e) => setEditSubject(e.target.value)}
+                  placeholder="t.ex. Matematik"
+                  className="w-full bg-stone-50 dark:bg-slate-800 border-none rounded-xl px-4 py-3 text-sm dark:text-stone-100 focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                />
+              </div>
+
+              {/* Editable: Description */}
+              <div>
+                <label className="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1">
+                  {t('planner.description')}
+                </label>
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="Vad ska göras?"
+                  rows={3}
+                  className="w-full bg-stone-50 dark:bg-slate-800 border-none rounded-xl px-4 py-3 text-sm dark:text-stone-100 focus:ring-2 focus:ring-emerald-500/20 transition-all resize-none"
+                />
+              </div>
+
+              {/* Editable: Minutes per day */}
+              <div>
+                <label className="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1">
+                  {t('planner.minutesPerDay')}
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={5}
+                    max={180}
+                    step={5}
+                    value={editMinutesPerDay}
+                    onChange={(e) => setEditMinutesPerDay(e.target.value ? Number(e.target.value) : '')}
+                    placeholder="t.ex. 30"
+                    className="w-full bg-stone-50 dark:bg-slate-800 border-none rounded-xl px-4 py-3 text-sm dark:text-stone-100 focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                  />
+                  <div className="flex gap-1">
+                    {[15, 30, 45, 60].map(m => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setEditMinutesPerDay(m)}
+                        className={cn(
+                          "px-2.5 py-2 rounded-lg text-xs font-medium transition-all border whitespace-nowrap",
+                          editMinutesPerDay === m
+                            ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                            : "bg-stone-50 border-stone-100 text-stone-400 hover:bg-stone-100"
+                        )}
+                      >
+                        {m}m
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              )}
+              </div>
 
               {/* Editable: Inlämningsdag */}
               <div>
@@ -1054,9 +1119,16 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
               {/* Actions */}
               <div className="flex flex-col gap-2 pt-2">
                 {/* Save edits button - only show if something changed */}
-                {(editDueDay !== (selectedTask.dueDay || '') || JSON.stringify(editWorkDays) !== JSON.stringify(selectedTask.workDays || [])) && (
+                {(
+                  editSubject.trim() !== (selectedTask.subject || '') ||
+                  editDescription !== (selectedTask.description || '') ||
+                  editMinutesPerDay !== (selectedTask.minutesPerDay || '') ||
+                  editDueDay !== (selectedTask.dueDay || '') ||
+                  JSON.stringify(editWorkDays) !== JSON.stringify(selectedTask.workDays || [])
+                ) && (
                   <button
                     onClick={saveTaskEdits}
+                    disabled={!editSubject.trim()}
                     className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 text-white rounded-2xl font-medium shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all"
                   >
                     <CalendarCheck size={18} />
