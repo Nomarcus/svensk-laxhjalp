@@ -1,11 +1,17 @@
-import 'dotenv/config';
+import { config as loadEnv } from 'dotenv';
+import { resolve } from 'path';
 import express from 'express';
+
+loadEnv();
+// Local overrides (gitignored); wins over .env so ADMIN_EMAIL etc. work without editing .env
+loadEnv({ path: resolve(process.cwd(), '.env.local'), override: true });
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { authMiddleware } from './middleware/auth';
 import { subscriptionMiddleware } from './middleware/subscription';
 import { aiRouter } from './routes/ai';
 import { billingRouter, stripeWebhookHandler } from './routes/billing';
+import { adminRouter } from './routes/admin';
 
 const app = express();
 app.set('trust proxy', true);
@@ -41,6 +47,7 @@ const limiter = rateLimit({
 app.use('/api', limiter);
 app.use('/api', authMiddleware);
 app.use('/api', billingRouter);           // After auth, before subscription check
+app.use('/api', adminRouter);             // Sole-owner analytics (requires ADMIN_UID)
 app.use('/api', subscriptionMiddleware);  // After billing, before AI routes
 app.use('/api', aiRouter);
 

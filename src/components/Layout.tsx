@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, MessageSquare, Calendar, BookOpen, User as UserIcon, ChevronDown, Settings, Info, Library, Crown, Download, Users, X, Menu, Moon, Sun, Mail, Shield, FileText, Share2 } from 'lucide-react';
+import { LogOut, MessageSquare, Calendar, BookOpen, User as UserIcon, ChevronDown, Settings, Info, Library, Crown, Download, Users, X, Menu, Moon, Sun, Mail, Shield, FileText, Share2, BarChart3 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { logout, User } from '../firebase';
 import { cn } from '../utils/cn';
@@ -9,8 +9,9 @@ import LanguageSwitcher from './LanguageSwitcher';
 interface LayoutProps {
   children: React.ReactNode;
   user: User;
-  activeTab: 'chat' | 'planner' | 'info' | 'library' | 'subscription' | 'contact';
-  setActiveTab: (tab: 'chat' | 'planner' | 'info' | 'library' | 'subscription' | 'contact') => void;
+  activeTab: 'chat' | 'planner' | 'info' | 'library' | 'subscription' | 'contact' | 'admin';
+  setActiveTab: (tab: 'chat' | 'planner' | 'info' | 'library' | 'subscription' | 'contact' | 'admin') => void;
+  showAdminNav?: boolean;
   childrenList: Child[];
   selectedChildId: string | null;
   onSelectChild: (id: string) => void;
@@ -38,6 +39,7 @@ export default function Layout({
   onShowTerms,
   dark,
   onToggleDark,
+  showAdminNav = false,
 }: LayoutProps) {
   const { t, i18n } = useTranslation();
   const [showChildSelect, setShowChildSelect] = React.useState(false);
@@ -209,6 +211,20 @@ export default function Layout({
             <Mail size={20} />
             <span>{t('nav.contact')}</span>
           </button>
+          {showAdminNav && (
+            <button
+              onClick={() => setActiveTab('admin')}
+              className={cn(
+                "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 border border-dashed border-stone-200 dark:border-stone-600",
+                activeTab === 'admin'
+                  ? "bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 font-medium shadow-sm"
+                  : "text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800"
+              )}
+            >
+              <BarChart3 size={20} />
+              <span>{t('nav.admin')}</span>
+            </button>
+          )}
         </nav>
 
         <div className="p-4 border-t border-black/5 dark:border-white/5 mt-auto">
@@ -438,6 +454,18 @@ export default function Layout({
                 <Mail size={18} />
                 <span>{t('nav.contact')}</span>
               </button>
+              {showAdminNav && (
+                <button
+                  onClick={() => handleTabChange('admin')}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all text-sm border border-dashed border-stone-200 dark:border-stone-600",
+                    activeTab === 'admin' ? "bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 font-medium" : "text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800"
+                  )}
+                >
+                  <BarChart3 size={18} />
+                  <span>{t('nav.admin')}</span>
+                </button>
+              )}
               {onShowInstallGuide && (
                 <button
                   onClick={() => { onShowInstallGuide(); setShowMobileMenu(false); }}

@@ -16,6 +16,8 @@ import InstallPrompt, { InstallGuide } from './components/InstallPrompt';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import Subscription from './components/Subscription';
 import Contact from './components/Contact';
+import Admin from './components/Admin';
+import { shouldShowAdminNav } from './utils/adminClient';
 import CookieConsent from './components/CookieConsent';
 import Terms from './components/Terms';
 import { useTheme } from './hooks/useTheme';
@@ -28,7 +30,7 @@ const isFirestorePermissionError = (error: unknown) => {
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'chat' | 'planner' | 'info' | 'library' | 'subscription' | 'contact'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'planner' | 'info' | 'library' | 'subscription' | 'contact' | 'admin'>('chat');
   const [subscription, setSubscription] = useState<UserSubscription>({ tier: 'free', status: 'none' });
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
@@ -222,11 +224,14 @@ export default function App() {
         onShowTerms={() => setShowTerms(true)}
         dark={dark}
         onToggleDark={toggleDark}
+        showAdminNav={shouldShowAdminNav(user.uid, user.email)}
       >
         {activeTab === 'contact' ? (
           <Contact />
         ) : activeTab === 'subscription' ? (
           <Subscription />
+        ) : activeTab === 'admin' ? (
+          <Admin />
         ) : activeTab === 'info' ? (
           <Info />
         ) : children.length === 0 ? (

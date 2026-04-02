@@ -16,8 +16,12 @@ export async function subscriptionMiddleware(
   res: Response,
   next: NextFunction
 ): Promise<void> {
-  // Skip billing routes and health check
-  if (req.path.startsWith('/billing') || req.path === '/health') {
+  // Skip billing, admin analytics, and health check
+  if (
+    req.path.startsWith('/billing')
+    || req.path.startsWith('/admin')
+    || req.path === '/health'
+  ) {
     next();
     return;
   }
