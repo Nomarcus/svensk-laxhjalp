@@ -1,6 +1,6 @@
 {
-  "name": "Svensk Läxhjälp för Föräldrar",
-  "short_name": "Läxhjälpen",
+  "name": "Föräldrahjälpen — läxhjälp för föräldrar",
+  "short_name": "Föräldrahjälpen",
   "description": "AI-driven läxhjälp för svenska föräldrar",
   "start_url": "/",
   "display": "standalone",

@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Läxhjälp",
+    "name": "Föräldrahjälpen",
     "subtitle": "Föräldraassistans",
     "fullName": "Föräldrahjälpen"
   },
@@ -76,8 +76,8 @@
   },
   "landing": {
     "heroTitle": "AI-driven läxhjälp för svenska föräldrar",
-    "missionTitle": "Varför jag skapade Läxhjälpen",
-    "missionText": "Jag skapade Läxhjälpen för att alla barn ska få samma chans att lyckas i skolan, oavsett vilka förutsättningar familjen har hemma. Föräldrar har olika tid, skolbakgrund, språk och trygghet i dagens undervisning. Med hjälp av ny teknik vill jag minska det gapet genom att göra stödet tydligt, pedagogiskt och tillgängligt för alla.",
+    "missionTitle": "Varför jag skapade Föräldrahjälpen",
+    "missionText": "Jag skapade Föräldrahjälpen för att alla barn ska få samma chans att lyckas i skolan, oavsett vilka förutsättningar familjen har hemma. Föräldrar har olika tid, skolbakgrund, språk och trygghet i dagens undervisning. Med hjälp av ny teknik vill jag minska det gapet genom att göra stödet tydligt, pedagogiskt och tillgängligt för alla.",
     "freeToStart": "Gratis att starta",
     "linkedToLgr22": "Kopplat till Lgr22",
     "safeAndSecure": "Säkert och tryggt",
@@ -126,7 +126,7 @@
     "reason4Title": "Alla har rätt att förstå",
     "reason4Desc": "Oavsett om du har universitetskurser i matematik eller aldrig avslutade grundskolan — Föräldrahjälpen ger dig verktygen att stötta ditt barn pedagogiskt.",
     "freeToUse": "Gratis att använda",
-    "freeToUseDesc": "Läxhjälpen är helt gratis med begränsad daglig användning. Abonnemangsplaner med mer användning är under planering.",
+    "freeToUseDesc": "Föräldrahjälpen är helt gratis med begränsad daglig användning. Abonnemangsplaner med mer användning är under planering.",
     "aiQuestionsPerDay": "AI-frågor/dag",
     "imageAnalysesPerDay": "Bildanalyser/dag",
     "illustrationsPerDay": "Illustrationer/dag",
@@ -175,7 +175,7 @@
     "listening": "Lyssnar... Tala nu",
     "aiDisclaimer": "AI-genererat innehåll kan vara felaktigt. Kontrollera alltid med läraren.",
     "share": "Dela",
-    "shareIntro": "Läxhjälpen - sammanfattning",
+    "shareIntro": "Föräldrahjälpen — sammanfattning",
     "saveToLibrary": "Spara i bibliotek",
     "illustrate": "Illustrera förklaringen",
     "creatingIllustration": "Skapar illustration...",
@@ -204,9 +204,9 @@
     "noActiveTasks": "Inga aktiva läxor att koppla till.",
     "saved": "Sparat",
     "textCopied": "Text kopierad till urklipp!",
-    "printTitle": "Läxhjälpen — Facit",
-    "printHeading": "Läxhjälpen — Facit",
-    "printFooter": "Utskrivet från Läxhjälpen",
+    "printTitle": "Föräldrahjälpen — Facit",
+    "printHeading": "Föräldrahjälpen — Facit",
+    "printFooter": "Utskrivet från Föräldrahjälpen",
     "listen": "Lyssna",
     "stopListening": "Stopp",
     "pause": "Paus",
@@ -291,7 +291,7 @@
     "saved": "Sparad",
     "general": "Allmänt",
     "share": "Dela",
-    "shareText": "Kolla in denna resurs från Läxhjälpen!",
+    "shareText": "Kolla in denna resurs från Föräldrahjälpen!",
     "copiedToClipboard": "Kopierat till urklipp!"
   },
   "info": {
@@ -478,7 +478,7 @@
     "title": "Installera appen",
     "installDirect": "Installera direkt",
     "alreadyInstalled": "Redan installerad!",
-    "alreadyInstalledDesc": "Du kör redan Läxhjälpen som app.",
+    "alreadyInstalledDesc": "Du kör redan Föräldrahjälpen som app.",
     "close": "Stäng",
     "followSteps": "Följ dessa steg:",
     "followStepsInSafari": "Följ dessa steg i Safari:",
@@ -500,7 +500,7 @@
     "unknownStep2": "Välj <strong>Installera</strong> eller <strong>Lägg till på hemskärm</strong>",
     "unknownStep3": "Bekräfta installationen",
     "offlineNote": "Appen fungerar offline och uppdateras automatiskt",
-    "installBanner": "Installera Läxhjälpen",
+    "installBanner": "Installera Föräldrahjälpen",
     "installBannerDesc": "Lägg till appen på din hemskärm för snabb åtkomst.",
     "install": "Installera",
     "notNow": "Inte nu"
@@ -514,7 +514,7 @@
     "networkError": "Nätverksfel"
   },
   "welcome": {
-    "title": "Välkommen till Läxhjälpen!",
+    "title": "Välkommen till Föräldrahjälpen!",
     "description": "Börja med att lägga till ett barn för att komma igång med läxhjälp och planering.",
     "addChild": "Lägg till barn"
   },

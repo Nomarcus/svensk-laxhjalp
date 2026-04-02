@@ -39,7 +39,7 @@ export default function Subscription() {
       <div className="max-w-lg mx-auto space-y-6">
         <header className="text-center">
           <h2 className="text-3xl font-serif italic mb-2 dark:text-stone-100">Abonnemang</h2>
-          <p className="text-stone-500 dark:text-stone-400">Tack för att du testar Läxhjälpen!</p>
+          <p className="text-stone-500 dark:text-stone-400">Tack för att du testar Föräldrahjälpen!</p>
         </header>
 
         {/* Under planering */}
@@ -54,7 +54,7 @@ export default function Subscription() {
             </div>
           </div>
           <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed">
-            Just nu är Läxhjälpen gratis att testa med begränsad användning. Vi jobbar på abonnemangsplaner
+            Just nu är Föräldrahjälpen gratis att testa med begränsad användning. Vi jobbar på abonnemangsplaner
             som ger dig mer — de kommer snart!
           </p>
         </div>
@@ -126,12 +126,12 @@ export default function Subscription() {
               <Heart size={24} />
             </div>
             <div>
-              <h3 className="font-medium text-lg text-emerald-900 dark:text-emerald-300">Stötta Läxhjälpen</h3>
+              <h3 className="font-medium text-lg text-emerald-900 dark:text-emerald-300">Stötta Föräldrahjälpen</h3>
               <p className="text-sm text-emerald-700/70 dark:text-emerald-400/70">Hjälp oss fortsätta utveckla appen</p>
             </div>
           </div>
           <p className="text-sm text-emerald-800/80 dark:text-emerald-300/80 leading-relaxed mb-4">
-            Läxhjälpen är ett ideellt projekt som hjälper svenska föräldrar med barnens läxor.
+            Föräldrahjälpen är ett ideellt projekt som hjälper svenska föräldrar med barnens läxor.
             Om du gillar appen och vill att den ska fortsätta finnas — swisha gärna en valfri summa!
           </p>
           <div className="bg-white dark:bg-slate-800 rounded-xl p-4 text-center">

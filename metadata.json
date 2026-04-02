@@ -1,5 +1,5 @@
 {
-  "name": "Svensk Läxhjälp för Föräldrar",
+  "name": "Föräldrahjälpen",
   "description": "En pedagogisk assistent som hjälper föräldrar att stötta sina barn med läxor och skolarbete i den svenska skolan.",
   "requestFramePermissions": [
     "camera",
