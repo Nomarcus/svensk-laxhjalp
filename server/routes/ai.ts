@@ -49,28 +49,33 @@ function trimHistory(history: { role: string; content: string }[]) {
 
 router.post('/chat', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { prompt, history = [], imageBase64 } = req.body;
+    const { prompt, history = [], imageBase64, imageBase64s } = req.body;
 
-    if (!prompt && !imageBase64) {
+    const providedImages: string[] = Array.isArray(imageBase64s)
+      ? imageBase64s.filter((img: unknown) => typeof img === 'string' && img.length > 0)
+      : (imageBase64 ? [imageBase64] : []);
+    if (!prompt && providedImages.length === 0) {
       res.status(400).json({ error: 'Meddelande eller bild krävs.' });
       return;
     }
 
     const trimmedHistory = trimHistory(history);
 
-    // Detect mime type from base64 data URI or default to jpeg
-    let mimeType = 'image/jpeg';
-    let cleanBase64 = imageBase64;
-    if (imageBase64 && imageBase64.startsWith('data:')) {
-      const match = imageBase64.match(/^data:([^;]+);base64,(.+)$/);
-      if (match) {
-        mimeType = match[1];
-        cleanBase64 = match[2];
+    const inlineImages = providedImages.map((img: string) => {
+      let mimeType = 'image/jpeg';
+      let cleanBase64 = img;
+      if (img.startsWith('data:')) {
+        const match = img.match(/^data:([^;]+);base64,(.+)$/);
+        if (match) {
+          mimeType = match[1];
+          cleanBase64 = match[2];
+        }
       }
-    }
+      return { inlineData: { mimeType: mimeType as any, data: cleanBase64 } };
+    });
 
     const response = await ai.models.generateContent({
-      model: imageBase64 ? 'gemini-2.5-flash' : TEXT_MODEL,
+      model: inlineImages.length > 0 ? 'gemini-2.5-flash' : TEXT_MODEL,
       contents: [
         ...trimmedHistory.map((h: { role: string; content: string }) => ({
           role: h.role as 'user' | 'model',
@@ -79,9 +84,7 @@ router.post('/chat', async (req: AuthenticatedRequest, res: Response) => {
         {
           role: 'user' as const,
           parts: [
-            ...(cleanBase64
-              ? [{ inlineData: { mimeType: mimeType as any, data: cleanBase64 } }]
-              : []),
+            ...inlineImages,
             { text: prompt || 'Analysera denna bild.' },
           ],
         },

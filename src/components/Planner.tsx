@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, CheckCircle2, Circle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, LayoutList, Calendar, Calculator, BookOpen, Languages, Beaker, Globe, Book, Clock, CalendarCheck, Camera, MessageSquare, X, Image as ImageIcon, Eye, EyeOff, Sparkles, Loader2, GraduationCap } from 'lucide-react';
 import { db, auth, OperationType, handleFirestoreError } from '../firebase';
-import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc, where, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc, where, arrayUnion, arrayRemove, getDocs, orderBy, limit } from 'firebase/firestore';
 import { format, startOfWeek, addDays, getWeek, getYear, addWeeks, subWeeks } from 'date-fns';
 import { sv } from 'date-fns/locale';
 import { cn } from '../utils/cn';
@@ -206,18 +206,45 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
     }
   };
 
-  const handleExamPrep = async (task: Task) => {
+  const getLinkedChatContext = async (task: Task): Promise<string[]> => {
+    if (!task.linkedChatSessionId || !auth.currentUser || !childId) return [];
+    try {
+      const q = query(
+        collection(db, 'users', ownerId, 'children', childId, 'chatSessions', task.linkedChatSessionId, 'messages'),
+        orderBy('timestamp', 'desc'),
+        limit(8)
+      );
+      const snap = await getDocs(q);
+      return snap.docs
+        .map((d) => d.data() as { role?: string; content?: string })
+        .filter((m) => m.role === 'model' && typeof m.content === 'string' && m.content.trim().length > 0)
+        .map((m) => (m.content as string).slice(0, 500))
+        .reverse();
+    } catch (err) {
+      console.error('Error reading linked chat context:', err);
+      return [];
+    }
+  };
+
+  const handleExamPrep = async (task: Task, forceRegenerate = false) => {
     setExamPrepTask(task);
     setExamPrepLoading(true);
     setExamPrepContent(null);
     try {
       // Check if we already have cached content
-      if (task.examPrepContent) {
+      if (task.examPrepContent && !forceRegenerate) {
         setExamPrepContent(task.examPrepContent);
         setExamPrepLoading(false);
         return;
       }
-      const content = await generateExamPrep(task.subject, task.description, task.aiNotes);
+      const linkedChatContext = await getLinkedChatContext(task);
+      const content = await generateExamPrep(
+        task.subject,
+        task.description,
+        task.aiNotes || [],
+        linkedChatContext,
+        getTaskImages(task)
+      );
       setExamPrepContent(content);
       // Save to Firestore for caching
       await updateDoc(doc(db, 'users', ownerId, 'children', childId, 'tasks', task.id), {
@@ -1345,6 +1372,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
           content={examPrepContent}
           subject={examPrepTask.subject}
           loading={examPrepLoading}
+          onRegenerate={() => handleExamPrep(examPrepTask, true)}
           onClose={() => { setExamPrepTask(null); setExamPrepContent(null); }}
         />
       )}

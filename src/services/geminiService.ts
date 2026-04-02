@@ -82,12 +82,17 @@ AI-analys av läxan: ${aiExplanation.slice(0, 800)}`;
 export async function generateExamPrep(
   subject: string,
   description: string,
-  aiNotes: string[] = []
+  aiNotes: string[] = [],
+  linkedChatContext: string[] = [],
+  imageBase64s: string[] = []
 ): Promise<string> {
   const context = aiNotes.length > 0 ? `\n\nTidigare AI-anteckningar om ämnet:\n${aiNotes.join('\n---\n')}` : '';
+  const linkedChat = linkedChatContext.length > 0
+    ? `\n\nRelevant tidigare AI-chatt kopplad till denna läxa:\n${linkedChatContext.join('\n---\n')}`
+    : '';
 
   const prompt = `Skapa ett komplett studiepaket för ett prov i ${subject}.
-Beskrivning av provet: ${description}${context}
+Beskrivning av provet: ${description}${context}${linkedChat}
 
 Inkludera:
 1. **Sammanfattning** — De viktigaste koncepten att kunna (3-5 punkter)
@@ -98,7 +103,11 @@ Inkludera:
 
 Skriv på svenska. Anpassa till grundskolenivå. Använd tydliga rubriker och numrering.`;
 
-  return generateHomeworkHelp(prompt);
+  const data = await apiRequest('chat', {
+    prompt,
+    imageBase64s: imageBase64s.length > 0 ? imageBase64s : undefined,
+  });
+  return data.text;
 }
 
 export async function generateStudyPlan(

@@ -1,4 +1,4 @@
-import { X, Printer, Loader2, GraduationCap, BookmarkPlus } from 'lucide-react';
+import { X, Printer, Loader2, GraduationCap, BookmarkPlus, RefreshCcw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 interface ExamPrepModalProps {
@@ -7,9 +7,10 @@ interface ExamPrepModalProps {
   loading: boolean;
   onClose: () => void;
   onSave?: () => void;
+  onRegenerate?: () => void;
 }
 
-export default function ExamPrepModal({ content, subject, loading, onClose, onSave }: ExamPrepModalProps) {
+export default function ExamPrepModal({ content, subject, loading, onClose, onSave, onRegenerate }: ExamPrepModalProps) {
   const handlePrint = () => {
     if (!content) return;
     const printWindow = window.open('', '_blank');
@@ -43,6 +44,16 @@ export default function ExamPrepModal({ content, subject, loading, onClose, onSa
             <h2 className="text-lg font-bold text-stone-800">Provförberedelse — {subject}</h2>
           </div>
           <div className="flex items-center gap-2">
+            {onRegenerate && (
+              <button
+                onClick={onRegenerate}
+                disabled={loading}
+                className="p-2 text-stone-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-colors disabled:opacity-50"
+                title="Gör om med AI"
+              >
+                <RefreshCcw size={18} className={loading ? 'animate-spin' : ''} />
+              </button>
+            )}
             {content && onSave && (
               <button
                 onClick={onSave}

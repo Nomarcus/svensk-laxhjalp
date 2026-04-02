@@ -125,17 +125,26 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { prompt, history = [], imageBase64, simpleSwedish, language } = req.body;
-    if (!prompt && !imageBase64) {
+    const { prompt, history = [], imageBase64, imageBase64s, simpleSwedish, language } = req.body;
+    const providedImages: string[] = Array.isArray(imageBase64s)
+      ? imageBase64s.filter((img: unknown) => typeof img === 'string' && img.length > 0)
+      : (imageBase64 ? [imageBase64] : []);
+    if (!prompt && providedImages.length === 0) {
       return res.status(400).json({ error: 'Meddelande eller bild krävs.' });
     }
 
-    let mimeType = 'image/jpeg';
-    let cleanBase64 = imageBase64;
-    if (imageBase64?.startsWith('data:')) {
-      const match = imageBase64.match(/^data:([^;]+);base64,(.+)$/);
-      if (match) { mimeType = match[1]; cleanBase64 = match[2]; }
-    }
+    const inlineImages = providedImages.map((img) => {
+      let mimeType = 'image/jpeg';
+      let cleanBase64 = img;
+      if (img.startsWith('data:')) {
+        const match = img.match(/^data:([^;]+);base64,(.+)$/);
+        if (match) {
+          mimeType = match[1];
+          cleanBase64 = match[2];
+        }
+      }
+      return { inlineData: { mimeType: mimeType as any, data: cleanBase64 } };
+    });
 
     // Use completely different system instruction for simple Swedish
     let systemInstruction = simpleSwedish ? SIMPLE_SYSTEM_INSTRUCTION : SYSTEM_INSTRUCTION;
@@ -154,7 +163,7 @@ export default async function handler(req: any, res: any) {
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
     const response = await ai.models.generateContent({
-      model: imageBase64 ? 'gemini-2.5-flash' : TEXT_MODEL,
+      model: inlineImages.length > 0 ? 'gemini-2.5-flash' : TEXT_MODEL,
       contents: [
         ...trimHistory(history).map((h: any) => ({
           role: h.role as 'user' | 'model',
@@ -163,7 +172,7 @@ export default async function handler(req: any, res: any) {
         {
           role: 'user' as const,
           parts: [
-            ...(cleanBase64 ? [{ inlineData: { mimeType: mimeType as any, data: cleanBase64 } }] : []),
+            ...inlineImages,
             { text: userText },
           ],
         },
