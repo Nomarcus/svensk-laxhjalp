@@ -194,7 +194,14 @@ export default function App() {
   }
 
   if (!user) {
-    return <Auth onShowPrivacy={() => setShowPrivacy(true)} onShowTerms={() => setShowTerms(true)} />;
+    return (
+      <Auth
+        dark={dark}
+        onToggleDark={toggleDark}
+        onShowPrivacy={() => setShowPrivacy(true)}
+        onShowTerms={() => setShowTerms(true)}
+      />
+    );
   }
 
   const selectedChild = children.find(c => c.id === selectedChildId);

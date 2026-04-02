@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Globe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { LANGUAGES } from '../i18n';
+import { ensureTranslationLoaded, LANGUAGES } from '../i18n';
 import { cn } from '../utils/cn';
 
 interface LanguageSwitcherProps {
@@ -9,11 +9,11 @@ interface LanguageSwitcherProps {
 }
 
 export default function LanguageSwitcher({ compact }: LanguageSwitcherProps) {
-  const { i18n } = useTranslation();
+  const { i18n: i18nInstance } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const currentLang = LANGUAGES.find(l => l.code === i18n.language) || LANGUAGES[0];
+  const currentLang = LANGUAGES.find(l => l.code === i18nInstance.language) || LANGUAGES[0];
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -23,8 +23,9 @@ export default function LanguageSwitcher({ compact }: LanguageSwitcherProps) {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const handleSelect = (code: string) => {
-    i18n.changeLanguage(code);
+  const handleSelect = async (code: string) => {
+    await ensureTranslationLoaded(code);
+    await i18nInstance.changeLanguage(code);
     setOpen(false);
   };
 
@@ -43,10 +44,10 @@ export default function LanguageSwitcher({ compact }: LanguageSwitcherProps) {
             {LANGUAGES.map(lang => (
               <button
                 key={lang.code}
-                onClick={() => handleSelect(lang.code)}
+                onClick={() => void handleSelect(lang.code)}
                 className={cn(
                   "w-full flex items-center gap-3 px-4 py-2 text-sm transition-colors text-left",
-                  lang.code === i18n.language
+                  lang.code === i18nInstance.language
                     ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-medium"
                     : "text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-700"
                 )}
@@ -66,22 +67,22 @@ export default function LanguageSwitcher({ compact }: LanguageSwitcherProps) {
     <div className="relative inline-block" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 px-3 py-2 bg-white/80 backdrop-blur-sm border border-black/5 rounded-full text-sm text-stone-600 hover:bg-white hover:border-stone-300 transition-all shadow-sm"
+        className="flex items-center gap-2 px-3 py-2 bg-white/80 dark:bg-slate-800/90 backdrop-blur-sm border border-black/5 dark:border-white/10 rounded-full text-sm text-stone-600 dark:text-stone-300 hover:bg-white dark:hover:bg-slate-800 hover:border-stone-300 dark:hover:border-white/15 transition-all shadow-sm"
       >
-        <Globe size={16} className="text-stone-400" />
+        <Globe size={16} className="text-stone-400 dark:text-stone-500" />
         <span>{currentLang.flag} {currentLang.name}</span>
       </button>
       {open && (
-        <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-black/5 z-30 py-1 animate-in fade-in slide-in-from-top-2">
+        <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-black/5 dark:border-white/10 z-30 py-1 animate-in fade-in slide-in-from-top-2">
           {LANGUAGES.map(lang => (
             <button
               key={lang.code}
-              onClick={() => handleSelect(lang.code)}
+              onClick={() => void handleSelect(lang.code)}
               className={cn(
                 "w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors text-left",
-                lang.code === i18n.language
-                  ? "bg-emerald-50 text-emerald-700 font-medium"
-                  : "text-stone-600 hover:bg-stone-50"
+                lang.code === i18nInstance.language
+                  ? "bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 font-medium"
+                  : "text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-700"
               )}
             >
               <span>{lang.flag}</span>

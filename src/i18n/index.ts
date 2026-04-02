@@ -34,8 +34,8 @@ i18n
     react: { useSuspense: false },
   });
 
-// Lazy-load non-Swedish translations
-async function loadTranslation(lang: string) {
+/** Load locale JSON into i18n before switching language (avoids UI stuck on Swedish until next interaction). */
+export async function ensureTranslationLoaded(lang: string): Promise<void> {
   if (lang === 'sv') return;
   try {
     const module = await import(`./locales/${lang}.json`);
@@ -43,6 +43,10 @@ async function loadTranslation(lang: string) {
   } catch {
     console.warn(`Translation for ${lang} not found, falling back to sv`);
   }
+}
+
+async function loadTranslation(lang: string) {
+  await ensureTranslationLoaded(lang);
 }
 
 // Load saved language on startup
