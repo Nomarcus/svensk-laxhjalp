@@ -955,7 +955,68 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                                       : "bg-white dark:bg-slate-800 border-black/5 dark:border-white/5 text-stone-700 dark:text-stone-200"
                             )}
                           >
-                            <div className="grid grid-cols-[auto_minmax(60px,1fr)_auto_auto_auto] gap-2 items-center">
+                            {task.taskType === 'exam' && isDeadline && !isDayCompleted(task, day) && (
+                              <div className="flex items-center gap-1 mb-1.5 text-[9px] font-bold text-purple-700 uppercase tracking-wider">
+                                <CalendarCheck size={9} />
+                                {t('planner.examDay')}
+                              </div>
+                            )}
+                            {task.taskType === 'exam' && !isDeadline && !isDayCompleted(task, day) && task.workDays?.includes(day) && (
+                              <div className="flex items-center gap-1 mb-1.5 text-[9px] font-bold text-blue-600 uppercase tracking-wider">
+                                <Clock size={9} />
+                                {t('planner.workDay')}
+                              </div>
+                            )}
+                            {task.taskType === 'exam' && !isDeadline && !isDayCompleted(task, day) && !task.workDays?.includes(day) && (
+                              <div className="flex items-center gap-1 mb-1.5 text-[9px] font-bold text-purple-600 uppercase tracking-wider">
+                                <GraduationCap size={9} />
+                                {t('planner.typeTest')}
+                              </div>
+                            )}
+                            {task.taskType !== 'exam' && isDeadline && !isDayCompleted(task, day) && (
+                              <div className="flex items-center gap-1 mb-1.5 text-[9px] font-bold text-red-600 uppercase tracking-wider">
+                                <CalendarCheck size={9} />
+                                Inlämningsdag
+                              </div>
+                            )}
+                            {task.taskType !== 'exam' && !isDeadline && !isDayCompleted(task, day) && task.workDays?.includes(day) && (
+                              <div className="flex items-center gap-1 mb-1.5 text-[9px] font-bold text-blue-600 uppercase tracking-wider">
+                                <Clock size={9} />
+                                Arbetsdag
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <div className="opacity-50">
+                                {getSubjectIcon(task.subject)}
+                              </div>
+                              <div className="font-bold truncate">{task.subject}</div>
+                            </div>
+                            <div className="text-[10px] line-clamp-2 opacity-70">{task.description}</div>
+                            {task.minutesPerDay && (
+                              <div className="mt-1 text-[9px] text-emerald-600 flex items-center gap-0.5">
+                                <Clock size={8} /> {task.minutesPerDay} min
+                              </div>
+                            )}
+                            {task.dueDay && task.dueDay !== day && (
+                              <div className={cn(
+                                "mt-0.5 text-[9px] flex items-center gap-0.5",
+                                task.taskType === 'exam' ? "text-purple-600" : "text-amber-600"
+                              )}>
+                                <CalendarCheck size={8} /> {task.taskType === 'exam' ? t('planner.examDay') : t('planner.submissionDay')}: {task.dueDay.slice(0, 3)}
+                              </div>
+                            )}
+                            <div className="mt-1">
+                              <div className="h-1.5 bg-stone-200/80 dark:bg-slate-700 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-indigo-500 transition-all"
+                                  style={{ width: `${getTaskProgressPercent(task)}%` }}
+                                />
+                              </div>
+                              <div className="mt-0.5 text-[9px] text-indigo-600">
+                                {t('planner.remainingPercent', { value: getTaskRemainingPercent(task) })}
+                              </div>
+                            </div>
+                            <div className="mt-2 flex items-center justify-between">
                               <button
                                 onClick={(e) => { e.stopPropagation(); toggleTask(task, day); }}
                                 className={cn(
@@ -965,21 +1026,6 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                               >
                                 {isDayCompleted(task, day) ? <CheckCircle2 size={10} /> : <Circle size={10} />}
                               </button>
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-1 min-w-0">
-                                  <span className="opacity-60 shrink-0">{getSubjectIcon(task.subject)}</span>
-                                  <span className="font-bold truncate">{task.subject}</span>
-                                </div>
-                              </div>
-                              <span className={cn(
-                                "px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase whitespace-nowrap",
-                                task.taskType === 'exam' ? "bg-purple-100 text-purple-700" : "bg-emerald-100 text-emerald-700"
-                              )}>
-                                {task.taskType === 'exam' ? t('planner.typeTest') : t('planner.typeHomework')}
-                              </span>
-                              <span className="text-[9px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                                {t('planner.remainingPercent', { value: getTaskRemainingPercent(task) })}
-                              </span>
                               {task.taskType === 'exam' && (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleExamPrep(task); }}
