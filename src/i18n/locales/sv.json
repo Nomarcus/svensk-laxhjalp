@@ -247,6 +247,7 @@
     "saturdayShort": "Lör",
     "sundayShort": "Sön",
     "workDay": "Arbetsdag",
+    "examDay": "Provdag",
     "submissionDay": "Inlämningsdag",
     "noTasks": "Inga läxor denna dag",
     "addNewTask": "Ny läxa",

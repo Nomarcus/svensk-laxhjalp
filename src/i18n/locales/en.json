@@ -247,6 +247,7 @@
     "saturdayShort": "Sat",
     "sundayShort": "Sun",
     "workDay": "Work day",
+    "examDay": "Exam day",
     "submissionDay": "Due day",
     "noTasks": "No homework this day",
     "addNewTask": "New homework",

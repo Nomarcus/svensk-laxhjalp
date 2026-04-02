@@ -799,7 +799,14 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                               {task.subject}
                             </span>
                             {task.taskType === 'exam' && (
-                              <span className="shrink-0 px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[9px] font-bold rounded-full uppercase">Prov</span>
+                              <span className={cn(
+                                "shrink-0 px-1.5 py-0.5 text-[9px] font-bold rounded-full uppercase",
+                                task.dueDay === day
+                                  ? "bg-purple-100 text-purple-700"
+                                  : "bg-violet-50 text-violet-700"
+                              )}>
+                                {task.dueDay === day ? t('planner.examDay') : t('planner.typeTest')}
+                              </span>
                             )}
                             {task.description && (
                               <span className="text-stone-400 text-sm truncate min-w-0">
@@ -813,12 +820,17 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                               {task.linkedChatSessionId && (
                                 <MessageSquare size={14} className="text-emerald-500" />
                               )}
-                              {task.dateType === 'due' && task.dueDay && task.day !== task.dueDay && (
+                              {task.taskType === 'exam' && task.dueDay && task.dueDay !== day && (
+                                <span className="text-[10px] bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                  {t('planner.examDay')}: {task.dueDay.slice(0, 3)}
+                                </span>
+                              )}
+                              {task.taskType !== 'exam' && task.dateType === 'due' && task.dueDay && task.day !== task.dueDay && (
                                 <span className="text-[10px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                                   {task.dueDay.slice(0, 3)}
                                 </span>
                               )}
-                              {task.dateType === 'work' && task.dueDay && (
+                              {task.taskType !== 'exam' && task.dateType === 'work' && task.dueDay && (
                                 <span className="text-[10px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                                   Inl: {task.dueDay.slice(0, 3)}
                                 </span>
@@ -888,10 +900,22 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                                       : "bg-white dark:bg-slate-800 border-black/5 dark:border-white/5 text-stone-700 dark:text-stone-200"
                             )}
                           >
-                            {task.taskType === 'exam' && !isDayCompleted(task, day) && (
+                            {task.taskType === 'exam' && isDeadline && !isDayCompleted(task, day) && (
+                              <div className="flex items-center gap-1 mb-1.5 text-[9px] font-bold text-purple-700 uppercase tracking-wider">
+                                <CalendarCheck size={9} />
+                                {t('planner.examDay')}
+                              </div>
+                            )}
+                            {task.taskType === 'exam' && !isDeadline && !isDayCompleted(task, day) && task.workDays?.includes(day) && (
+                              <div className="flex items-center gap-1 mb-1.5 text-[9px] font-bold text-blue-600 uppercase tracking-wider">
+                                <Clock size={9} />
+                                {t('planner.workDay')}
+                              </div>
+                            )}
+                            {task.taskType === 'exam' && !isDeadline && !isDayCompleted(task, day) && !task.workDays?.includes(day) && (
                               <div className="flex items-center gap-1 mb-1.5 text-[9px] font-bold text-purple-600 uppercase tracking-wider">
                                 <GraduationCap size={9} />
-                                Prov
+                                {t('planner.typeTest')}
                               </div>
                             )}
                             {task.taskType !== 'exam' && isDeadline && !isDayCompleted(task, day) && (
@@ -919,8 +943,11 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                               </div>
                             )}
                             {task.dueDay && task.dueDay !== day && (
-                              <div className="mt-0.5 text-[9px] text-amber-600 flex items-center gap-0.5">
-                                <CalendarCheck size={8} /> Inl: {task.dueDay.slice(0, 3)}
+                              <div className={cn(
+                                "mt-0.5 text-[9px] flex items-center gap-0.5",
+                                task.taskType === 'exam' ? "text-purple-600" : "text-amber-600"
+                              )}>
+                                <CalendarCheck size={8} /> {task.taskType === 'exam' ? t('planner.examDay') : t('planner.submissionDay')}: {task.dueDay.slice(0, 3)}
                               </div>
                             )}
                             <div className="mt-1">
@@ -1117,10 +1144,10 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                 </div>
               </div>
 
-              {/* Editable: Inlämningsdag */}
+              {/* Editable: Due day / Exam day */}
               <div>
                 <label className="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-2">
-                  Inlämningsdag
+                  {selectedTask.taskType === 'exam' ? t('planner.examDay') : t('planner.submissionDay')}
                 </label>
                 <div className="flex flex-wrap gap-1.5">
                   {DAYS.map(day => (
@@ -1131,7 +1158,9 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                       className={cn(
                         "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border capitalize",
                         editDueDay === day
-                          ? "bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-800 text-red-700 dark:text-red-400 ring-1 ring-red-300 dark:ring-red-800"
+                          ? selectedTask.taskType === 'exam'
+                            ? "bg-purple-50 dark:bg-purple-900/20 border-purple-300 dark:border-purple-800 text-purple-700 dark:text-purple-400 ring-1 ring-purple-300 dark:ring-purple-800"
+                            : "bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-800 text-red-700 dark:text-red-400 ring-1 ring-red-300 dark:ring-red-800"
                           : "bg-stone-50 dark:bg-slate-800 border-stone-100 dark:border-slate-700 text-stone-400 dark:text-stone-500 hover:bg-stone-100 dark:hover:bg-slate-700"
                       )}
                     >
