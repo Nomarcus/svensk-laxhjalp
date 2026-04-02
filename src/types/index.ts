@@ -43,6 +43,8 @@ export interface Task {
   progressPercent?: number;
   /** Foto av läxan (base64 data URI) */
   imageUrl?: string;
+  /** Flera foton av samma läxa (base64 data URI) */
+  imageUrls?: string[];
   /** Kopplad AI-chattsession */
   linkedChatSessionId?: string;
   /** AI-svar sparade till uppgiften */

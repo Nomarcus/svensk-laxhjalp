@@ -15,7 +15,7 @@ import ExamPrepModal from './ExamPrepModal';
 interface PlannerProps {
   childId: string;
   ownerId: string;
-  prefill?: { subject: string; description: string; workDays?: string[]; dueDay?: string; minutesPerDay?: number; imageUrl?: string } | null;
+  prefill?: { subject: string; description: string; workDays?: string[]; dueDay?: string; minutesPerDay?: number; imageUrl?: string; imageUrls?: string[] } | null;
   onPrefillUsed?: () => void;
   onOpenAiForTask?: (taskId: string, subject: string, description: string, imageUrl?: string) => void;
 }
@@ -25,6 +25,7 @@ const DAYS = ['måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag', 's�
 export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOpenAiForTask }: PlannerProps) {
   const { t } = useTranslation();
   const plannerCameraRef = useRef<HTMLInputElement>(null);
+  const editTaskCameraRef = useRef<HTMLInputElement>(null);
   const [viewDate, setViewDate] = useState(new Date());
   const [tasks, setTasks] = useState<Task[]>([]);
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
@@ -55,7 +56,8 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
       if (prefill.workDays?.length) setNewWorkDays(prefill.workDays);
       if (prefill.dueDay) setNewDueDay(prefill.dueDay);
       if (prefill.minutesPerDay) setNewMinutesPerDay(prefill.minutesPerDay);
-      if (prefill.imageUrl) setTaskImage(prefill.imageUrl);
+      if (prefill.imageUrls?.length) setTaskImages(prefill.imageUrls);
+      else if (prefill.imageUrl) setTaskImages([prefill.imageUrl]);
       setShowAddModal(true);
       onPrefillUsed?.();
     }
@@ -93,7 +95,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
     setNewWorkDays([]);
     setNewDueDay(selectedDay);
     setNewMinutesPerDay('');
-    setTaskImage(null);
+    setTaskImages([]);
     setNewTaskType('homework');
   };
 
@@ -117,9 +119,8 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
       if (newMinutesPerDay) {
         taskData.minutesPerDay = Number(newMinutesPerDay);
       }
-      if (taskImage) {
-        taskData.imageUrl = taskImage;
-      }
+      taskData.imageUrls = taskImages;
+      taskData.imageUrl = taskImages[0] || null;
 
       taskData.dueDay = newDueDay || selectedDay;
       taskData.workDays = newWorkDays.length > 0 ? newWorkDays : [];
@@ -290,6 +291,11 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
   };
 
   const getTaskRemainingPercent = (task: Task) => 100 - getTaskProgressPercent(task);
+  const getTaskImages = (task: Task) => {
+    if (task.imageUrls?.length) return task.imageUrls;
+    if (task.imageUrl) return [task.imageUrl];
+    return [];
+  };
 
   const completedCount = tasks.filter(t => t.completed).length;
   const totalCount = tasks.length;
@@ -349,7 +355,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
     </div>
   );
 
-  const [taskImage, setTaskImage] = useState<string | null>(null);
+  const [taskImages, setTaskImages] = useState<string[]>([]);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   // Edit state for task detail modal
@@ -357,6 +363,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
   const [editDescription, setEditDescription] = useState('');
   const [editMinutesPerDay, setEditMinutesPerDay] = useState<number | ''>('');
   const [editProgressPercent, setEditProgressPercent] = useState<number | ''>('');
+  const [editImages, setEditImages] = useState<string[]>([]);
   const [editDueDay, setEditDueDay] = useState('');
   const [editWorkDays, setEditWorkDays] = useState<string[]>([]);
   const [editDateType, setEditDateType] = useState<'due' | 'work'>('due');
@@ -367,6 +374,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
     setEditDescription(task.description || '');
     setEditMinutesPerDay(task.minutesPerDay || '');
     setEditProgressPercent(getTaskProgressPercent(task));
+    setEditImages(getTaskImages(task));
     setEditDueDay(task.dueDay || '');
     setEditWorkDays(task.workDays || []);
     setEditDateType(task.dateType || 'due');
@@ -383,6 +391,8 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
         progressPercent: editProgressPercent === ''
           ? getTaskProgressPercent(selectedTask)
           : Math.max(0, Math.min(100, Number(editProgressPercent))),
+        imageUrls: editImages,
+        imageUrl: editImages[0] || null,
         dueDay: editDueDay,
         workDays: editWorkDays,
         dateType: editDateType,
@@ -405,19 +415,35 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
     return task.dueDay === day;
   };
 
-  const handlePlannerCamera = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = async () => {
+  const processImages = async (files: FileList | null) => {
+    if (!files?.length) return [];
+    const all = Array.from(files);
+    const results: string[] = [];
+    for (const file of all) {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
       try {
-        const compressed = await compressImage(reader.result as string, 800, 800, 0.7);
-        setTaskImage(compressed);
+        results.push(await compressImage(dataUrl, 800, 800, 0.7));
       } catch {
-        setTaskImage(reader.result as string);
+        results.push(dataUrl);
       }
-    };
-    reader.readAsDataURL(file);
+    }
+    return results;
+  };
+
+  const handlePlannerCamera = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const images = await processImages(e.target.files);
+    if (images.length) setTaskImages(prev => [...prev, ...images]);
+    e.target.value = '';
+  };
+
+  const handleEditTaskImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const images = await processImages(e.target.files);
+    if (images.length) setEditImages(prev => [...prev, ...images]);
     e.target.value = '';
   };
 
@@ -437,13 +463,25 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
         ref={plannerCameraRef}
         onChange={handlePlannerCamera}
         accept="image/*"
-        capture="environment"
+        multiple
         className="hidden"
       />
-      {taskImage && (
-        <div className="relative">
-          <img src={taskImage} alt="Läxbild" className="w-full max-h-40 object-cover rounded-xl border border-black/5 dark:border-white/5" />
-          <button type="button" onClick={() => setTaskImage(null)} className="absolute top-1 right-1 p-1 bg-white/90 dark:bg-slate-900/90 rounded-full text-stone-500 dark:text-stone-400 hover:text-red-500">✕</button>
+      {taskImages.length > 0 && (
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            {taskImages.map((img, idx) => (
+              <div key={`${idx}-${img.slice(0, 24)}`} className="relative">
+                <img src={img} alt={`Läxbild ${idx + 1}`} className="w-full h-24 object-cover rounded-xl border border-black/5 dark:border-white/5" />
+                <button
+                  type="button"
+                  onClick={() => setTaskImages(prev => prev.filter((_, i) => i !== idx))}
+                  className="absolute top-1 right-1 p-1 bg-white/90 dark:bg-slate-900/90 rounded-full text-stone-500 dark:text-stone-400 hover:text-red-500"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
       {/* Task type toggle */}
@@ -814,7 +852,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                               </span>
                             )}
                             <div className="flex items-center gap-1.5 ml-auto shrink-0">
-                              {task.imageUrl && (
+                              {getTaskImages(task).length > 0 && (
                                 <ImageIcon size={14} className="text-amber-500" />
                               )}
                               {task.linkedChatSessionId && (
@@ -1037,13 +1075,44 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
             </div>
 
             <div className="p-6 space-y-5">
-              {/* Task image */}
-              {selectedTask.imageUrl && (
+              {/* Task images */}
+              {editImages.length > 0 && (
                 <div>
-                  <label className="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-2">Foto av läxan</label>
-                  <img src={selectedTask.imageUrl} alt="Läxbild" className="w-full max-h-64 object-contain rounded-xl border border-black/5 dark:border-white/5 bg-stone-50 dark:bg-slate-800" />
+                  <label className="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-2">Foton av läxan</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {editImages.map((img, idx) => (
+                      <div key={`${idx}-${img.slice(0, 24)}`} className="relative">
+                        <img src={img} alt={`Läxbild ${idx + 1}`} className="w-full h-28 object-cover rounded-xl border border-black/5 dark:border-white/5 bg-stone-50 dark:bg-slate-800" />
+                        <button
+                          type="button"
+                          onClick={() => setEditImages(prev => prev.filter((_, i) => i !== idx))}
+                          className="absolute top-1 right-1 p-1 bg-white/90 dark:bg-slate-900/90 rounded-full text-stone-500 dark:text-stone-400 hover:text-red-500"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
+              <div>
+                <button
+                  type="button"
+                  onClick={() => editTaskCameraRef.current?.click()}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/30 rounded-xl font-medium hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-all"
+                >
+                  <Camera size={16} />
+                  Lägg till fler bilder
+                </button>
+                <input
+                  type="file"
+                  ref={editTaskCameraRef}
+                  onChange={handleEditTaskImages}
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                />
+              </div>
 
               {/* Editable: Subject */}
               <div>
@@ -1232,7 +1301,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                 {onOpenAiForTask && (
                   <button
                     onClick={() => {
-                      onOpenAiForTask(selectedTask.id, selectedTask.subject, selectedTask.description, selectedTask.imageUrl);
+                      onOpenAiForTask(selectedTask.id, selectedTask.subject, selectedTask.description, editImages[0]);
                       setSelectedTask(null);
                     }}
                     className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white rounded-2xl font-medium shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all"
