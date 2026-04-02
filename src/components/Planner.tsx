@@ -31,7 +31,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [selectedDay, setSelectedDay] = useState(format(new Date(), 'EEEE', { locale: sv }));
   const [showAddModal, setShowAddModal] = useState(false);
-  const [hideCompleted, setHideCompleted] = useState(false);
+  const [hideCompleted, setHideCompleted] = useState(true);
   const [showStudyPlan, setShowStudyPlan] = useState(false);
   const [studyPlanContent, setStudyPlanContent] = useState<string | null>(null);
   const [studyPlanLoading, setStudyPlanLoading] = useState(false);
@@ -811,82 +811,72 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                             key={task.id}
                             onClick={() => openTaskDetail(task)}
                             className={cn(
-                              "bg-white dark:bg-slate-900 rounded-xl px-3 py-2 shadow-sm border border-black/5 dark:border-white/5 flex items-center gap-3 transition-all group cursor-pointer hover:shadow-md",
+                              "bg-white dark:bg-slate-900 rounded-xl px-3 py-2 shadow-sm border border-black/5 dark:border-white/5 transition-all group cursor-pointer hover:shadow-md",
                               isDayCompleted(task, day) && "opacity-60"
                             )}
                           >
-                            <button
-                              onClick={(e) => { e.stopPropagation(); toggleTask(task, day); }}
-                              className={cn(
-                                "shrink-0 transition-colors",
-                                isDayCompleted(task, day) ? "text-emerald-500" : "text-stone-300 hover:text-emerald-500"
-                              )}
-                            >
-                              {isDayCompleted(task, day) ? <CheckCircle2 size={20} /> : <Circle size={20} />}
-                            </button>
-                            <div className={cn(
-                              "shrink-0 p-1 rounded-lg",
-                              isDayCompleted(task, day) ? "bg-stone-100 text-stone-400" : "bg-emerald-50 text-emerald-600"
-                            )}>
-                              {getSubjectIcon(task.subject)}
-                            </div>
-                            <span className={cn(
-                              "font-medium text-sm shrink-0",
-                              isDayCompleted(task, day) && "line-through text-stone-400"
-                            )}>
-                              {task.subject}
-                            </span>
-                            {task.taskType === 'exam' && (
-                              <span className={cn(
-                                "shrink-0 px-1.5 py-0.5 text-[9px] font-bold rounded-full uppercase",
-                                task.dueDay === day
-                                  ? "bg-purple-100 text-purple-700"
-                                  : "bg-violet-50 text-violet-700"
-                              )}>
-                                {task.dueDay === day ? t('planner.examDay') : t('planner.typeTest')}
-                              </span>
-                            )}
-                            {task.description && (
-                              <span className="text-stone-400 text-sm truncate min-w-0">
-                                {task.description}
-                              </span>
-                            )}
-                            <div className="flex items-center gap-1.5 ml-auto shrink-0">
-                              {getTaskImages(task).length > 0 && (
-                                <ImageIcon size={14} className="text-amber-500" />
-                              )}
-                              {task.linkedChatSessionId && (
-                                <MessageSquare size={14} className="text-emerald-500" />
-                              )}
-                              {task.taskType === 'exam' && task.dueDay && task.dueDay !== day && (
-                                <span className="text-[10px] bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                                  {t('planner.examDay')}: {task.dueDay.slice(0, 3)}
-                                </span>
-                              )}
-                              {task.taskType !== 'exam' && task.dateType === 'due' && task.dueDay && task.day !== task.dueDay && (
-                                <span className="text-[10px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                                  {task.dueDay.slice(0, 3)}
-                                </span>
-                              )}
-                              {task.taskType !== 'exam' && task.dateType === 'work' && task.dueDay && (
-                                <span className="text-[10px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                                  Inl: {task.dueDay.slice(0, 3)}
-                                </span>
-                              )}
-                              {task.minutesPerDay && (
-                                <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                                  {task.minutesPerDay}min
-                                </span>
-                              )}
-                              <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                                {t('planner.remainingPercent', { value: getTaskRemainingPercent(task) })}
-                              </span>
+                            <div className="grid grid-cols-[auto_minmax(140px,1.2fr)_80px_minmax(120px,1fr)_auto] gap-2 items-center w-full">
                               <button
-                                onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
-                                className="p-1 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                                onClick={(e) => { e.stopPropagation(); toggleTask(task, day); }}
+                                className={cn(
+                                  "shrink-0 transition-colors",
+                                  isDayCompleted(task, day) ? "text-emerald-500" : "text-stone-300 hover:text-emerald-500"
+                                )}
                               >
-                                <Trash2 size={16} />
+                                {isDayCompleted(task, day) ? <CheckCircle2 size={20} /> : <Circle size={20} />}
                               </button>
+
+                              <div className="min-w-0 flex items-center gap-2">
+                                <div className={cn(
+                                  "shrink-0 p-1 rounded-lg",
+                                  isDayCompleted(task, day) ? "bg-stone-100 text-stone-400" : "bg-emerald-50 text-emerald-600"
+                                )}>
+                                  {getSubjectIcon(task.subject)}
+                                </div>
+                                <span className={cn(
+                                  "font-medium text-sm truncate",
+                                  isDayCompleted(task, day) && "line-through text-stone-400"
+                                )}>
+                                  {task.subject}
+                                </span>
+                              </div>
+
+                              <div>
+                                <span className={cn(
+                                  "inline-flex px-2 py-0.5 text-[10px] font-bold rounded-full uppercase",
+                                  task.taskType === 'exam'
+                                    ? "bg-purple-100 text-purple-700"
+                                    : "bg-emerald-100 text-emerald-700"
+                                )}>
+                                  {task.taskType === 'exam' ? t('planner.typeTest') : t('planner.typeHomework')}
+                                </span>
+                              </div>
+
+                              <div className="min-w-0">
+                                {task.description ? (
+                                  <span className="text-stone-400 text-sm truncate block">{task.description}</span>
+                                ) : (
+                                  <span className="text-stone-300 text-xs">-</span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-1.5 ml-auto shrink-0">
+                                {getTaskImages(task).length > 0 && (
+                                  <ImageIcon size={14} className="text-amber-500" />
+                                )}
+                                {task.linkedChatSessionId && (
+                                  <MessageSquare size={14} className="text-emerald-500" />
+                                )}
+                                <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                  {t('planner.remainingPercent', { value: getTaskRemainingPercent(task) })}
+                                </span>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
+                                  className="p-1 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
                             </div>
                           </div>
                         ))
