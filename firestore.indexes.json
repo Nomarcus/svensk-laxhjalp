@@ -1,0 +1,30 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "children",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [{ "fieldPath": "__name__", "order": "ASCENDING" }]
+    },
+    {
+      "collectionGroup": "chatSessions",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [{ "fieldPath": "__name__", "order": "ASCENDING" }]
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [{ "fieldPath": "__name__", "order": "ASCENDING" }]
+    },
+    {
+      "collectionGroup": "library",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [{ "fieldPath": "__name__", "order": "ASCENDING" }]
+    },
+    {
+      "collectionGroup": "usage",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [{ "fieldPath": "__name__", "order": "ASCENDING" }]
+    }
+  ],
+  "fieldOverrides": []
+}

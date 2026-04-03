@@ -1,12 +1,21 @@
 import { buildAdminOverviewPayload, isSoleAdminFromEnv } from '../../server/lib/adminOverviewPayload';
 
+function parseServiceAccountJson(): object {
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
+  if (!raw) throw new Error('FIREBASE_SERVICE_ACCOUNT is not set');
+  try {
+    return JSON.parse(raw) as object;
+  } catch {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT is not valid JSON');
+  }
+}
+
 async function getFirebaseAdmin() {
   const mod = await import('firebase-admin');
   const adm = mod.default;
   if (!adm.apps?.length) {
-    const sa = process.env.FIREBASE_SERVICE_ACCOUNT;
-    if (sa) adm.initializeApp({ credential: adm.credential.cert(JSON.parse(sa)) });
-    else adm.initializeApp();
+    const cred = adm.credential.cert(parseServiceAccountJson() as Parameters<typeof adm.credential.cert>[0]);
+    adm.initializeApp({ credential: cred });
   }
   return adm;
 }
@@ -25,7 +34,11 @@ export default async function handler(req: { method?: string; headers: { authori
     const payload = await buildAdminOverviewPayload(db);
     return res.status(200).json(payload);
   } catch (err: unknown) {
-    console.error('Admin overview error:', err instanceof Error ? err.message : err);
+    const e = err as { code?: string; message?: string };
+    if (typeof e?.code === 'string' && e.code.startsWith('auth/')) {
+      return res.status(401).json({ error: 'Ogiltig session.', code: e.code });
+    }
+    console.error('Admin overview error:', e?.code ?? '', e?.message ?? '', err);
     return res.status(500).json({ error: 'Admin overview failed.' });
   }
 }
