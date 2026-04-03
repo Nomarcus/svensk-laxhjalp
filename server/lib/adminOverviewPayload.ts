@@ -1,11 +1,12 @@
 import type { Firestore } from 'firebase-admin/firestore';
 
 const MAX_USERS_SAMPLE = 2500;
-const USAGE_GET_CHUNK = 30;
-/** Parallel user shards for nested totals (no collectionGroup — avoids index / agg failures). */
-const TOTALS_USER_PARALLEL = 12;
-/** Run usage-by-day in small waves to reduce Firestore burst + Vercel timeouts. */
-const USAGE_DAY_PARALLEL = 4;
+/** keep getAll batches small (Cloud Run + Firestore client pool ~100 concurrent ops). */
+const USAGE_GET_CHUNK = 15;
+/** Few users in parallel; each user processes children one-by-one to avoid burst. */
+const TOTALS_USER_PARALLEL = 3;
+/** Run usage-by-day in small waves to reduce Firestore burst + timeouts. */
+const USAGE_DAY_PARALLEL = 2;
 
 export function isSoleAdminFromEnv(uid: string | undefined, email: string | undefined): boolean {
   const adminUid = process.env.ADMIN_UID?.trim();
@@ -103,18 +104,16 @@ async function aggregateTotalsByUserTree(db: Firestore, userIds: string[]) {
         let cs = 0;
         let tk = 0;
         let lib = 0;
-        await Promise.all(
-          childRefs.map(async (cref) => {
-            const [a, b, c] = await Promise.all([
-              cref.collection('chatSessions').count().get(),
-              cref.collection('tasks').count().get(),
-              cref.collection('library').count().get(),
-            ]);
-            cs += a.data().count;
-            tk += b.data().count;
-            lib += c.data().count;
-          }),
-        );
+        for (const cref of childRefs) {
+          const [a, b, c] = await Promise.all([
+            cref.collection('chatSessions').count().get(),
+            cref.collection('tasks').count().get(),
+            cref.collection('library').count().get(),
+          ]);
+          cs += a.data().count;
+          tk += b.data().count;
+          lib += c.data().count;
+        }
         return { children: childRefs.length, chatSessions: cs, tasks: tk, libraryItems: lib };
       }),
     );
@@ -127,6 +126,15 @@ async function aggregateTotalsByUserTree(db: Firestore, userIds: string[]) {
   }
 
   return { children, chatSessions, tasks, libraryItems };
+}
+
+function emptyDailyUsageRow() {
+  return {
+    aiChats: 0,
+    imageAnalyses: 0,
+    activeUsers: 0,
+    topUsers: [] as { uid: string; aiChats: number; imageAnalyses: number }[],
+  };
 }
 
 /** Shared by Express (Cloud Run) and Vercel serverless. */
@@ -146,9 +154,28 @@ export async function buildAdminOverviewPayload(db: Firestore) {
   const userIds = userIdsSnap.docs.map((d) => d.id);
   const totalUsersCounted = userIds.length;
 
-  const [totalsResolved, dailyUsageResolved] = await Promise.all([
-    aggregateTotalsByUserTree(db, userIds),
-    aggregateUsageByDays(db, dates, userIds),
+  let totalsResolved = { children: 0, chatSessions: 0, tasks: 0, libraryItems: 0 };
+  let dailyUsageResolved: Awaited<ReturnType<typeof aggregateUsageByDays>> = dates.map(() => emptyDailyUsageRow());
+  let totalsFailed = false;
+  let usageFailed = false;
+
+  await Promise.all([
+    (async () => {
+      try {
+        totalsResolved = await aggregateTotalsByUserTree(db, userIds);
+      } catch (err) {
+        totalsFailed = true;
+        console.error('admin aggregateTotalsByUserTree:', err);
+      }
+    })(),
+    (async () => {
+      try {
+        dailyUsageResolved = await aggregateUsageByDays(db, dates, userIds);
+      } catch (err) {
+        usageFailed = true;
+        console.error('admin aggregateUsageByDays:', err);
+      }
+    })(),
   ]);
 
   const { children, chatSessions, tasks, libraryItems } = totalsResolved;
@@ -222,8 +249,16 @@ export async function buildAdminOverviewPayload(db: Firestore) {
 
   const insights: string[] = [];
   insights.push(
-    'totals: counted via users/children tree (no collectionGroup) for reliable serverless runs.',
+    'totals: users/children tree with throttled Firestore calls (avoids collectionGroup + client overload).',
   );
+  if (totalsFailed) {
+    insights.push(
+      'totals failed server-side — see Cloud Run / Vercel logs. Om du kör foraldrahjalpen.se: deploya om API med npm run deploy:api (Hosting skickar /api till Cloud Run).',
+    );
+  }
+  if (usageFailed) {
+    insights.push('usage (14 dagar) misslyckades — kontrollera serverloggar.');
+  }
   if (userDocs.length >= MAX_USERS_SAMPLE || totalUsersCounted > userDocs.length) {
     insights.push(
       `sampling: tier/login stats use up to ${MAX_USERS_SAMPLE} user documents; Firestore reports ${totalUsersCounted} users total.`,
