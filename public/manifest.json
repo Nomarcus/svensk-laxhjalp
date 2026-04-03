@@ -1,7 +1,7 @@
 {
-  "name": "Föräldrahjälpen — läxhjälp & läxhjälpen",
+  "name": "Föräldrahjälpen — AI-läxhjälp för föräldrar",
   "short_name": "Föräldrahjälpen",
-  "description": "Läxhjälp och läxhjälpen med AI för svenska föräldrar (Lgr22).",
+  "description": "AI-läxhjälp för föräldrar: Lgr22, läxplanering och bildanalys.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F5F5F0",
