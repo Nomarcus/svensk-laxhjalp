@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { db, auth, OperationType, handleFirestoreError } from '../firebase';
-import { collection, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { Plus, Trash2, User as UserIcon, X, Check, Share2, Mail } from 'lucide-react';
+import { collection, onSnapshot, addDoc, deleteDoc, doc, deleteField, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { Plus, Trash2, User as UserIcon, X, Check, Share2, Mail, Pencil } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 interface ChildWithSharing {
@@ -24,6 +24,9 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [sharingChildId, setSharingChildId] = useState<string | null>(null);
   const [newShareEmail, setNewShareEmail] = useState('');
+  const [editingChildId, setEditingChildId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editGrade, setEditGrade] = useState('');
 
   useEffect(() => {
     if (!auth.currentUser) return;
@@ -129,18 +132,66 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
             {children.map((child) => (
               <div key={child.id} className="space-y-2">
                 <div className="flex items-center justify-between p-4 bg-stone-50 rounded-2xl group">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                  {editingChildId === child.id ? (
+                    <form onSubmit={saveEdit} className="flex flex-col gap-3 w-full min-w-0">
+                      <input
+                        autoFocus
+                        type="text"
+                        placeholder={t('childManager.childName')}
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500/20"
+                      />
+                      <input
+                        type="text"
+                        placeholder={t('childManager.grade')}
+                        value={editGrade}
+                        onChange={(e) => setEditGrade(e.target.value)}
+                        className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500/20"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          type="submit"
+                          disabled={!editName.trim()}
+                          className="flex-1 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-1.5"
+                        >
+                          <Check size={16} /> {t('childManager.save')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelEdit}
+                          className="flex-1 py-2 bg-stone-200 text-stone-700 rounded-xl text-sm font-medium hover:bg-stone-300"
+                        >
+                          {t('childManager.cancel')}
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center shrink-0">
                       <UserIcon size={20} className="text-emerald-600" />
                     </div>
-                    <div>
-                      <h3 className="font-medium text-stone-900">{child.name}</h3>
-                      {child.grade && <p className="text-xs text-stone-500">{child.grade}</p>}
+                    <div className="min-w-0">
+                      <h3 className="font-medium text-stone-900 truncate">{child.name}</h3>
+                      {child.grade && <p className="text-xs text-stone-500 truncate">{child.grade}</p>}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1">
+                  )}
+                  {editingChildId !== child.id && (
+                  <div className="flex items-center gap-1 shrink-0">
                     <button
-                      onClick={() => setSharingChildId(sharingChildId === child.id ? null : child.id)}
+                      type="button"
+                      onClick={() => startEdit(child)}
+                      className="p-2 text-stone-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition-all"
+                      title={t('childManager.edit')}
+                    >
+                      <Pencil size={18} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingChildId(null);
+                        setSharingChildId(sharingChildId === child.id ? null : child.id);
+                      }}
                       className={cn(
                         "p-2 rounded-xl transition-all flex items-center gap-1",
                         sharingChildId === child.id
@@ -164,6 +215,7 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
                       <Trash2 size={18} />
                     </button>
                   </div>
+                  )}
                 </div>
 
                 {sharingChildId === child.id && (
@@ -265,7 +317,11 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
             </form>
           ) : (
             <button
-              onClick={() => setIsAdding(true)}
+              onClick={() => {
+                setEditingChildId(null);
+                setSharingChildId(null);
+                setIsAdding(true);
+              }}
               className="w-full py-4 border-2 border-dashed border-stone-200 rounded-2xl text-stone-400 hover:text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all flex items-center justify-center gap-2 text-sm font-medium"
             >
               <Plus size={18} /> {t('childManager.addChild')}
