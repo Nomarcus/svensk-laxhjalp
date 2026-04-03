@@ -1,7 +1,8 @@
 import type { Firestore } from 'firebase-admin/firestore';
-import { FieldPath } from 'firebase-admin/firestore';
 
 const MAX_USERS_SAMPLE = 2500;
+/** Firestore batch limit for getAll. */
+const USAGE_GET_CHUNK = 100;
 
 export function isSoleAdminFromEnv(uid: string | undefined, email: string | undefined): boolean {
   const adminUid = process.env.ADMIN_UID?.trim();
@@ -41,22 +42,28 @@ function tsToDate(v: unknown): Date | null {
   return null;
 }
 
-async function aggregateUsageForDate(db: Firestore, dateStr: string) {
-  const snap = await db.collectionGroup('usage').where(FieldPath.documentId(), '==', dateStr).get();
+/** Per-user usage docs — avoids collectionGroup + documentId indexes that often break admin. */
+async function aggregateUsageForDateByUsers(db: Firestore, dateStr: string, userIds: string[]) {
   let aiChats = 0;
   let imageAnalyses = 0;
   const perUser: { uid: string; aiChats: number; imageAnalyses: number }[] = [];
-  snap.forEach((doc) => {
-    const parentUser = doc.ref.parent.parent;
-    if (!parentUser) return;
-    const uid = parentUser.id;
-    const row = doc.data();
-    const c = typeof row.chatCount === 'number' ? row.chatCount : 0;
-    const im = typeof row.imageCount === 'number' ? row.imageCount : 0;
-    aiChats += c;
-    imageAnalyses += im;
-    if (c > 0 || im > 0) perUser.push({ uid, aiChats: c, imageAnalyses: im });
-  });
+
+  for (let i = 0; i < userIds.length; i += USAGE_GET_CHUNK) {
+    const chunk = userIds.slice(i, i + USAGE_GET_CHUNK);
+    const refs = chunk.map((uid) => db.doc(`users/${uid}/usage/${dateStr}`));
+    const snaps = await db.getAll(...refs);
+    snaps.forEach((snap, j) => {
+      if (!snap.exists) return;
+      const uid = chunk[j]!;
+      const row = snap.data() || {};
+      const c = typeof row.chatCount === 'number' ? row.chatCount : 0;
+      const im = typeof row.imageCount === 'number' ? row.imageCount : 0;
+      aiChats += c;
+      imageAnalyses += im;
+      if (c > 0 || im > 0) perUser.push({ uid, aiChats: c, imageAnalyses: im });
+    });
+  }
+
   perUser.sort((a, b) => b.aiChats + b.imageAnalyses - (a.aiChats + a.imageAnalyses));
   return {
     aiChats,
@@ -71,16 +78,11 @@ export async function buildAdminOverviewPayload(db: Firestore) {
   const dates = lastNDatesUTC(14);
   const today = dates[dates.length - 1]!;
 
-  const [
-    usersCountSnap,
-    childrenCountSnap,
-    chatSessionsSnap,
-    tasksSnap,
-    librarySnap,
-    usersSample,
-    ...dailyUsage
-  ] = await Promise.all([
-    db.collection('users').count().get(),
+  const userIdsSnap = await db.collection('users').select().get();
+  const userIds = userIdsSnap.docs.map((d) => d.id);
+  const totalUsersCounted = userIds.length;
+
+  const [childrenCountSnap, chatSessionsSnap, tasksSnap, librarySnap, usersSample, ...dailyUsage] = await Promise.all([
     db.collectionGroup('children').count().get(),
     db.collectionGroup('chatSessions').count().get(),
     db.collectionGroup('tasks').count().get(),
@@ -90,10 +92,8 @@ export async function buildAdminOverviewPayload(db: Firestore) {
       .select('email', 'displayName', 'tier', 'subscriptionStatus', 'lastLogin', 'uid')
       .limit(MAX_USERS_SAMPLE)
       .get(),
-    ...dates.map((d) => aggregateUsageForDate(db, d)),
+    ...dates.map((d) => aggregateUsageForDateByUsers(db, d, userIds)),
   ]);
-
-  const totalUsersCounted = usersCountSnap.data().count;
   const userDocs = usersSample.docs;
   type Tier = string;
   const tierBuckets: Record<string, number> = {};

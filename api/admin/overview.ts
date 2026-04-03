@@ -34,11 +34,16 @@ export default async function handler(req: { method?: string; headers: { authori
     const payload = await buildAdminOverviewPayload(db);
     return res.status(200).json(payload);
   } catch (err: unknown) {
-    const e = err as { code?: string; message?: string };
+    const e = err as { code?: string | number; message?: string };
     if (typeof e?.code === 'string' && e.code.startsWith('auth/')) {
       return res.status(401).json({ error: 'Ogiltig session.', code: e.code });
     }
     console.error('Admin overview error:', e?.code ?? '', e?.message ?? '', err);
-    return res.status(500).json({ error: 'Admin overview failed.' });
+    const detail = typeof e?.message === 'string' ? e.message.slice(0, 400) : undefined;
+    return res.status(500).json({
+      error: 'Admin overview failed.',
+      code: e?.code,
+      detail,
+    });
   }
 }
