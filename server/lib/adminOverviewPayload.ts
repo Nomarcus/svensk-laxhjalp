@@ -1,8 +1,11 @@
 import type { Firestore } from 'firebase-admin/firestore';
 
 const MAX_USERS_SAMPLE = 2500;
-/** Firestore batch limit for getAll. */
-const USAGE_GET_CHUNK = 100;
+const USAGE_GET_CHUNK = 30;
+/** Parallel user shards for nested totals (no collectionGroup — avoids index / agg failures). */
+const TOTALS_USER_PARALLEL = 12;
+/** Run usage-by-day in small waves to reduce Firestore burst + Vercel timeouts. */
+const USAGE_DAY_PARALLEL = 4;
 
 export function isSoleAdminFromEnv(uid: string | undefined, email: string | undefined): boolean {
   const adminUid = process.env.ADMIN_UID?.trim();
@@ -42,7 +45,6 @@ function tsToDate(v: unknown): Date | null {
   return null;
 }
 
-/** Per-user usage docs — avoids collectionGroup + documentId indexes that often break admin. */
 async function aggregateUsageForDateByUsers(db: Firestore, dateStr: string, userIds: string[]) {
   let aiChats = 0;
   let imageAnalyses = 0;
@@ -73,27 +75,84 @@ async function aggregateUsageForDateByUsers(db: Firestore, dateStr: string, user
   };
 }
 
+async function aggregateUsageByDays(db: Firestore, dates: string[], userIds: string[]) {
+  const out: Awaited<ReturnType<typeof aggregateUsageForDateByUsers>>[] = [];
+  for (let i = 0; i < dates.length; i += USAGE_DAY_PARALLEL) {
+    const slice = dates.slice(i, i + USAGE_DAY_PARALLEL);
+    const batch = await Promise.all(slice.map((d) => aggregateUsageForDateByUsers(db, d, userIds)));
+    out.push(...batch);
+  }
+  return out;
+}
+
+/**
+ * Sum children / chatSessions / tasks / library by walking each user's `children` subcollection.
+ * Avoids collectionGroup count queries (indexes + aggregation quirks on serverless).
+ */
+async function aggregateTotalsByUserTree(db: Firestore, userIds: string[]) {
+  let children = 0;
+  let chatSessions = 0;
+  let tasks = 0;
+  let libraryItems = 0;
+
+  for (let i = 0; i < userIds.length; i += TOTALS_USER_PARALLEL) {
+    const slice = userIds.slice(i, i + TOTALS_USER_PARALLEL);
+    const parts = await Promise.all(
+      slice.map(async (uid) => {
+        const childRefs = await db.collection('users').doc(uid).collection('children').listDocuments();
+        let cs = 0;
+        let tk = 0;
+        let lib = 0;
+        await Promise.all(
+          childRefs.map(async (cref) => {
+            const [a, b, c] = await Promise.all([
+              cref.collection('chatSessions').count().get(),
+              cref.collection('tasks').count().get(),
+              cref.collection('library').count().get(),
+            ]);
+            cs += a.data().count;
+            tk += b.data().count;
+            lib += c.data().count;
+          }),
+        );
+        return { children: childRefs.length, chatSessions: cs, tasks: tk, libraryItems: lib };
+      }),
+    );
+    for (const p of parts) {
+      children += p.children;
+      chatSessions += p.chatSessions;
+      tasks += p.tasks;
+      libraryItems += p.libraryItems;
+    }
+  }
+
+  return { children, chatSessions, tasks, libraryItems };
+}
+
 /** Shared by Express (Cloud Run) and Vercel serverless. */
 export async function buildAdminOverviewPayload(db: Firestore) {
   const dates = lastNDatesUTC(14);
   const today = dates[dates.length - 1]!;
 
-  const userIdsSnap = await db.collection('users').select().get();
-  const userIds = userIdsSnap.docs.map((d) => d.id);
-  const totalUsersCounted = userIds.length;
-
-  const [childrenCountSnap, chatSessionsSnap, tasksSnap, librarySnap, usersSample, ...dailyUsage] = await Promise.all([
-    db.collectionGroup('children').count().get(),
-    db.collectionGroup('chatSessions').count().get(),
-    db.collectionGroup('tasks').count().get(),
-    db.collectionGroup('library').count().get(),
+  const [userIdsSnap, usersSample] = await Promise.all([
+    db.collection('users').select().get(),
     db
       .collection('users')
       .select('email', 'displayName', 'tier', 'subscriptionStatus', 'lastLogin', 'uid')
       .limit(MAX_USERS_SAMPLE)
       .get(),
-    ...dates.map((d) => aggregateUsageForDateByUsers(db, d, userIds)),
   ]);
+
+  const userIds = userIdsSnap.docs.map((d) => d.id);
+  const totalUsersCounted = userIds.length;
+
+  const [totalsResolved, dailyUsageResolved] = await Promise.all([
+    aggregateTotalsByUserTree(db, userIds),
+    aggregateUsageByDays(db, dates, userIds),
+  ]);
+
+  const { children, chatSessions, tasks, libraryItems } = totalsResolved;
+
   const userDocs = usersSample.docs;
   type Tier = string;
   const tierBuckets: Record<string, number> = {};
@@ -146,7 +205,7 @@ export async function buildAdminOverviewPayload(db: Firestore) {
     return tb - ta;
   });
 
-  const todayBundle = dailyUsage[dailyUsage.length - 1]!;
+  const todayBundle = dailyUsageResolved[dailyUsageResolved.length - 1]!;
   const topToday = todayBundle.topUsers.map((row) => ({
     uid: row.uid,
     email: emailByUid.get(row.uid) ?? null,
@@ -156,12 +215,15 @@ export async function buildAdminOverviewPayload(db: Firestore) {
 
   const dailySeries = dates.map((d, i) => ({
     date: d,
-    aiChats: dailyUsage[i]!.aiChats,
-    imageAnalyses: dailyUsage[i]!.imageAnalyses,
-    activeUsers: dailyUsage[i]!.activeUsers,
+    aiChats: dailyUsageResolved[i]!.aiChats,
+    imageAnalyses: dailyUsageResolved[i]!.imageAnalyses,
+    activeUsers: dailyUsageResolved[i]!.activeUsers,
   }));
 
   const insights: string[] = [];
+  insights.push(
+    'totals: counted via users/children tree (no collectionGroup) for reliable serverless runs.',
+  );
   if (userDocs.length >= MAX_USERS_SAMPLE || totalUsersCounted > userDocs.length) {
     insights.push(
       `sampling: tier/login stats use up to ${MAX_USERS_SAMPLE} user documents; Firestore reports ${totalUsersCounted} users total.`,
@@ -189,10 +251,10 @@ export async function buildAdminOverviewPayload(db: Firestore) {
     },
     totals: {
       users: totalUsersCounted,
-      children: childrenCountSnap.data().count,
-      chatSessions: chatSessionsSnap.data().count,
-      tasks: tasksSnap.data().count,
-      libraryItems: librarySnap.data().count,
+      children,
+      chatSessions,
+      tasks,
+      libraryItems,
     },
     engagement: { withEmail, guests, activeLast7DaysInSample: activeLast7d },
     subscription: { byTier: tierBuckets, byStatus: statusBuckets },

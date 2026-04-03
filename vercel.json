@@ -4,6 +4,9 @@
   "framework": "vite",
   "regions": ["arn1"],
   "functions": {
+    "api/admin/overview.ts": {
+      "maxDuration": 120
+    },
     "api/**/*.ts": {
       "maxDuration": 60
     }
