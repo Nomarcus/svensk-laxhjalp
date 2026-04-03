@@ -11,13 +11,18 @@
     <!-- SEO: Author & Freshness -->
     <meta name="author" content="Föräldrahjälpen" />
     <meta property="article:published_time" content="2026-01-15T08:00:00Z" />
-    <meta property="article:modified_time" content="2026-03-21T10:00:00Z" />
+    <meta property="article:modified_time" content="2026-04-03T12:00:00Z" />
+
+    <!-- Google Search Console: byt YOUR_CODE mot värdet från Inställningar → Verifiering → HTML-tag -->
+    <!-- <meta name="google-site-verification" content="YOUR_CODE" /> -->
 
     <!-- SEO: Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Föräldrahjälpen — AI-driven läxhjälp för svenska föräldrar" />
     <meta property="og:description" content="Fota läxan och få den förklarad med AI. Pedagogisk hjälp kopplad till svenska läroplanen (Lgr22) för föräldrar med barn i åk 1-9." />
     <meta property="og:url" content="https://foraldrahjalpen.se/" />
+    <meta property="og:image" content="https://foraldrahjalpen.se/icon.svg" />
+    <meta property="og:image:alt" content="Föräldrahjälpen logotyp" />
     <meta property="og:site_name" content="Föräldrahjälpen" />
     <meta property="og:locale" content="sv_SE" />
 
@@ -35,12 +40,13 @@
 
     <!-- PWA -->
     <meta name="theme-color" content="#059669" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Föräldrahjälpen" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
 
     <!-- JSON-LD: Organization -->
     <script type="application/ld+json">
@@ -48,12 +54,30 @@
       "@context": "https://schema.org",
       "@type": "Organization",
       "name": "Föräldrahjälpen",
-      "url": "https://foraldrahjalpen.se",
+      "url": "https://foraldrahjalpen.se/",
+      "logo": "https://foraldrahjalpen.se/icon.svg",
       "description": "AI-driven läxhjälp för svenska föräldrar med barn i grundskolan. Pedagogiska förklaringar kopplade till läroplanen Lgr22.",
       "foundingDate": "2026",
       "areaServed": {
         "@type": "Country",
         "name": "Sweden"
+      }
+    }
+    </script>
+
+    <!-- JSON-LD: WebSite (hjälper Google koppla domän till varumärke) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Föräldrahjälpen",
+      "url": "https://foraldrahjalpen.se/",
+      "description": "AI-läxhjälp för svenska föräldrar med barn i grundskolan, kopplat till Lgr22.",
+      "inLanguage": "sv-SE",
+      "publisher": {
+        "@type": "Organization",
+        "name": "Föräldrahjälpen",
+        "url": "https://foraldrahjalpen.se/"
       }
     }
     </script>
@@ -67,7 +91,8 @@
       "applicationCategory": "EducationalApplication",
       "operatingSystem": "Web, Android, iOS",
       "description": "AI-driven läxhjälp som hjälper svenska föräldrar förklara skoluppgifter för sina barn. Stöder alla ämnen i grundskolan åk 1-9 och kopplar till läroplanen Lgr22.",
-      "url": "https://foraldrahjalpen.se",
+      "url": "https://foraldrahjalpen.se/",
+      "image": "https://foraldrahjalpen.se/icon.svg",
       "inLanguage": "sv",
       "offers": [
         {
