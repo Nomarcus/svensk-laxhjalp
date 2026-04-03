@@ -70,8 +70,43 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
 
     try {
       await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'children', id));
+      if (editingChildId === id) {
+        setEditingChildId(null);
+        setEditName('');
+        setEditGrade('');
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `children/${id}`);
+    }
+  };
+
+  const startEdit = (child: ChildWithSharing) => {
+    setIsAdding(false);
+    setSharingChildId(null);
+    setEditingChildId(child.id);
+    setEditName(child.name ?? '');
+    setEditGrade(child.grade ?? '');
+  };
+
+  const cancelEdit = () => {
+    setEditingChildId(null);
+    setEditName('');
+    setEditGrade('');
+  };
+
+  const saveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!auth.currentUser || !editingChildId || !editName.trim()) return;
+
+    try {
+      const childRef = doc(db, 'users', auth.currentUser.uid, 'children', editingChildId);
+      const patch: Record<string, unknown> = { name: editName.trim() };
+      if (editGrade.trim()) patch.grade = editGrade.trim();
+      else patch.grade = deleteField();
+      await updateDoc(childRef, patch);
+      cancelEdit();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `children/${editingChildId}`);
     }
   };
 
