@@ -21,14 +21,37 @@ const PORT = process.env.PORT || 3001;
 // CRITICAL: Stripe webhook MUST come before express.json() — needs raw body
 app.post('/webhook/stripe', express.raw({ type: 'application/json' }), stripeWebhookHandler);
 
-const allowedOrigins = process.env.ALLOWED_ORIGIN
-  ? process.env.ALLOWED_ORIGIN.split(',')
-  : ['http://localhost:3000'];
+const DEFAULT_CORS_ORIGINS = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'https://lead-agent-489101.web.app',
+  'https://foraldrahjalpen.se',
+  'https://www.foraldrahjalpen.se',
+];
 
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true,
-}));
+function corsAllowlist(): Set<string> {
+  const set = new Set(DEFAULT_CORS_ORIGINS);
+  for (const o of process.env.ALLOWED_ORIGIN?.split(',') ?? []) {
+    const t = o.trim();
+    if (t) set.add(t);
+  }
+  return set;
+}
+
+const corsAllowed = corsAllowlist();
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || corsAllowed.has(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(null, false);
+    },
+    credentials: true,
+  }),
+);
 
 app.use(express.json({ limit: '5mb' }));
 

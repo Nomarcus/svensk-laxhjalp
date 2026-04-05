@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, Clock, Construction, MessageCircle, Image, Palette, BookOpen, Sparkles, FileText } from 'lucide-react';
 import { auth } from '../firebase';
+import { apiUrl } from '../utils/apiBase';
 
 interface UsageData {
   chatCount: number;
@@ -22,7 +23,7 @@ export default function Subscription() {
       if (!user) return;
       try {
         const token = await user.getIdToken();
-        const res = await fetch('/api/billing/status', {
+        const res = await fetch(apiUrl('/api/billing/status'), {
           headers: { 'Authorization': `Bearer ${token}` },
         });
         const data = await res.json();

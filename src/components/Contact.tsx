@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Send, MessageCircle, Lightbulb, Bug } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { apiUrl } from '../utils/apiBase';
 
 export default function Contact() {
   const { t } = useTranslation();
@@ -16,7 +17,7 @@ export default function Contact() {
     setSending(true);
     setError(false);
     try {
-      const res = await fetch('/api/contact', {
+      const res = await fetch(apiUrl('/api/contact'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, message }),

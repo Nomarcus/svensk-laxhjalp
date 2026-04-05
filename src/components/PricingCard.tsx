@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Check, Crown, Zap, Star } from 'lucide-react';
 import { auth } from '../firebase';
 import { cn } from '../utils/cn';
+import { apiUrl } from '../utils/apiBase';
 import type { SubscriptionTier } from '../types';
 
 interface PricingCardProps {
@@ -23,7 +24,7 @@ export default function PricingCard({ currentTier, onUpgradeStart, onUpgradeEnd 
 
     try {
       const token = await user.getIdToken();
-      const res = await fetch(`/api/billing/create-checkout-session`, {
+      const res = await fetch(apiUrl('/api/billing/create-checkout-session'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

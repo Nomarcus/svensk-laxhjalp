@@ -1,4 +1,5 @@
 import { auth } from '../firebase';
+import { apiUrl } from '../utils/apiBase';
 
 async function getAuthToken(): Promise<string> {
   const user = auth.currentUser;
@@ -21,7 +22,7 @@ export async function requestPremiumTts(text: string, lang?: string): Promise<Re
 
 async function apiRequest(endpoint: string, body: object): Promise<any> {
   const token = await getAuthToken();
-  const response = await fetch(`/api/${endpoint}`, {
+  const response = await fetch(apiUrl(`/api/${endpoint}`), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
