@@ -597,7 +597,7 @@
     "activeUsers": "Aktiva konton",
     "analytics": {
       "title": "Användning & ämnen",
-      "subtitle": "Periodfilter (UTC). Ämnesdata från planeraren och bibliotek. AI-siffror från serverns dagliga usage-logg.",
+      "subtitle": "Periodfilter (UTC). Ämnesdata från planeraren och bibliotek. AI-siffror från serverns dagliga usage-dokument (samma fönster som grafen).",
       "range": {
         "day": "Idag",
         "week": "7 dagar",
@@ -611,7 +611,13 @@
       "kpiSessions": "Nya chatt-sessioner",
       "kpiLibrary": "Nya biblioteksposter",
       "kpiStalled": "Öppna äldre uppgifter",
-      "usageSum": "AI (usage): {{ai}} chattar · {{img}} bildanalyser (inom grafens fönster)",
+      "usageSum": "AI (usage): {{ai}} chattar · {{img}} bildanalyser · {{tts}} premium-TTS (free, inom grafens fönster)",
+      "usageLeadersTitle": "Mest AI-användning i perioden",
+      "usageLeadersHint": "Summor från usage per användare (UTC-dagar som grafen). Pro-användares TTS räknas inte i premium-TTS.",
+      "colUser": "Användare",
+      "colChats": "Chatt",
+      "colImages": "Bild",
+      "colTts": "TTS",
       "truncatedChart": "Lång period: grafen visar högst de senaste 90 UTC-dagarna.",
       "chartTitle": "AI per dag (usage, UTC)",
       "featuresMost": "Mest aktiva signaler",
@@ -636,6 +642,7 @@
       "feat": {
         "usage_ai_chats": "AI-chattar (server usage)",
         "usage_image_analysis": "Bildanalyser (server usage)",
+        "usage_premium_tts": "Premium-TTS (free, server usage)",
         "planner_tasks_new": "Nya planeringsuppgifter",
         "chat_sessions_new": "Nya chatt-sessioner",
         "library_saves": "Bibliotek (nya poster)",

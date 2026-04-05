@@ -92,6 +92,96 @@ export async function aggregateUsageByDays(db: Firestore, dates: string[], userI
   return out;
 }
 
+/** En Firestore-pass: dagliga totals, summor och topplista (samma datumfönster som AI-grafen). */
+export async function aggregateUsageForRangeDetailed(
+  db: Firestore,
+  dates: string[],
+  userIds: string[],
+): Promise<{
+  byDay: { date: string; aiChats: number; imageAnalyses: number; aiTtsCount: number }[];
+  sumAiChats: number;
+  sumImageAnalyses: number;
+  sumAiTts: number;
+  leaders: { uid: string; aiChats: number; imageAnalyses: number; aiTtsCount: number }[];
+}> {
+  const perUser = new Map<string, { aiChats: number; imageAnalyses: number; aiTtsCount: number }>();
+  for (const uid of userIds) {
+    perUser.set(uid, { aiChats: 0, imageAnalyses: 0, aiTtsCount: 0 });
+  }
+
+  const byDay: { date: string; aiChats: number; imageAnalyses: number; aiTtsCount: number }[] = [];
+  let sumAiChats = 0;
+  let sumImageAnalyses = 0;
+  let sumAiTts = 0;
+
+  if (dates.length === 0 || userIds.length === 0) {
+    return { byDay, sumAiChats, sumImageAnalyses, sumAiTts, leaders: [] };
+  }
+
+  for (let di = 0; di < dates.length; di += USAGE_DAY_PARALLEL) {
+    const slice = dates.slice(di, di + USAGE_DAY_PARALLEL);
+    const parts = await Promise.all(
+      slice.map(async (dateStr) => {
+        let dayAi = 0;
+        let dayImg = 0;
+        let dayTts = 0;
+        for (let i = 0; i < userIds.length; i += USAGE_GET_CHUNK) {
+          const chunk = userIds.slice(i, i + USAGE_GET_CHUNK);
+          if (chunk.length === 0) continue;
+          const refs = chunk.map((uid) => db.doc(`users/${uid}/usage/${dateStr}`));
+          const snaps = await db.getAll(...refs);
+          snaps.forEach((snap, j) => {
+            if (!snap.exists) return;
+            const uid = chunk[j]!;
+            const row = snap.data() || {};
+            const c = typeof row.chatCount === 'number' ? row.chatCount : 0;
+            const im = typeof row.imageCount === 'number' ? row.imageCount : 0;
+            const tts = typeof row.aiTtsCount === 'number' ? row.aiTtsCount : 0;
+            dayAi += c;
+            dayImg += im;
+            dayTts += tts;
+            const p = perUser.get(uid);
+            if (p) {
+              p.aiChats += c;
+              p.imageAnalyses += im;
+              p.aiTtsCount += tts;
+            }
+          });
+        }
+        return { dateStr, dayAi, dayImg, dayTts };
+      }),
+    );
+
+    for (const p of parts) {
+      byDay.push({
+        date: p.dateStr,
+        aiChats: p.dayAi,
+        imageAnalyses: p.dayImg,
+        aiTtsCount: p.dayTts,
+      });
+      sumAiChats += p.dayAi;
+      sumImageAnalyses += p.dayImg;
+      sumAiTts += p.dayTts;
+    }
+  }
+
+  const leaders = [...perUser.entries()]
+    .map(([uid, v]) => ({
+      uid,
+      aiChats: v.aiChats,
+      imageAnalyses: v.imageAnalyses,
+      aiTtsCount: v.aiTtsCount,
+    }))
+    .filter((x) => x.aiChats + x.imageAnalyses + x.aiTtsCount > 0)
+    .sort(
+      (a, b) =>
+        b.aiChats + b.imageAnalyses + b.aiTtsCount - (a.aiChats + a.imageAnalyses + a.aiTtsCount),
+    )
+    .slice(0, 20);
+
+  return { byDay, sumAiChats, sumImageAnalyses, sumAiTts, leaders };
+}
+
 /**
  * Sum children / chatSessions / tasks / library by walking each user's `children` subcollection.
  * Avoids collectionGroup count queries (indexes + aggregation quirks on serverless).

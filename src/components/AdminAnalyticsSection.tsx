@@ -36,7 +36,13 @@ export type AnalyticsPayload = {
     libraryItemsAdded: number;
     incompleteTasksOlderThanRange: number;
   };
-  usage: { sumAiChats: number; sumImageAnalyses: number; byDay: { date: string; aiChats: number; imageAnalyses: number }[] };
+  usage: {
+    sumAiChats: number;
+    sumImageAnalyses: number;
+    sumPremiumTts: number;
+    byDay: { date: string; aiChats: number; imageAnalyses: number }[];
+  };
+  usageLeaders: { uid: string; email: string | null; aiChats: number; imageAnalyses: number; premiumTts: number }[];
   subjects: AnalyticsSubjectRow[];
   difficulty: {
     lowCompletionSubjects: AnalyticsSubjectRow[];
@@ -153,11 +159,50 @@ export default function AdminAnalyticsSection({ t, range, onRangeChange, payload
           </div>
 
           <p className="text-sm text-stone-600 dark:text-stone-300">
-            {t('admin.analytics.usageSum', { ai: payload.usage.sumAiChats, img: payload.usage.sumImageAnalyses })}
+            {t('admin.analytics.usageSum', {
+              ai: payload.usage.sumAiChats,
+              img: payload.usage.sumImageAnalyses,
+              tts: payload.usage.sumPremiumTts,
+            })}
             {payload.usageChartTruncated && (
               <span className="block text-xs text-amber-600 dark:text-amber-400 mt-1">{t('admin.analytics.truncatedChart')}</span>
             )}
           </p>
+
+          {!payload.usageFailed && payload.usageLeaders.length > 0 && (
+            <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-stone-50/80 dark:bg-slate-800/50 p-4">
+              <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">
+                {t('admin.analytics.usageLeadersTitle')}
+              </h3>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mb-3">{t('admin.analytics.usageLeadersHint')}</p>
+              <div className="overflow-x-auto -mx-1">
+                <table className="w-full text-sm min-w-[520px]">
+                  <thead>
+                    <tr className="text-left text-stone-400 border-b border-black/5 dark:border-white/10">
+                      <th className="pb-2 pr-2 font-medium">{t('admin.analytics.colUser')}</th>
+                      <th className="pb-2 pr-2 font-medium tabular-nums">{t('admin.analytics.colChats')}</th>
+                      <th className="pb-2 pr-2 font-medium tabular-nums">{t('admin.analytics.colImages')}</th>
+                      <th className="pb-2 font-medium tabular-nums">{t('admin.analytics.colTts')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payload.usageLeaders.map((row) => (
+                      <tr key={row.uid} className="border-b border-black/5 dark:border-white/5 last:border-0">
+                        <td className="py-2 pr-2 text-stone-800 dark:text-stone-200">
+                          <span className="block truncate max-w-[240px]" title={row.uid}>
+                            {row.email || row.uid}
+                          </span>
+                        </td>
+                        <td className="py-2 pr-2 tabular-nums text-stone-600 dark:text-stone-300">{row.aiChats}</td>
+                        <td className="py-2 pr-2 tabular-nums text-stone-600 dark:text-stone-300">{row.imageAnalyses}</td>
+                        <td className="py-2 tabular-nums text-stone-600 dark:text-stone-300">{row.premiumTts}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {!payload.usageFailed && payload.usage.byDay.length > 0 && (
             <div>

@@ -597,7 +597,7 @@
     "activeUsers": "Active accounts",
     "analytics": {
       "title": "Usage & subjects",
-      "subtitle": "Period filter (UTC). Subjects from planner + library. AI figures from daily server usage logs.",
+      "subtitle": "Period filter (UTC). Subjects from planner + library. AI figures from daily server usage docs (same window as the chart).",
       "range": {
         "day": "Today",
         "week": "7 days",
@@ -611,7 +611,13 @@
       "kpiSessions": "New chat sessions",
       "kpiLibrary": "New library items",
       "kpiStalled": "Open older tasks",
-      "usageSum": "AI (usage): {{ai}} chats · {{img}} image analyses (within chart window)",
+      "usageSum": "AI (usage): {{ai}} chats · {{img}} image analyses · {{tts}} premium TTS (free tier, within chart window)",
+      "usageLeadersTitle": "Top AI usage in period",
+      "usageLeadersHint": "Per-user sums from usage (UTC days covered by the chart). Pro users’ TTS is not counted in premium TTS.",
+      "colUser": "User",
+      "colChats": "Chat",
+      "colImages": "Image",
+      "colTts": "TTS",
       "truncatedChart": "Long range: chart shows at most the last 90 UTC days.",
       "chartTitle": "AI per day (usage, UTC)",
       "featuresMost": "Strongest signals",
@@ -636,6 +642,7 @@
       "feat": {
         "usage_ai_chats": "AI chats (server usage)",
         "usage_image_analysis": "Image analyses (server usage)",
+        "usage_premium_tts": "Premium TTS (free, server usage)",
         "planner_tasks_new": "New planner tasks",
         "chat_sessions_new": "New chat sessions",
         "library_saves": "Library (new items)",

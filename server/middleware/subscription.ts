@@ -40,7 +40,30 @@ export async function subscriptionMiddleware(
 
     req.tier = tier as 'free' | 'pro';
 
+    const today = new Date().toISOString().split('T')[0];
+    const usageRef = getServerFirestore().doc(`users/${req.uid}/usage/${today}`);
+
+    const recordChatUsage = async (): Promise<void> => {
+      if (req.path !== '/chat') return;
+      const chatHasImage =
+        Boolean(req.body?.imageBase64)
+        || (Array.isArray(req.body?.imageBase64s) && req.body.imageBase64s.length > 0);
+      const field = chatHasImage ? 'imageCount' : 'chatCount';
+      await usageRef.set(
+        {
+          [field]: admin.firestore.FieldValue.increment(1),
+          lastUpdated: new Date().toISOString(),
+        },
+        { merge: true },
+      );
+    };
+
     if (!enforceSubscriptionLimits()) {
+      try {
+        await recordChatUsage();
+      } catch (e) {
+        console.error('Subscription usage log (no enforce):', e instanceof Error ? e.message : e);
+      }
       next();
       return;
     }
@@ -49,9 +72,6 @@ export async function subscriptionMiddleware(
       next();
       return;
     }
-
-    const today = new Date().toISOString().split('T')[0];
-    const usageRef = getServerFirestore().doc(`users/${req.uid}/usage/${today}`);
     const usageDoc = await usageRef.get();
     const usage = usageDoc.data() || { chatCount: 0, imageCount: 0 };
 

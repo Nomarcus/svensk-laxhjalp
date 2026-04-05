@@ -84,7 +84,7 @@ export default async function handler(req: any, res: any) {
 
     const audio = await synthesizeMp3(apiKey, plain, typeof lang === 'string' ? lang : 'sv');
 
-    if (enforceSubscriptionLimits() && !pro) {
+    if (!pro) {
       await usageRef.set(
         {
           aiTtsCount: admin.firestore.FieldValue.increment(1),

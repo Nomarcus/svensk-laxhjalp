@@ -67,7 +67,7 @@ router.post('/tts', async (req: AuthenticatedRequest, res: Response) => {
 
     const audio = await synthesizeMp3(apiKey, plain, typeof lang === 'string' ? lang : 'sv');
 
-    if (enforceSubscriptionLimits() && !pro) {
+    if (!pro) {
       await usageRef.set(
         {
           aiTtsCount: admin.firestore.FieldValue.increment(1),

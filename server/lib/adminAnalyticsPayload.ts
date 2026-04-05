@@ -1,5 +1,27 @@
 import type { Firestore } from 'firebase-admin/firestore';
-import { aggregateUsageByDays } from './adminOverviewPayload';
+import { aggregateUsageForRangeDetailed } from './adminOverviewPayload';
+
+const EMAIL_GET_CHUNK = 15;
+
+async function loadUserEmails(db: Firestore, uids: string[]): Promise<Map<string, string | null>> {
+  const out = new Map<string, string | null>();
+  for (let i = 0; i < uids.length; i += EMAIL_GET_CHUNK) {
+    const chunk = uids.slice(i, i + EMAIL_GET_CHUNK);
+    if (chunk.length === 0) continue;
+    const snaps = await db.getAll(...chunk.map((uid) => db.doc(`users/${uid}`)));
+    snaps.forEach((snap, j) => {
+      const uid = chunk[j]!;
+      if (!snap.exists) {
+        out.set(uid, null);
+        return;
+      }
+      const row = snap.data() || {};
+      const email = typeof row.email === 'string' ? row.email : null;
+      out.set(uid, email);
+    });
+  }
+  return out;
+}
 
 const MAX_ANALYTICS_USERS = 120;
 const USER_PARALLEL = 2;
@@ -262,18 +284,37 @@ export async function buildAdminAnalyticsPayload(db: Firestore, presetRaw: strin
   let usageByDay: { date: string; aiChats: number; imageAnalyses: number }[] = [];
   let usageSumAi = 0;
   let usageSumImg = 0;
+  let usageSumTts = 0;
+  let usageLeaders: {
+    uid: string;
+    email: string | null;
+    aiChats: number;
+    imageAnalyses: number;
+    premiumTts: number;
+  }[] = [];
   let usageFailed = false;
 
   try {
-    const usageBatches = await aggregateUsageByDays(db, usageDates, userIds);
-    usageByDay = usageDates.map((date, i) => {
-      const row = usageBatches[i]!;
-      return { date, aiChats: row.aiChats, imageAnalyses: row.imageAnalyses };
-    });
-    for (const row of usageByDay) {
-      usageSumAi += row.aiChats;
-      usageSumImg += row.imageAnalyses;
-    }
+    const detailed = await aggregateUsageForRangeDetailed(db, usageDates, userIds);
+    usageByDay = detailed.byDay.map((d) => ({
+      date: d.date,
+      aiChats: d.aiChats,
+      imageAnalyses: d.imageAnalyses,
+    }));
+    usageSumAi = detailed.sumAiChats;
+    usageSumImg = detailed.sumImageAnalyses;
+    usageSumTts = detailed.sumAiTts;
+    const emails = await loadUserEmails(
+      db,
+      detailed.leaders.map((l) => l.uid),
+    );
+    usageLeaders = detailed.leaders.map((l) => ({
+      uid: l.uid,
+      email: emails.get(l.uid) ?? null,
+      aiChats: l.aiChats,
+      imageAnalyses: l.imageAnalyses,
+      premiumTts: l.aiTtsCount,
+    }));
   } catch (e) {
     usageFailed = true;
     console.error('admin analytics usage:', e);
@@ -317,6 +358,7 @@ export async function buildAdminAnalyticsPayload(db: Firestore, presetRaw: strin
   const featureCandidates = [
     { id: 'usage_ai_chats', count: usageSumAi },
     { id: 'usage_image_analysis', count: usageSumImg },
+    { id: 'usage_premium_tts', count: usageSumTts },
     { id: 'planner_tasks_new', count: tasksInRange },
     { id: 'chat_sessions_new', count: chatSessionsInRange },
     { id: 'library_saves', count: libraryInRange },
@@ -331,6 +373,7 @@ export async function buildAdminAnalyticsPayload(db: Firestore, presetRaw: strin
   const featuresLeast = [...featureCandidates].reverse().filter((f) => f.count > 0).slice(0, 5);
 
   const notes: string[] = [
+    'Servern loggar AI-chatt, bildanalys och premium-TTS (endast free) i users/{uid}/usage/{YYYY-MM-DD} vid varje lyckat anrop — även när abonnemangsgränser är av.',
     'Uppgifter räknas om de har createdAt inom perioden (ISO-sträng eller Firestore-tid). Äldre uppgifter utan datum syns inte i periodfilter.',
     'Ämnesfördelning: planeringsuppgifter + biblioteksposter (ämnesfält).',
     'Låg slutförandegrad och låg självrapporterad progress tolkas som möjliga "svåra" områden — inte samma sak som användarfeedback.',
@@ -365,8 +408,10 @@ export async function buildAdminAnalyticsPayload(db: Firestore, presetRaw: strin
     usage: {
       sumAiChats: usageSumAi,
       sumImageAnalyses: usageSumImg,
+      sumPremiumTts: usageSumTts,
       byDay: usageByDay,
     },
+    usageLeaders,
     subjects: subjectRows,
     difficulty: {
       lowCompletionSubjects: subjectsStruggling,
