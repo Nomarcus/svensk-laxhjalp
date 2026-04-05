@@ -42,6 +42,7 @@ export default async function handler(req: { method?: string; query?: { range?: 
       return res.status(401).json({ error: 'Ogiltig session.', code: e.code });
     }
     console.error('Admin analytics error:', e?.message ?? '', err);
-    return res.status(500).json({ error: 'Admin analytics failed.' });
+    const msg = err instanceof Error ? err.message : String(err);
+    return res.status(500).json({ error: 'Admin analytics failed.', detail: msg.slice(0, 500) });
   }
 }

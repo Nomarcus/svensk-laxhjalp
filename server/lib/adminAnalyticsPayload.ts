@@ -1,8 +1,10 @@
 import type { Firestore } from 'firebase-admin/firestore';
 import { aggregateUsageByDays } from './adminOverviewPayload';
 
-const MAX_ANALYTICS_USERS = 300;
-const USER_PARALLEL = 3;
+const MAX_ANALYTICS_USERS = 120;
+const USER_PARALLEL = 2;
+/** Undvik enorma läsningar om något konto har väldigt mycket data. */
+const MAX_DOCS_PER_CHILD_COLLECTION = 2500;
 
 export type AnalyticsPreset = 'day' | 'week' | 'month' | 'year' | 'all';
 
@@ -153,27 +155,29 @@ export async function buildAdminAnalyticsPayload(db: Firestore, presetRaw: strin
   let gExamPrep = 0;
 
   async function processUser(uid: string) {
-    const childRefs = await db.collection('users').doc(uid).collection('children').listDocuments();
-    for (const cref of childRefs) {
-      const [tasksSnap, libSnap, sessSnap] = await Promise.all([
-        cref
-          .collection('tasks')
-          .select(
-            'subject',
-            'createdAt',
-            'completed',
-            'taskType',
-            'imageUrl',
-            'imageUrls',
-            'linkedChatSessionId',
-            'aiNotes',
-            'examPrepContent',
-            'progressPercent',
-          )
-          .get(),
-        cref.collection('library').select('subject', 'createdAt').get(),
-        cref.collection('chatSessions').select('createdAt').get(),
-      ]);
+    try {
+      const childRefs = await db.collection('users').doc(uid).collection('children').listDocuments();
+      for (const cref of childRefs) {
+        const [tasksSnap, libSnap, sessSnap] = await Promise.all([
+          cref
+            .collection('tasks')
+            .select(
+              'subject',
+              'createdAt',
+              'completed',
+              'taskType',
+              'imageUrl',
+              'imageUrls',
+              'linkedChatSessionId',
+              'aiNotes',
+              'examPrepContent',
+              'progressPercent',
+            )
+            .limit(MAX_DOCS_PER_CHILD_COLLECTION)
+            .get(),
+          cref.collection('library').select('subject', 'createdAt').limit(MAX_DOCS_PER_CHILD_COLLECTION).get(),
+          cref.collection('chatSessions').select('createdAt').limit(MAX_DOCS_PER_CHILD_COLLECTION).get(),
+        ]);
 
       for (const doc of tasksSnap.docs) {
         const r = doc.data() as Record<string, unknown>;
@@ -243,6 +247,9 @@ export async function buildAdminAnalyticsPayload(db: Firestore, presetRaw: strin
         if (t == null || t < start.getTime() || t > end.getTime()) continue;
         chatSessionsInRange += 1;
       }
+    }
+    } catch (err) {
+      console.error('admin analytics processUser:', uid, err instanceof Error ? err.message : err);
     }
   }
 
@@ -337,6 +344,9 @@ export async function buildAdminAnalyticsPayload(db: Firestore, presetRaw: strin
   if (usersSnap.size > MAX_ANALYTICS_USERS) {
     notes.push(`Analysen begränsas till ${MAX_ANALYTICS_USERS} användare (id-ordning) av ${usersSnap.size} totalt.`);
   }
+  notes.push(
+    `Högst ${MAX_DOCS_PER_CHILD_COLLECTION} dokument per barn och underkollektion (tasks/library/chatSessions) räknas — vid extremt mycket data är siffror ett urval.`,
+  );
 
   return {
     preset,

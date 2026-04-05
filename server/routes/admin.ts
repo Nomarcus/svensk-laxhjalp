@@ -40,8 +40,9 @@ router.get('/admin/analytics', async (req: AuthenticatedRequest, res: Response) 
     const payload = await buildAdminAnalyticsPayload(db, range);
     res.json(payload);
   } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
     console.error('Admin analytics error:', err);
-    res.status(500).json({ error: 'Admin analytics failed.' });
+    res.status(500).json({ error: 'Admin analytics failed.', detail: msg.slice(0, 500) });
   }
 });
 

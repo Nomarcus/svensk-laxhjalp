@@ -113,6 +113,8 @@ export default function Admin({ standalone }: AdminProps) {
   const [analytics, setAnalytics] = useState<AnalyticsPayload | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [analyticsErr, setAnalyticsErr] = useState<string | null>(null);
+  /** Ladda analys efter översikt så vi inte slår API med två tunga anrop samtidigt (Cloud Run-timeout). */
+  const [overviewReady, setOverviewReady] = useState(false);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, setAuthUser);
@@ -173,7 +175,17 @@ export default function Admin({ standalone }: AdminProps) {
         return;
       }
       if (!res.ok) {
-        setAnalyticsErr(t('admin.analytics.loadError'));
+        const text = await res.text();
+        let msg = t('admin.analytics.loadError');
+        try {
+          const j = JSON.parse(text) as { detail?: string };
+          if (typeof j.detail === 'string' && j.detail.trim()) {
+            msg = `${msg} (${j.detail.trim()})`;
+          }
+        } catch {
+          /* ignore */
+        }
+        setAnalyticsErr(msg);
         setAnalytics(null);
         return;
       }
@@ -193,15 +205,17 @@ export default function Admin({ standalone }: AdminProps) {
       setErr(null);
       setForbidden(false);
       setAnalytics(null);
+      setOverviewReady(false);
       return;
     }
-    void load();
+    setOverviewReady(false);
+    void load().finally(() => setOverviewReady(true));
   }, [authUser, load]);
 
   useEffect(() => {
-    if (!authUser) return;
+    if (!authUser || !overviewReady) return;
     void loadAnalytics();
-  }, [authUser, loadAnalytics]);
+  }, [authUser, overviewReady, analyticsRange, loadAnalytics]);
 
   const mapLoginError = useCallback(
     (code: string) => {

@@ -13,7 +13,7 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "deploy:hosting": "npm run build && firebase deploy --only hosting",
-    "deploy:api": "gcloud run deploy laxhjalp-api --source . --region europe-west1 --project lead-agent-489101 --allow-unauthenticated --min-instances 0 --max-instances 2",
+    "deploy:api": "gcloud run deploy laxhjalp-api --source . --region europe-west1 --project lead-agent-489101 --allow-unauthenticated --min-instances 0 --max-instances 2 --timeout=120",
     "deploy": "npm run deploy:hosting && npm run deploy:api"
   },
   "dependencies": {

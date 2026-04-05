@@ -66,6 +66,7 @@ const limiter = rateLimit({
   message: { error: 'För många förfrågningar. Försök igen om en minut.' },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => (req.originalUrl || req.url || '').includes('/admin/'),
 });
 
 app.use('/api', limiter);

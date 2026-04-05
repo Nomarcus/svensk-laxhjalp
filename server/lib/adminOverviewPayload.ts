@@ -51,8 +51,13 @@ export async function aggregateUsageForDateByUsers(db: Firestore, dateStr: strin
   let imageAnalyses = 0;
   const perUser: { uid: string; aiChats: number; imageAnalyses: number }[] = [];
 
+  if (userIds.length === 0) {
+    return { aiChats: 0, imageAnalyses: 0, activeUsers: 0, topUsers: [] };
+  }
+
   for (let i = 0; i < userIds.length; i += USAGE_GET_CHUNK) {
     const chunk = userIds.slice(i, i + USAGE_GET_CHUNK);
+    if (chunk.length === 0) continue;
     const refs = chunk.map((uid) => db.doc(`users/${uid}/usage/${dateStr}`));
     const snaps = await db.getAll(...refs);
     snaps.forEach((snap, j) => {
@@ -78,6 +83,7 @@ export async function aggregateUsageForDateByUsers(db: Firestore, dateStr: strin
 
 export async function aggregateUsageByDays(db: Firestore, dates: string[], userIds: string[]) {
   const out: Awaited<ReturnType<typeof aggregateUsageForDateByUsers>>[] = [];
+  if (dates.length === 0) return out;
   for (let i = 0; i < dates.length; i += USAGE_DAY_PARALLEL) {
     const slice = dates.slice(i, i + USAGE_DAY_PARALLEL);
     const batch = await Promise.all(slice.map((d) => aggregateUsageForDateByUsers(db, d, userIds)));
