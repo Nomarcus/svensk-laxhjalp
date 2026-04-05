@@ -1,10 +1,13 @@
-import type { Firestore } from 'firebase-admin/firestore';
+import type { CollectionReference, Firestore } from 'firebase-admin/firestore';
+import { FieldPath } from 'firebase-admin/firestore';
 
 const MAX_USERS_SAMPLE = 2500;
 /** keep getAll batches small (Cloud Run + Firestore client pool ~100 concurrent ops). */
 const USAGE_GET_CHUNK = 15;
 /** Few users in parallel; each user processes children one-by-one to avoid burst. */
 const TOTALS_USER_PARALLEL = 3;
+/** Samma tak som admin analytics; undvik count()-aggregate som kan fallera på vissa Firestore-DB. */
+const TOTALS_MAX_DOCS_PER_SUBCOL = 2500;
 /** Run usage-by-day in small waves to reduce Firestore burst + timeouts. */
 const USAGE_DAY_PARALLEL = 2;
 
@@ -183,14 +186,26 @@ export async function aggregateUsageForRangeDetailed(
 }
 
 /**
+ * Räkna dokument utan count()-aggregate (aggregate kan fallera på vissa namngivna Firestore-DB / äldre index).
+ * Läser bara dokument-id upp till cap+1 för att se om tak nås.
+ */
+async function boundedSubcollectionCount(col: CollectionReference): Promise<{ n: number; capped: boolean }> {
+  const cap = TOTALS_MAX_DOCS_PER_SUBCOL;
+  const snap = await col.select(FieldPath.documentId()).limit(cap + 1).get();
+  const size = snap.size;
+  if (size <= cap) return { n: size, capped: false };
+  return { n: cap, capped: true };
+}
+
+/**
  * Sum children / chatSessions / tasks / library by walking each user's `children` subcollection.
- * Avoids collectionGroup count queries (indexes + aggregation quirks on serverless).
  */
 async function aggregateTotalsByUserTree(db: Firestore, userIds: string[]) {
   let children = 0;
   let chatSessions = 0;
   let tasks = 0;
   let libraryItems = 0;
+  let totalsCapped = false;
 
   for (let i = 0; i < userIds.length; i += TOTALS_USER_PARALLEL) {
     const slice = userIds.slice(i, i + TOTALS_USER_PARALLEL);
@@ -200,17 +215,25 @@ async function aggregateTotalsByUserTree(db: Firestore, userIds: string[]) {
         let cs = 0;
         let tk = 0;
         let lib = 0;
+        let userCapped = false;
         for (const cref of childRefs) {
           const [a, b, c] = await Promise.all([
-            cref.collection('chatSessions').count().get(),
-            cref.collection('tasks').count().get(),
-            cref.collection('library').count().get(),
+            boundedSubcollectionCount(cref.collection('chatSessions')),
+            boundedSubcollectionCount(cref.collection('tasks')),
+            boundedSubcollectionCount(cref.collection('library')),
           ]);
-          cs += Number(a.data().count ?? 0);
-          tk += Number(b.data().count ?? 0);
-          lib += Number(c.data().count ?? 0);
+          if (a.capped || b.capped || c.capped) userCapped = true;
+          cs += a.n;
+          tk += b.n;
+          lib += c.n;
         }
-        return { children: childRefs.length, chatSessions: cs, tasks: tk, libraryItems: lib };
+        return {
+          children: childRefs.length,
+          chatSessions: cs,
+          tasks: tk,
+          libraryItems: lib,
+          capped: userCapped,
+        };
       }),
     );
     for (const p of parts) {
@@ -218,10 +241,11 @@ async function aggregateTotalsByUserTree(db: Firestore, userIds: string[]) {
       chatSessions += p.chatSessions;
       tasks += p.tasks;
       libraryItems += p.libraryItems;
+      if (p.capped) totalsCapped = true;
     }
   }
 
-  return { children, chatSessions, tasks, libraryItems };
+  return { children, chatSessions, tasks, libraryItems, totalsCapped };
 }
 
 function emptyDailyUsageRow() {
@@ -250,7 +274,13 @@ export async function buildAdminOverviewPayload(db: Firestore) {
   const userIds = userIdsSnap.docs.map((d) => d.id);
   const totalUsersCounted = userIds.length;
 
-  let totalsResolved = { children: 0, chatSessions: 0, tasks: 0, libraryItems: 0 };
+  let totalsResolved = {
+    children: 0,
+    chatSessions: 0,
+    tasks: 0,
+    libraryItems: 0,
+    totalsCapped: false,
+  };
   let dailyUsageResolved: Awaited<ReturnType<typeof aggregateUsageByDays>> = dates.map(() => emptyDailyUsageRow());
   let totalsFailed = false;
   let usageFailed = false;
@@ -274,7 +304,7 @@ export async function buildAdminOverviewPayload(db: Firestore) {
     })(),
   ]);
 
-  const { children, chatSessions, tasks, libraryItems } = totalsResolved;
+  const { children, chatSessions, tasks, libraryItems, totalsCapped } = totalsResolved;
 
   const userDocs = usersSample.docs;
   type Tier = string;
@@ -350,6 +380,11 @@ export async function buildAdminOverviewPayload(db: Firestore) {
   if (totalsFailed) {
     insights.push(
       'totals failed server-side — see Cloud Run / Vercel logs. Om du kör foraldrahjalpen.se: deploya om API med npm run deploy:api (Hosting skickar /api till Cloud Run).',
+    );
+  }
+  if (!totalsFailed && totalsCapped) {
+    insights.push(
+      `totals: minst en barn-underkollektion har fler än ${TOTALS_MAX_DOCS_PER_SUBCOL} dokument — översiktssiffror är avkapade till det taket (samma som analytics).`,
     );
   }
   if (usageFailed) {
