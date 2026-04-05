@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Activity,
   AlertCircle,
+  ArrowLeft,
   BookOpen,
   Calendar,
+  Eye,
+  EyeOff,
   ImageIcon,
   MessageSquare,
   RefreshCw,
@@ -12,8 +16,10 @@ import {
   Layers,
   Lightbulb,
 } from 'lucide-react';
-import { auth } from '../firebase';
+import { auth, onAuthStateChanged, signInWithEmail, type User } from '../firebase';
 import { cn } from '../utils/cn';
+import { apiUrl } from '../utils/apiBase';
+import { OPERATOR_ADMIN_EMAIL } from '../utils/adminClient';
 
 type OverviewPayload = {
   generatedAt: string;
@@ -88,12 +94,25 @@ function fmtDate(iso: string | null) {
   }
 }
 
-export default function Admin() {
+type AdminProps = { standalone?: boolean };
+
+export default function Admin({ standalone }: AdminProps) {
   const { t } = useTranslation();
+  const [authUser, setAuthUser] = useState<User | null>(() => auth.currentUser);
   const [data, setData] = useState<OverviewPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
+  const [loginEmail, setLoginEmail] = useState(OPERATOR_ADMIN_EMAIL);
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginErr, setLoginErr] = useState('');
+  const [loginBusy, setLoginBusy] = useState(false);
+  const [showPw, setShowPw] = useState(false);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, setAuthUser);
+    return unsub;
+  }, []);
 
   const load = useCallback(async () => {
     setErr(null);
@@ -102,12 +121,12 @@ export default function Admin() {
     try {
       const user = auth.currentUser;
       if (!user) {
-        setErr(t('admin.notSignedIn'));
+        setData(null);
         setLoading(false);
         return;
       }
       const token = await user.getIdToken();
-      const res = await fetch('/api/admin/overview', {
+      const res = await fetch(apiUrl('/api/admin/overview'), {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 403) {
@@ -131,8 +150,48 @@ export default function Admin() {
   }, [t]);
 
   useEffect(() => {
+    if (!authUser) {
+      setData(null);
+      setLoading(false);
+      setErr(null);
+      setForbidden(false);
+      return;
+    }
     void load();
-  }, [load]);
+  }, [authUser, load]);
+
+  const mapLoginError = useCallback(
+    (code: string) => {
+      const map: Record<string, string> = {
+        'auth/invalid-email': t('authErrors.invalidEmail'),
+        'auth/user-not-found': t('authErrors.userNotFound'),
+        'auth/wrong-password': t('authErrors.wrongPassword'),
+        'auth/invalid-credential': t('authErrors.invalidCredential'),
+        'auth/too-many-requests': t('authErrors.tooManyRequests'),
+        'auth/operation-not-allowed': t('authErrors.providerNotEnabled'),
+      };
+      return map[code] || t('admin.loginErrorGeneric');
+    },
+    [t],
+  );
+
+  const handleOperatorLogin = async (e: FormEvent) => {
+    e.preventDefault();
+    setLoginErr('');
+    setLoginBusy(true);
+    try {
+      await signInWithEmail(loginEmail.trim(), loginPassword);
+    } catch (err: unknown) {
+      const code = err && typeof err === 'object' && 'code' in err ? String((err as { code?: string }).code) : '';
+      setLoginErr(mapLoginError(code));
+    } finally {
+      setLoginBusy(false);
+    }
+  };
+
+  const leaveStandalone = () => {
+    window.location.replace(window.location.pathname || '/');
+  };
 
   const chartMax = useMemo(() => {
     if (!data) return 1;
@@ -146,6 +205,76 @@ export default function Admin() {
     if (!data) return [];
     return Object.entries(data.subscription.byTier).sort((a, b) => b[1] - a[1]);
   }, [data]);
+
+  if (!authUser) {
+    const shell = standalone ? 'min-h-screen' : 'flex-1';
+    return (
+      <div className={`${shell} overflow-y-auto p-4 md:p-8 bg-[#F5F5F0] dark:bg-slate-950 flex flex-col`}>
+        <div className="max-w-md w-full mx-auto my-auto">
+          {standalone && (
+            <button
+              type="button"
+              onClick={leaveStandalone}
+              className="inline-flex items-center gap-2 text-sm text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 mb-6"
+            >
+              <ArrowLeft size={16} />
+              {t('admin.leaveOperatorGate')}
+            </button>
+          )}
+          <div className="rounded-3xl border border-black/5 dark:border-white/10 bg-white dark:bg-slate-900 p-8 shadow-sm">
+            <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-2">
+              {t('admin.badge')}
+            </p>
+            <h1 className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 mb-1">{t('admin.loginTitle')}</h1>
+            <p className="text-sm text-stone-500 dark:text-stone-400 mb-6">{t('admin.loginSubtitle')}</p>
+            {loginErr && (
+              <div className="mb-4 rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm text-red-800 dark:text-red-200">
+                {loginErr}
+              </div>
+            )}
+            <form onSubmit={(e) => void handleOperatorLogin(e)} className="space-y-4">
+              <input
+                type="email"
+                autoComplete="username"
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                required
+                className="w-full px-4 py-3 rounded-xl border border-stone-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-stone-800 dark:text-stone-100 outline-none focus:ring-2 focus:ring-emerald-200 dark:focus:ring-emerald-900/50"
+                placeholder={t('admin.loginEmail')}
+              />
+              <div className="relative">
+                <input
+                  type={showPw ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 pr-12 rounded-xl border border-stone-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-stone-800 dark:text-stone-100 outline-none focus:ring-2 focus:ring-emerald-200 dark:focus:ring-emerald-900/50"
+                  placeholder={t('admin.loginPassword')}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 p-1"
+                  aria-label={showPw ? 'Hide' : 'Show'}
+                >
+                  {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              <button
+                type="submit"
+                disabled={loginBusy}
+                className="w-full py-3 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+              >
+                {loginBusy ? t('auth.waiting') : t('admin.loginSubmit')}
+              </button>
+            </form>
+            <p className="mt-6 text-xs text-stone-400 dark:text-stone-500 leading-relaxed">{t('admin.loginHint')}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (forbidden) {
     return (

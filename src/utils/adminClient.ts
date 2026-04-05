@@ -1,6 +1,9 @@
+/** Same e-post som ska sättas som ADMIN_EMAIL på Cloud Run (utan VITE_* i bygget). */
+export const OPERATOR_ADMIN_EMAIL = 'nomarcus@hotmail.com';
+
 /**
- * Show Admin nav only for the sole admin (mirror server: VITE_ADMIN_UID and/or VITE_ADMIN_EMAIL).
- * If both are set, both must match. Real auth is on /api/admin.
+ * Visa Admin i menyn: VITE_ADMIN_UID / VITE_ADMIN_EMAIL om satta, annars inloggad operatör (OPERATOR_ADMIN_EMAIL).
+ * Verifiering sker på servern (/api/admin).
  */
 export function shouldShowAdminNav(
   uid: string | null | undefined,
@@ -16,5 +19,5 @@ export function shouldShowAdminNav(
   }
   if (viteUid) return Boolean(uid && uid === viteUid);
   if (viteEmail) return Boolean(email && email.toLowerCase() === viteEmail);
-  return false;
+  return Boolean(email && email.toLowerCase() === OPERATOR_ADMIN_EMAIL.toLowerCase());
 }

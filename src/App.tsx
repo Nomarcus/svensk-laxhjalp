@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { auth, onAuthStateChanged, User, db, OperationType, handleFirestoreError } from './firebase';
 import { doc, setDoc, serverTimestamp, collection, onSnapshot, query, orderBy, collectionGroup, where } from 'firebase/firestore';
@@ -74,6 +74,14 @@ export default function App() {
       applyHomeSeo();
     }
   }, [user, routePath]);
+
+  useLayoutEffect(() => {
+    if (!user) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('admin') !== '1') return;
+    setActiveTab('admin');
+    window.history.replaceState({}, '', window.location.pathname || '/');
+  }, [user]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -239,6 +247,9 @@ export default function App() {
   }
 
   if (!user) {
+    if (new URLSearchParams(window.location.search).get('admin') === '1') {
+      return <Admin standalone />;
+    }
     return (
       <Auth
         dark={dark}
