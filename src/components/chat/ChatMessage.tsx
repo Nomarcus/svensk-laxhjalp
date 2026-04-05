@@ -232,7 +232,9 @@ export default function ChatMessage({
                 </div>
               ) : (
                 <button
+                  type="button"
                   onClick={speechState.onSpeak}
+                  title={t('chat.listenHint')}
                   className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors px-2 py-1 rounded-md"
                 >
                   <Volume2 size={12} />

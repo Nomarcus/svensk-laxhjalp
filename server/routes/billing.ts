@@ -132,7 +132,7 @@ router.get('/billing/status', async (req: AuthenticatedRequest, res: Response) =
     // Get today's usage
     const today = new Date().toISOString().split('T')[0];
     const usageDoc = await admin.firestore().doc(`users/${uid}/usage/${today}`).get();
-    const usage = usageDoc.data() || { chatCount: 0, imageCount: 0 };
+    const usage = usageDoc.data() || { chatCount: 0, imageCount: 0, aiTtsCount: 0 };
 
     res.json({
       tier: data.tier || 'free',
@@ -142,6 +142,7 @@ router.get('/billing/status', async (req: AuthenticatedRequest, res: Response) =
       usage: {
         chatCount: usage.chatCount || 0,
         imageCount: usage.imageCount || 0,
+        aiTtsCount: usage.aiTtsCount || 0,
       },
     });
   } catch (error: any) {

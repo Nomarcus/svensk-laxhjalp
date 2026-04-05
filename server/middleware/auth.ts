@@ -14,6 +14,7 @@ if (!admin.apps.length) {
 }
 
 export interface AuthenticatedRequest extends Request {
+  /** Endast denna uid får användas för Firestore-sökvägar som users/{uid}/… — aldrig userId från klient-body. */
   uid?: string;
   email?: string;
 }

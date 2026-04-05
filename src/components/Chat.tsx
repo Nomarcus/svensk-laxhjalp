@@ -364,6 +364,20 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
           </div>
         )}
 
+        {speech.ttsNotice && (
+          <div className="max-w-3xl mx-auto mb-4 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/50 rounded-2xl text-amber-900 dark:text-amber-100 text-sm flex items-center justify-between gap-3">
+            <span>{speech.ttsNotice}</span>
+            <button
+              type="button"
+              onClick={() => speech.clearTtsNotice()}
+              className="p-1 shrink-0 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg"
+              aria-label={t('chat.dismissVoiceNotice')}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
+
         {messages.length === 0 && !loading ? (
           <ChatEmptyState childName={childName} onSendStarter={sendMessage} />
         ) : (
@@ -401,7 +415,7 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
                   isPaused: speech.isPaused,
                   currentChunk: speech.currentChunk,
                   totalChunks: speech.totalChunks,
-                  onSpeak: () => { speech.speak(msg.content, i18n.language); setSpeakingMessageId(msg.id); },
+                  onSpeak: () => { speech.stop(); setSpeakingMessageId(msg.id); void speech.speak(msg.content, i18n.language); },
                   onPause: speech.pause,
                   onResume: speech.resume,
                   onNext: speech.next,
@@ -411,7 +425,7 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
                   isPaused: false,
                   currentChunk: 0,
                   totalChunks: 0,
-                  onSpeak: () => { speech.stop(); speech.speak(msg.content, i18n.language); setSpeakingMessageId(msg.id); },
+                  onSpeak: () => { speech.stop(); setSpeakingMessageId(msg.id); void speech.speak(msg.content, i18n.language); },
                   onPause: speech.pause,
                   onResume: speech.resume,
                   onNext: speech.next,

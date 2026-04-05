@@ -213,7 +213,11 @@
     "pause": "Paus",
     "resume": "Fortsätt",
     "nextChunk": "Nästa",
-    "chunkProgress": "Stycke {{current}} av {{total}}"
+    "chunkProgress": "Stycke {{current}} av {{total}}",
+    "listenHint": "Använder först Google-neural röst när det finns kvar (1/dag gratis, obegränsat med Pro), annars webbläsarens uppläsning.",
+    "aiVoiceDailyUsed": "Din gratis AI-röst för idag är redan använd — vi läser upp med webbläsarens röst istället.",
+    "noSpeechInBrowser": "Webbläsaren har ingen inbyggd uppläsning här, och AI-rösten för idag är förbrukad.",
+    "dismissVoiceNotice": "Stäng"
   },
   "chatEmpty": {
     "helpWith": "Hjälp {{name}} med läxan",

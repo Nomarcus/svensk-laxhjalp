@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { requestPremiumTts } from '../services/geminiService';
 
 const LANG_MAP: Record<string, string> = {
   sv: 'sv-SE',
@@ -8,19 +10,19 @@ const LANG_MAP: Record<string, string> = {
 
 function stripMarkdown(text: string): string {
   return text
-    .replace(/#{1,6}\s+/g, '')       // headings
-    .replace(/\*\*(.+?)\*\*/g, '$1') // bold
-    .replace(/\*(.+?)\*/g, '$1')     // italic
-    .replace(/_(.+?)_/g, '$1')       // italic underscore
-    .replace(/`(.+?)`/g, '$1')       // inline code
-    .replace(/^\s*[-*+]\s+/gm, '')   // list markers
-    .replace(/^\s*\d+\.\s+/gm, '')   // numbered list markers
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // links
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1') // images
-    .replace(/>\s+/g, '')            // blockquotes
-    .replace(/---+/g, '')            // horizontal rules
-    .replace(/📘.*$/gm, '')          // curriculum line (skip reading)
-    .replace(/\n{3,}/g, '\n\n')      // collapse multiple newlines
+    .replace(/#{1,6}\s+/g, '')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/\*(.+?)\*/g, '$1')
+    .replace(/_(.+?)_/g, '$1')
+    .replace(/`(.+?)`/g, '$1')
+    .replace(/^\s*[-*+]\s+/gm, '')
+    .replace(/^\s*\d+\.\s+/gm, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+    .replace(/>\s+/g, '')
+    .replace(/---+/g, '')
+    .replace(/📘.*$/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
 
@@ -32,18 +34,53 @@ function splitIntoChunks(text: string): string[] {
     .filter(chunk => chunk.length > 0);
 }
 
+type PlaybackKind = 'browser' | 'ai' | null;
+
 export function useSpeech() {
+  const { t } = useTranslation();
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [currentChunk, setCurrentChunk] = useState(0);
   const [totalChunks, setTotalChunks] = useState(0);
+  const [ttsNotice, setTtsNotice] = useState<string | null>(null);
   const chunksRef = useRef<string[]>([]);
   const langRef = useRef<string>('sv');
   const pausedMidChunkRef = useRef(false);
-  const isSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
+  const playbackKindRef = useRef<PlaybackKind>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const objectUrlRef = useRef<string | null>(null);
+
+  const isSupported =
+    typeof window !== 'undefined' &&
+    (('speechSynthesis' in window && window.speechSynthesis != null) || typeof Audio !== 'undefined');
+
+  const clearTtsNotice = useCallback(() => setTtsNotice(null), []);
+
+  const cleanupAi = useCallback(() => {
+    const a = audioRef.current;
+    if (a) {
+      a.pause();
+      a.src = '';
+      audioRef.current = null;
+    }
+    const u = objectUrlRef.current;
+    if (u) {
+      URL.revokeObjectURL(u);
+      objectUrlRef.current = null;
+    }
+    playbackKindRef.current = null;
+  }, []);
 
   const speakChunk = useCallback((index: number) => {
-    if (!isSupported || index >= chunksRef.current.length) {
+    if (!('speechSynthesis' in window) || !window.speechSynthesis) {
+      setIsSpeaking(false);
+      setIsPaused(false);
+      setCurrentChunk(0);
+      setTotalChunks(0);
+      chunksRef.current = [];
+      return;
+    }
+    if (index >= chunksRef.current.length) {
       setIsSpeaking(false);
       setIsPaused(false);
       setCurrentChunk(0);
@@ -71,18 +108,17 @@ export function useSpeech() {
     };
 
     utterance.onend = () => {
-      // Auto-pause after each chunk — user clicks "Fortsätt" for next
       pausedMidChunkRef.current = false;
       setIsSpeaking(false);
       if (index + 1 < chunksRef.current.length) {
         setIsPaused(true);
         setCurrentChunk(index);
       } else {
-        // Last chunk done
         setIsPaused(false);
         setCurrentChunk(0);
         setTotalChunks(0);
         chunksRef.current = [];
+        playbackKindRef.current = null;
       }
     };
 
@@ -92,70 +128,175 @@ export function useSpeech() {
     };
 
     window.speechSynthesis.speak(utterance);
-  }, [isSupported]);
+  }, []);
 
-  const speak = useCallback((text: string, lang: string = 'sv') => {
-    if (!isSupported) return;
-    window.speechSynthesis.cancel();
+  const speakBrowser = useCallback(
+    (text: string, lang: string) => {
+      if (!('speechSynthesis' in window) || !window.speechSynthesis) {
+        setTtsNotice(t('chat.noSpeechInBrowser'));
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const chunks = splitIntoChunks(text);
+      if (chunks.length === 0) return;
 
-    const chunks = splitIntoChunks(text);
-    if (chunks.length === 0) return;
+      chunksRef.current = chunks;
+      langRef.current = lang;
+      playbackKindRef.current = 'browser';
+      setTotalChunks(chunks.length);
+      setCurrentChunk(0);
+      setIsPaused(false);
+      pausedMidChunkRef.current = false;
+      speakChunk(0);
+    },
+    [speakChunk, t]
+  );
 
-    chunksRef.current = chunks;
-    langRef.current = lang;
-    setTotalChunks(chunks.length);
-    setCurrentChunk(0);
-    setIsPaused(false);
-    pausedMidChunkRef.current = false;
-    speakChunk(0);
-  }, [isSupported, speakChunk]);
+  const speak = useCallback(
+    async (text: string, lang: string = 'sv') => {
+      clearTtsNotice();
+      cleanupAi();
+      if ('speechSynthesis' in window && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      pausedMidChunkRef.current = false;
+      setIsSpeaking(false);
+      setIsPaused(false);
+      setCurrentChunk(0);
+      setTotalChunks(0);
+      chunksRef.current = [];
+      playbackKindRef.current = null;
+
+      const chunks = splitIntoChunks(text);
+      if (chunks.length === 0) return;
+
+      try {
+        const resp = await requestPremiumTts(text, lang);
+        if (resp.ok) {
+          const blob = await resp.blob();
+          const url = URL.createObjectURL(blob);
+          objectUrlRef.current = url;
+          const audio = new Audio(url);
+          audioRef.current = audio;
+          playbackKindRef.current = 'ai';
+          chunksRef.current = [];
+          langRef.current = lang;
+          setTotalChunks(1);
+          setCurrentChunk(0);
+          setIsPaused(false);
+
+          audio.onplay = () => {
+            setIsSpeaking(true);
+            setIsPaused(false);
+          };
+          audio.onpause = () => {
+            if (!audio.ended) {
+              setIsSpeaking(false);
+              setIsPaused(true);
+            }
+          };
+          audio.onended = () => {
+            cleanupAi();
+            setIsSpeaking(false);
+            setIsPaused(false);
+            setCurrentChunk(0);
+            setTotalChunks(0);
+          };
+          audio.onerror = () => {
+            cleanupAi();
+            speakBrowser(text, lang);
+          };
+
+          await audio.play();
+          return;
+        }
+
+        if (resp.status === 403) {
+          setTtsNotice(t('chat.aiVoiceDailyUsed'));
+          speakBrowser(text, lang);
+          return;
+        }
+
+        speakBrowser(text, lang);
+      } catch {
+        speakBrowser(text, lang);
+      }
+    },
+    [cleanupAi, clearTtsNotice, speakBrowser, t]
+  );
 
   const next = useCallback(() => {
-    if (!isSupported) return;
+    if (playbackKindRef.current === 'ai') return;
+    if (!('speechSynthesis' in window) || !window.speechSynthesis) return;
     const nextIndex = currentChunk + 1;
     if (nextIndex < chunksRef.current.length) {
       speakChunk(nextIndex);
     }
-  }, [isSupported, currentChunk, speakChunk]);
+  }, [currentChunk, speakChunk]);
 
   const pause = useCallback(() => {
-    if (!isSupported) return;
+    if (playbackKindRef.current === 'ai') {
+      audioRef.current?.pause();
+      return;
+    }
+    if (!('speechSynthesis' in window) || !window.speechSynthesis) return;
     window.speechSynthesis.pause();
     pausedMidChunkRef.current = true;
     setIsPaused(true);
     setIsSpeaking(false);
-  }, [isSupported]);
+  }, []);
 
   const resume = useCallback(() => {
-    if (!isSupported) return;
+    if (playbackKindRef.current === 'ai') {
+      void audioRef.current?.play();
+      return;
+    }
+    if (!('speechSynthesis' in window) || !window.speechSynthesis) return;
     if (pausedMidChunkRef.current) {
-      // Resume mid-chunk
       window.speechSynthesis.resume();
       pausedMidChunkRef.current = false;
       setIsPaused(false);
       setIsSpeaking(true);
     } else {
-      // Paused between chunks — play next chunk
       next();
     }
-  }, [isSupported, next]);
+  }, [next]);
 
   const stop = useCallback(() => {
-    if (!isSupported) return;
-    window.speechSynthesis.cancel();
+    cleanupAi();
+    if ('speechSynthesis' in window && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
     pausedMidChunkRef.current = false;
     setIsSpeaking(false);
     setIsPaused(false);
     setCurrentChunk(0);
     setTotalChunks(0);
     chunksRef.current = [];
-  }, [isSupported]);
+    playbackKindRef.current = null;
+  }, [cleanupAi]);
 
   useEffect(() => {
     return () => {
-      if (isSupported) window.speechSynthesis.cancel();
+      cleanupAi();
+      if ('speechSynthesis' in window && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
     };
-  }, [isSupported]);
+  }, [cleanupAi]);
 
-  return { speak, stop, pause, resume, next, isSpeaking, isPaused, isSupported, currentChunk, totalChunks };
+  return {
+    speak,
+    stop,
+    pause,
+    resume,
+    next,
+    isSpeaking,
+    isPaused,
+    isSupported,
+    currentChunk,
+    totalChunks,
+    ttsNotice,
+    clearTtsNotice,
+  };
 }

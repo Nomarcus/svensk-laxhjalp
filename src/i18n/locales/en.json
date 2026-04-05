@@ -213,7 +213,11 @@
     "pause": "Pause",
     "resume": "Continue",
     "nextChunk": "Next",
-    "chunkProgress": "Part {{current}} of {{total}}"
+    "chunkProgress": "Part {{current}} of {{total}}",
+    "listenHint": "Uses Google neural voice first when you have quota (1/day free, unlimited on Pro), otherwise your browser speech.",
+    "aiVoiceDailyUsed": "Your free AI voice for today is already used — playing with the browser instead.",
+    "noSpeechInBrowser": "This browser has no speech synthesis here, and today’s AI voice quota is used up.",
+    "dismissVoiceNotice": "Dismiss"
   },
   "chatEmpty": {
     "helpWith": "Help {{name}} with homework",

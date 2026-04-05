@@ -1,7 +1,11 @@
 import { GoogleGenAI } from '@google/genai';
+import {
+  normalizeAndTrimHistory,
+  normalizePrompt,
+  validateInlineImages,
+} from '../server/lib/chatRequestValidation';
 
 const TEXT_MODEL = process.env.AI_TEXT_MODEL || 'gemini-2.5-flash-lite';
-const MAX_HISTORY_PAIRS = 8;
 
 const SYSTEM_INSTRUCTION = `
 Du är en pedagogisk assistent för svenska föräldrar som hjälper till med barnens läxor.
@@ -88,11 +92,6 @@ Du får INTE svara som vanligt. Du MÅSTE använda det enkla formatet ovan.
 
 const SIMPLE_USER_PREFIX = `[ENKEL SVENSKA — skriv med MYCKET enkla ord och korta meningar. Max 8 ord per mening. Använd punktlistor och emojis.]\n\n`;
 
-function trimHistory(history: { role: string; content: string }[]) {
-  if (history.length <= MAX_HISTORY_PAIRS * 2) return history;
-  return history.slice(-MAX_HISTORY_PAIRS * 2);
-}
-
 async function getFirebaseAdmin() {
   const mod = await import('firebase-admin');
   const admin = mod.default;
@@ -115,36 +114,30 @@ export default async function handler(req: any, res: any) {
     return res.status(401).json({ error: 'Ingen autentisering. Logga in först.' });
   }
 
-  let uid: string;
   try {
     const admin = await getFirebaseAdmin();
-    const decoded = await admin.auth().verifyIdToken(authHeader.split('Bearer ')[1]);
-    uid = decoded.uid;
+    await admin.auth().verifyIdToken(authHeader.split('Bearer ')[1]);
   } catch {
     return res.status(401).json({ error: 'Ogiltig token. Logga in igen.' });
   }
 
   try {
-    const { prompt, history = [], imageBase64, imageBase64s, simpleSwedish, language } = req.body;
-    const providedImages: string[] = Array.isArray(imageBase64s)
-      ? imageBase64s.filter((img: unknown) => typeof img === 'string' && img.length > 0)
-      : (imageBase64 ? [imageBase64] : []);
-    if (!prompt && providedImages.length === 0) {
-      return res.status(400).json({ error: 'Meddelande eller bild krävs.' });
+    const { prompt, history, imageBase64, imageBase64s, simpleSwedish, language } = req.body;
+
+    const images = validateInlineImages(imageBase64, imageBase64s);
+    if (images.ok === false) {
+      return res.status(images.status).json({ error: images.error });
     }
 
-    const inlineImages = providedImages.map((img) => {
-      let mimeType = 'image/jpeg';
-      let cleanBase64 = img;
-      if (img.startsWith('data:')) {
-        const match = img.match(/^data:([^;]+);base64,(.+)$/);
-        if (match) {
-          mimeType = match[1];
-          cleanBase64 = match[2];
-        }
-      }
-      return { inlineData: { mimeType: mimeType as any, data: cleanBase64 } };
-    });
+    const hist = normalizeAndTrimHistory(history);
+    if (hist.ok === false) {
+      return res.status(hist.status).json({ error: hist.error });
+    }
+
+    const p = normalizePrompt(prompt, images.parts.length > 0);
+    if (p.ok === false) {
+      return res.status(p.status).json({ error: p.error });
+    }
 
     // Use completely different system instruction for simple Swedish
     let systemInstruction = simpleSwedish ? SIMPLE_SYSTEM_INSTRUCTION : SYSTEM_INSTRUCTION;
@@ -156,23 +149,20 @@ export default async function handler(req: any, res: any) {
     if (language && language !== 'sv' && LANGUAGE_NAMES[language]) {
       systemInstruction += `\n\nIMPORTANT: The user's interface language is ${LANGUAGE_NAMES[language]}. You MUST respond in ${LANGUAGE_NAMES[language]}. Keep Swedish school terms (like "Lgr22", subject names) in Swedish but write all explanations, instructions and text in ${LANGUAGE_NAMES[language]}.`;
     }
-    // Also prefix the user message to reinforce
-    const userText = simpleSwedish
-      ? SIMPLE_USER_PREFIX + (prompt || 'Analysera denna bild.')
-      : (prompt || 'Analysera denna bild.');
+    const userText = simpleSwedish ? SIMPLE_USER_PREFIX + p.text : p.text;
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
     const response = await ai.models.generateContent({
-      model: inlineImages.length > 0 ? 'gemini-2.5-flash' : TEXT_MODEL,
+      model: images.parts.length > 0 ? 'gemini-2.5-flash' : TEXT_MODEL,
       contents: [
-        ...trimHistory(history).map((h: any) => ({
-          role: h.role as 'user' | 'model',
+        ...hist.history.map((h) => ({
+          role: h.role,
           parts: [{ text: h.content }],
         })),
         {
           role: 'user' as const,
           parts: [
-            ...inlineImages,
+            ...images.parts,
             { text: userText },
           ],
         },

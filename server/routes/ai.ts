@@ -1,6 +1,12 @@
 import { Router, Response } from 'express';
 import { GoogleGenAI } from '@google/genai';
 import { AuthenticatedRequest } from '../middleware/auth';
+import {
+  normalizeAndTrimHistory,
+  normalizeImageGenerationPrompt,
+  normalizePrompt,
+  validateInlineImages,
+} from '../lib/chatRequestValidation';
 
 const router = Router();
 
@@ -40,52 +46,40 @@ När du analyserar bilder av läxor:
 - Avsluta med "Så kan du förklara för ditt barn:"-tipset.
 `;
 
-const MAX_HISTORY_PAIRS = 10;
-
-function trimHistory(history: { role: string; content: string }[]) {
-  if (history.length <= MAX_HISTORY_PAIRS * 2) return history;
-  return history.slice(-MAX_HISTORY_PAIRS * 2);
-}
-
 router.post('/chat', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { prompt, history = [], imageBase64, imageBase64s } = req.body;
+    const { prompt, history, imageBase64, imageBase64s } = req.body;
 
-    const providedImages: string[] = Array.isArray(imageBase64s)
-      ? imageBase64s.filter((img: unknown) => typeof img === 'string' && img.length > 0)
-      : (imageBase64 ? [imageBase64] : []);
-    if (!prompt && providedImages.length === 0) {
-      res.status(400).json({ error: 'Meddelande eller bild krävs.' });
+    const images = validateInlineImages(imageBase64, imageBase64s);
+    if (images.ok === false) {
+      res.status(images.status).json({ error: images.error });
       return;
     }
 
-    const trimmedHistory = trimHistory(history);
+    const hist = normalizeAndTrimHistory(history);
+    if (hist.ok === false) {
+      res.status(hist.status).json({ error: hist.error });
+      return;
+    }
 
-    const inlineImages = providedImages.map((img: string) => {
-      let mimeType = 'image/jpeg';
-      let cleanBase64 = img;
-      if (img.startsWith('data:')) {
-        const match = img.match(/^data:([^;]+);base64,(.+)$/);
-        if (match) {
-          mimeType = match[1];
-          cleanBase64 = match[2];
-        }
-      }
-      return { inlineData: { mimeType: mimeType as any, data: cleanBase64 } };
-    });
+    const p = normalizePrompt(prompt, images.parts.length > 0);
+    if (p.ok === false) {
+      res.status(p.status).json({ error: p.error });
+      return;
+    }
 
     const response = await ai.models.generateContent({
-      model: inlineImages.length > 0 ? 'gemini-2.5-flash' : TEXT_MODEL,
+      model: images.parts.length > 0 ? 'gemini-2.5-flash' : TEXT_MODEL,
       contents: [
-        ...trimmedHistory.map((h: { role: string; content: string }) => ({
-          role: h.role as 'user' | 'model',
+        ...hist.history.map((h) => ({
+          role: h.role,
           parts: [{ text: h.content }],
         })),
         {
           role: 'user' as const,
           parts: [
-            ...inlineImages,
-            { text: prompt || 'Analysera denna bild.' },
+            ...images.parts,
+            { text: p.text },
           ],
         },
       ],
@@ -115,9 +109,9 @@ router.post('/chat', async (req: AuthenticatedRequest, res: Response) => {
 router.post('/image', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { prompt } = req.body;
-
-    if (!prompt) {
-      res.status(400).json({ error: 'Beskrivning krävs för bildgenerering.' });
+    const np = normalizeImageGenerationPrompt(prompt);
+    if (np.ok === false) {
+      res.status(np.status).json({ error: np.error });
       return;
     }
 
@@ -126,7 +120,7 @@ router.post('/image', async (req: AuthenticatedRequest, res: Response) => {
       contents: {
         parts: [
           {
-            text: `Skapa en pedagogisk illustration för en svensk skoluppgift. Ämne: ${prompt}. Illustrationen ska vara tydlig, vänlig och hjälpsam för en förälder som förklarar för sitt barn. Undvik text i bilden om möjligt.`,
+            text: `Skapa en pedagogisk illustration för en svensk skoluppgift. Ämne: ${np.text}. Illustrationen ska vara tydlig, vänlig och hjälpsam för en förälder som förklarar för sitt barn. Undvik text i bilden om möjligt.`,
           },
         ],
       },

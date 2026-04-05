@@ -10,6 +10,7 @@ import rateLimit from 'express-rate-limit';
 import { authMiddleware } from './middleware/auth';
 import { subscriptionMiddleware } from './middleware/subscription';
 import { aiRouter } from './routes/ai';
+import { ttsRouter } from './routes/tts';
 import { billingRouter, stripeWebhookHandler } from './routes/billing';
 import { adminRouter } from './routes/admin';
 
@@ -49,6 +50,7 @@ app.use('/api', authMiddleware);
 app.use('/api', billingRouter);           // After auth, before subscription check
 app.use('/api', adminRouter);             // Sole-owner analytics (requires ADMIN_UID)
 app.use('/api', subscriptionMiddleware);  // After billing, before AI routes
+app.use('/api', ttsRouter);
 app.use('/api', aiRouter);
 
 app.listen(PORT, () => {

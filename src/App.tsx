@@ -21,6 +21,9 @@ import { shouldShowAdminNav } from './utils/adminClient';
 import CookieConsent from './components/CookieConsent';
 import Terms from './components/Terms';
 import { useTheme } from './hooks/useTheme';
+import LaxhjalpForaldrarLanding from './components/LaxhjalpForaldrarLanding';
+import { LAXHJALP_FORALDRAR_PATH, normalizePathname } from './routes';
+import { applyHomeSeo, applyParentLandingSeo } from './utils/seoMeta';
 
 const isFirestorePermissionError = (error: unknown) => {
   if (!(error instanceof Error)) return false;
@@ -43,6 +46,34 @@ export default function App() {
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const { dark, toggle: toggleDark } = useTheme();
   const { t } = useTranslation();
+  const [routePath, setRoutePath] = useState(() => normalizePathname(window.location.pathname));
+
+  const goToPath = (path: string) => {
+    const next = normalizePathname(path);
+    window.history.pushState({}, '', next === '/' ? '/' : next);
+    setRoutePath(next);
+  };
+
+  useEffect(() => {
+    const sync = () => setRoutePath(normalizePathname(window.location.pathname));
+    window.addEventListener('popstate', sync);
+    return () => window.removeEventListener('popstate', sync);
+  }, []);
+
+  useEffect(() => {
+    if (user && routePath === LAXHJALP_FORALDRAR_PATH) {
+      window.history.replaceState({}, '', '/');
+      setRoutePath('/');
+    }
+  }, [user, routePath]);
+
+  useEffect(() => {
+    if (!user && routePath === LAXHJALP_FORALDRAR_PATH) {
+      applyParentLandingSeo();
+    } else {
+      applyHomeSeo();
+    }
+  }, [user, routePath]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -193,6 +224,18 @@ export default function App() {
 
   if (showTerms) {
     return <Terms onBack={() => setShowTerms(false)} />;
+  }
+
+  if (!user && routePath === LAXHJALP_FORALDRAR_PATH) {
+    return (
+      <LaxhjalpForaldrarLanding
+        onGetStarted={() => goToPath('/')}
+        onShowPrivacy={() => setShowPrivacy(true)}
+        onShowTerms={() => setShowTerms(true)}
+        dark={dark}
+        onToggleDark={toggleDark}
+      />
+    );
   }
 
   if (!user) {

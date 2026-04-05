@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
+import { normalizeImageGenerationPrompt } from '../server/lib/chatRequestValidation';
 const IMAGE_MODEL = process.env.AI_IMAGE_MODEL || 'gemini-3.1-flash-image-preview';
 async function getFirebaseAdmin() { const mod = await import('firebase-admin'); const admin = mod.default; if (!admin.apps?.length) { const sa = process.env.FIREBASE_SERVICE_ACCOUNT; if (sa) admin.initializeApp({ credential: admin.credential.cert(JSON.parse(sa)) }); else admin.initializeApp(); } return admin; }
 export default async function handler(req: any, res: any) {
@@ -8,11 +9,12 @@ export default async function handler(req: any, res: any) {
   try { const admin = await getFirebaseAdmin(); await admin.auth().verifyIdToken(authHeader.split('Bearer ')[1]); } catch { return res.status(401).json({ error: 'Ogiltig token.' }); }
   try {
     const { prompt } = req.body;
-    if (!prompt) return res.status(400).json({ error: 'Beskrivning kravs.' });
+    const np = normalizeImageGenerationPrompt(prompt);
+    if (np.ok === false) return res.status(np.status).json({ error: np.error });
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
     const response = await ai.models.generateContent({
       model: IMAGE_MODEL,
-      contents: 'Skapa en pedagogisk illustration för barn: ' + prompt,
+      contents: 'Skapa en pedagogisk illustration för barn: ' + np.text,
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
         imageConfig: { aspectRatio: '1:1' }
