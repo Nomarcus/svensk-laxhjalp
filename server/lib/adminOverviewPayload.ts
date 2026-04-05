@@ -46,7 +46,7 @@ function tsToDate(v: unknown): Date | null {
   return null;
 }
 
-async function aggregateUsageForDateByUsers(db: Firestore, dateStr: string, userIds: string[]) {
+export async function aggregateUsageForDateByUsers(db: Firestore, dateStr: string, userIds: string[]) {
   let aiChats = 0;
   let imageAnalyses = 0;
   const perUser: { uid: string; aiChats: number; imageAnalyses: number }[] = [];
@@ -76,7 +76,7 @@ async function aggregateUsageForDateByUsers(db: Firestore, dateStr: string, user
   };
 }
 
-async function aggregateUsageByDays(db: Firestore, dates: string[], userIds: string[]) {
+export async function aggregateUsageByDays(db: Firestore, dates: string[], userIds: string[]) {
   const out: Awaited<ReturnType<typeof aggregateUsageForDateByUsers>>[] = [];
   for (let i = 0; i < dates.length; i += USAGE_DAY_PARALLEL) {
     const slice = dates.slice(i, i + USAGE_DAY_PARALLEL);

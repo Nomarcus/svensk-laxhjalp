@@ -20,6 +20,7 @@ import { auth, onAuthStateChanged, signInWithEmail, type User } from '../firebas
 import { cn } from '../utils/cn';
 import { apiUrl } from '../utils/apiBase';
 import { OPERATOR_ADMIN_EMAIL } from '../utils/adminClient';
+import AdminAnalyticsSection, { type AnalyticsPayload, type AnalyticsRange } from './AdminAnalyticsSection';
 
 type OverviewPayload = {
   generatedAt: string;
@@ -108,6 +109,10 @@ export default function Admin({ standalone }: AdminProps) {
   const [loginErr, setLoginErr] = useState('');
   const [loginBusy, setLoginBusy] = useState(false);
   const [showPw, setShowPw] = useState(false);
+  const [analyticsRange, setAnalyticsRange] = useState<AnalyticsRange>('month');
+  const [analytics, setAnalytics] = useState<AnalyticsPayload | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsErr, setAnalyticsErr] = useState<string | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, setAuthUser);
@@ -149,16 +154,54 @@ export default function Admin({ standalone }: AdminProps) {
     }
   }, [t]);
 
+  const loadAnalytics = useCallback(async () => {
+    setAnalyticsErr(null);
+    setAnalyticsLoading(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        setAnalyticsLoading(false);
+        return;
+      }
+      const token = await user.getIdToken();
+      const res = await fetch(apiUrl(`/api/admin/analytics?range=${analyticsRange}`), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.status === 403) {
+        setForbidden(true);
+        setAnalytics(null);
+        return;
+      }
+      if (!res.ok) {
+        setAnalyticsErr(t('admin.analytics.loadError'));
+        setAnalytics(null);
+        return;
+      }
+      setAnalytics((await res.json()) as AnalyticsPayload);
+    } catch {
+      setAnalyticsErr(t('admin.analytics.loadError'));
+      setAnalytics(null);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, [analyticsRange, t]);
+
   useEffect(() => {
     if (!authUser) {
       setData(null);
       setLoading(false);
       setErr(null);
       setForbidden(false);
+      setAnalytics(null);
       return;
     }
     void load();
   }, [authUser, load]);
+
+  useEffect(() => {
+    if (!authUser) return;
+    void loadAnalytics();
+  }, [authUser, loadAnalytics]);
 
   const mapLoginError = useCallback(
     (code: string) => {
@@ -301,18 +344,30 @@ export default function Admin({ standalone }: AdminProps) {
           </div>
           <button
             type="button"
-            onClick={() => void load()}
-            disabled={loading}
+            onClick={() => {
+              void load();
+              void loadAnalytics();
+            }}
+            disabled={loading || analyticsLoading}
             className={cn(
               'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl font-medium text-sm transition-all',
               'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20',
               'disabled:opacity-60 disabled:pointer-events-none',
             )}
           >
-            <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
+            <RefreshCw className={cn('w-4 h-4', (loading || analyticsLoading) && 'animate-spin')} />
             {t('admin.refresh')}
           </button>
         </header>
+
+        <AdminAnalyticsSection
+          t={t}
+          range={analyticsRange}
+          onRangeChange={setAnalyticsRange}
+          payload={analytics}
+          loading={analyticsLoading}
+          error={analyticsErr}
+        />
 
         {err && (
           <div className="rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm text-red-800 dark:text-red-200 flex items-center gap-2">
