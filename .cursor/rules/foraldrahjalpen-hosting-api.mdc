@@ -1,0 +1,12 @@
+---
+description: Firebase web.app + Vercel custom domain delar frontend; API ligger på Cloud Run
+alwaysApply: true
+---
+
+# Föräldrahjälpen — hosting och API
+
+- **Firebase Hosting** (`lead-agent-489101.web.app`): `firebase.json` skickar `/api/**` till **Cloud Run** (`laxhjalp-api`).
+- **Custom domain** (`foraldrahjalpen.se`) kan ligga på **Vercel**; då träffar **inte** relativa `/api/*` samma backend som web.app.
+- **Lösning i kod:** `src/utils/apiBase.ts` — i **produktion** anropas API direkt mot Cloud Run (`https://laxhjalp-api-288867992327.europe-west1.run.app`), om inte `VITE_API_ORIGIN` sätts. Lokalt (`npm run dev`) används Vite-proxy till `localhost:3001`.
+- **CORS på Cloud Run** (`server/index.ts`) måste inkludera `foraldrahjalpen.se`, `www`, och `web.app`.
+- Om Cloud Run-URL byts: uppdatera `CLOUD_RUN_API_ORIGIN` i `apiBase.ts` eller bygg med `VITE_API_ORIGIN`.

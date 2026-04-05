@@ -63,9 +63,9 @@ export default function PricingCard({ currentTier, onUpgradeStart, onUpgradeEnd 
       activeBorder: 'border-emerald-500',
       checkColor: 'text-emerald-500',
       features: [
-        '3 AI-frågor per dag',
-        '1 bildanalys per dag',
-        '1 AI-illustration per dag',
+        'AI-frågor och stöd (inga dagliga gränser just nu)',
+        'Bildanalys av läxfoton',
+        'AI-illustrationer',
         'Läxplanering & kalender',
         'Koppling till läroplanen',
       ],

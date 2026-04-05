@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import admin from 'firebase-admin';
 import { AuthenticatedRequest } from './auth';
+import { enforceSubscriptionLimits } from '../subscriptionEnv';
 
 export interface SubscriptionRequest extends AuthenticatedRequest {
   tier?: 'free' | 'pro';
@@ -16,7 +17,6 @@ export async function subscriptionMiddleware(
   res: Response,
   next: NextFunction
 ): Promise<void> {
-  // Skip billing, admin analytics, and health check
   if (
     req.path.startsWith('/billing')
     || req.path.startsWith('/admin')
@@ -32,22 +32,23 @@ export async function subscriptionMiddleware(
   }
 
   try {
-    // Read user subscription tier
     const userDoc = await admin.firestore().doc(`users/${req.uid}`).get();
     const userData = userDoc.data() || {};
     const tier = userData.tier || 'free';
     const subscriptionStatus = userData.subscriptionStatus || 'none';
 
-    req.tier = tier;
+    req.tier = tier as 'free' | 'pro';
 
-    // Pro users with active subscription pass through
-    if (tier === 'pro' && (subscriptionStatus === 'active' || subscriptionStatus === 'canceled')) {
-      // canceled but still in period = still pro
+    if (!enforceSubscriptionLimits()) {
       next();
       return;
     }
 
-    // Free tier enforcement
+    if (tier === 'pro' && (subscriptionStatus === 'active' || subscriptionStatus === 'canceled')) {
+      next();
+      return;
+    }
+
     const today = new Date().toISOString().split('T')[0];
     const usageRef = admin.firestore().doc(`users/${req.uid}/usage/${today}`);
     const usageDoc = await usageRef.get();
@@ -59,7 +60,6 @@ export async function subscriptionMiddleware(
     req.dailyChatCount = chatCount;
     req.dailyImageCount = imageCount;
 
-    // Image generation (not analysis) - Pro only
     if (req.path === '/image') {
       res.status(403).json({
         error: 'Bildgenerering kräver Pro-abonnemang. Uppgradera för att skapa illustrationer.',
@@ -68,8 +68,11 @@ export async function subscriptionMiddleware(
       return;
     }
 
-    // Chat with image (image analysis)
-    if (req.path === '/chat' && req.body?.imageBase64) {
+    const chatHasImage =
+      Boolean(req.body?.imageBase64)
+      || (Array.isArray(req.body?.imageBase64s) && req.body.imageBase64s.length > 0);
+
+    if (req.path === '/chat' && chatHasImage) {
       if (imageCount >= FREE_IMAGE_LIMIT) {
         res.status(403).json({
           error: `Du har använt din gratis bildanalys idag (${FREE_IMAGE_LIMIT}/dag). Uppgradera till Pro för obegränsade bildanalyser.`,
@@ -79,16 +82,14 @@ export async function subscriptionMiddleware(
         });
         return;
       }
-      // Increment image count
       await usageRef.set(
         { imageCount: admin.firestore.FieldValue.increment(1), lastUpdated: new Date().toISOString() },
-        { merge: true }
+        { merge: true },
       );
       next();
       return;
     }
 
-    // Text chat
     if (req.path === '/chat') {
       if (chatCount >= FREE_CHAT_LIMIT) {
         res.status(429).json({
@@ -99,20 +100,17 @@ export async function subscriptionMiddleware(
         });
         return;
       }
-      // Increment chat count
       await usageRef.set(
         { chatCount: admin.firestore.FieldValue.increment(1), lastUpdated: new Date().toISOString() },
-        { merge: true }
+        { merge: true },
       );
       next();
       return;
     }
 
-    // All other routes pass through
     next();
   } catch (error: any) {
     console.error('Subscription middleware error:', error.message);
-    // On error, allow request through (don't block users due to internal errors)
     next();
   }
 }

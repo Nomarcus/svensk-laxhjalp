@@ -1,3 +1,5 @@
+import { enforceSubscriptionLimits } from '../server/subscriptionEnv';
+
 async function getFirebaseAdmin() {
   const mod = await import('firebase-admin');
   const admin = mod.default;
@@ -65,7 +67,7 @@ export default async function handler(req: any, res: any) {
     const today = new Date().toISOString().split('T')[0];
     const usageRef = db.doc(`users/${uid}/usage/${today}`);
 
-    if (!pro) {
+    if (enforceSubscriptionLimits() && !pro) {
       const usageDoc = await usageRef.get();
       const usage = usageDoc.data() || {};
       const aiTtsCount = usage.aiTtsCount || 0;
@@ -81,7 +83,7 @@ export default async function handler(req: any, res: any) {
 
     const audio = await synthesizeMp3(apiKey, plain, typeof lang === 'string' ? lang : 'sv');
 
-    if (!pro) {
+    if (enforceSubscriptionLimits() && !pro) {
       await usageRef.set(
         {
           aiTtsCount: admin.firestore.FieldValue.increment(1),

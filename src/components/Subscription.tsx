@@ -1,40 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Heart, Clock, Construction, MessageCircle, Image, Palette, BookOpen, Sparkles, FileText } from 'lucide-react';
-import { auth } from '../firebase';
-import { apiUrl } from '../utils/apiBase';
-
-interface UsageData {
-  chatCount: number;
-  imageCount: number;
-}
-
-const LIMITS = {
-  chat: 5,
-  image: 2,
-  illustration: 2,
-};
+import React from 'react';
+import { Heart, Construction, MessageCircle, Image, Palette, BookOpen, Sparkles, FileText } from 'lucide-react';
 
 export default function Subscription() {
-  const [usage, setUsage] = useState<UsageData>({ chatCount: 0, imageCount: 0 });
-
-  useEffect(() => {
-    const fetchUsage = async () => {
-      const user = auth.currentUser;
-      if (!user) return;
-      try {
-        const token = await user.getIdToken();
-        const res = await fetch(apiUrl('/api/billing/status'), {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (data.usage) setUsage(data.usage);
-      } catch (err) {
-        console.error('Failed to fetch usage:', err);
-      }
-    };
-    fetchUsage();
-  }, []);
-
   return (
     <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 bg-[#F5F5F0] dark:bg-slate-950">
       <div className="max-w-lg mx-auto space-y-6">
@@ -43,7 +10,6 @@ export default function Subscription() {
           <p className="text-stone-500 dark:text-stone-400">Tack för att du testar Föräldrahjälpen!</p>
         </header>
 
-        {/* Under planering */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-black/5 dark:border-white/5">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
@@ -55,57 +21,21 @@ export default function Subscription() {
             </div>
           </div>
           <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed">
-            Just nu är Föräldrahjälpen gratis att testa med begränsad användning. Vi jobbar på abonnemangsplaner
-            som ger dig mer — de kommer snart!
+            Just nu är Föräldrahjälpen gratis att använda utan dagliga gränser. Vi jobbar på abonnemangsplaner
+            som kan ge extra funktioner — de kommer snart!
           </p>
         </div>
 
-        {/* Daglig användning med progress */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-black/5 dark:border-white/5">
-          <h3 className="font-medium mb-4 flex items-center gap-2 dark:text-stone-100">
-            <Clock size={18} className="text-emerald-600 dark:text-emerald-400" />
-            Dagens användning
-          </h3>
-          <div className="space-y-4">
-            <UsageRow
-              icon={<MessageCircle size={16} />}
-              iconColor="text-emerald-600 dark:text-emerald-400"
-              barColor="bg-emerald-500"
-              label="AI-frågor"
-              used={usage.chatCount}
-              limit={LIMITS.chat}
-            />
-            <UsageRow
-              icon={<Image size={16} />}
-              iconColor="text-blue-600 dark:text-blue-400"
-              barColor="bg-blue-500"
-              label="Bildanalyser"
-              used={usage.imageCount}
-              limit={LIMITS.image}
-            />
-            <UsageRow
-              icon={<Palette size={16} />}
-              iconColor="text-purple-600 dark:text-purple-400"
-              barColor="bg-purple-500"
-              label="AI-illustrationer"
-              used={0}
-              limit={LIMITS.illustration}
-            />
-          </div>
-          <p className="text-xs text-stone-400 dark:text-stone-500 mt-4">Nollställs varje dag vid midnatt.</p>
-        </div>
-
-        {/* Alla AI-funktioner */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-black/5 dark:border-white/5">
           <h3 className="font-medium mb-4 flex items-center gap-2 dark:text-stone-100">
             <Sparkles size={18} className="text-emerald-600 dark:text-emerald-400" />
-            Vad som ingår gratis
+            Vad som ingår nu
           </h3>
           <div className="space-y-3">
             {[
-              { icon: <MessageCircle size={14} />, text: `${LIMITS.chat} AI-frågor per dag`, sub: 'Hjälp med läxor, förklaringar och tips' },
-              { icon: <Image size={14} />, text: `${LIMITS.image} bildanalyser per dag`, sub: 'Fotografera läxan och få hjälp direkt' },
-              { icon: <Palette size={14} />, text: `${LIMITS.illustration} AI-illustrationer per dag`, sub: 'Visuella förklaringar av svåra begrepp' },
+              { icon: <MessageCircle size={14} />, text: 'AI-frågor och stöd', sub: 'Hjälp med läxor, förklaringar och tips' },
+              { icon: <Image size={14} />, text: 'Bildanalys', sub: 'Fotografera läxan och få hjälp direkt' },
+              { icon: <Palette size={14} />, text: 'AI-illustrationer', sub: 'Visuella förklaringar av svåra begrepp' },
               { icon: <BookOpen size={14} />, text: 'Koppling till läroplanen', sub: 'Se hur läxan kopplar till Lgr22' },
               { icon: <FileText size={14} />, text: 'Facit, studieplan & provförberedelse', sub: 'Planera och förbered inför prov' },
             ].map((item, i) => (
@@ -120,7 +50,6 @@ export default function Subscription() {
           </div>
         </div>
 
-        {/* Swish-stöd */}
         <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-900/20 dark:to-emerald-900/10 rounded-2xl p-6 shadow-sm border border-emerald-200/50 dark:border-emerald-800/30">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm">
@@ -141,38 +70,6 @@ export default function Subscription() {
             <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">Swish-nummer läggs till inom kort</p>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function UsageRow({ icon, iconColor, barColor, label, used, limit }: {
-  icon: React.ReactNode;
-  iconColor: string;
-  barColor: string;
-  label: string;
-  used: number;
-  limit: number;
-}) {
-  const pct = limit > 0 ? Math.min((used / limit) * 100, 100) : 0;
-  const remaining = Math.max(limit - used, 0);
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <div className="flex items-center gap-2">
-          <span className={iconColor}>{icon}</span>
-          <span className="text-sm font-medium text-stone-700 dark:text-stone-200">{label}</span>
-        </div>
-        <span className="text-sm text-stone-500 dark:text-stone-400">
-          {remaining} kvar av {limit}
-        </span>
-      </div>
-      <div className="h-2 bg-stone-200 dark:bg-slate-700 rounded-full overflow-hidden">
-        <div
-          className={`h-full ${barColor} transition-all rounded-full`}
-          style={{ width: `${pct}%` }}
-        />
       </div>
     </div>
   );

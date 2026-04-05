@@ -3,6 +3,7 @@ import admin from 'firebase-admin';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { stripMarkdownForTts } from '../lib/stripForTts';
 import { synthesizeMp3 } from '../lib/googleCloudTts';
+import { enforceSubscriptionLimits } from '../subscriptionEnv';
 
 const router = Router();
 
@@ -48,7 +49,7 @@ router.post('/tts', async (req: AuthenticatedRequest, res: Response) => {
     const today = new Date().toISOString().split('T')[0];
     const usageRef = admin.firestore().doc(`users/${uid}/usage/${today}`);
 
-    if (!pro) {
+    if (enforceSubscriptionLimits() && !pro) {
       const usageDoc = await usageRef.get();
       const usage = usageDoc.data() || {};
       const aiTtsCount = usage.aiTtsCount || 0;
@@ -65,7 +66,7 @@ router.post('/tts', async (req: AuthenticatedRequest, res: Response) => {
 
     const audio = await synthesizeMp3(apiKey, plain, typeof lang === 'string' ? lang : 'sv');
 
-    if (!pro) {
+    if (enforceSubscriptionLimits() && !pro) {
       await usageRef.set(
         {
           aiTtsCount: admin.firestore.FieldValue.increment(1),
