@@ -1,4 +1,4 @@
-import type { CollectionReference, Firestore, QuerySnapshot } from 'firebase-admin/firestore';
+import type { CollectionReference, DocumentReference, Firestore, QuerySnapshot } from 'firebase-admin/firestore';
 import { resolveFirestoreDatabaseId } from './serverFirestore';
 
 const MAX_USERS_SAMPLE = 2500;
@@ -8,6 +8,23 @@ const USAGE_GET_CHUNK = 15;
 const TOTALS_USER_PARALLEL = 3;
 /** Samma tak som admin analytics; undvik count()-aggregate som kan fallera på vissa Firestore-DB. */
 const TOTALS_MAX_DOCS_PER_SUBCOL = 2500;
+/** listDocuments() kan ge tom lista mot vissa DB; använd query+get istället. */
+export const ADMIN_MAX_CHILDREN_PER_USER = 500;
+
+export async function listUserChildRefs(
+  db: Firestore,
+  uid: string,
+): Promise<{ refs: DocumentReference[]; capped: boolean }> {
+  const snap = await db
+    .collection('users')
+    .doc(uid)
+    .collection('children')
+    .limit(ADMIN_MAX_CHILDREN_PER_USER + 1)
+    .get();
+  const capped = snap.size > ADMIN_MAX_CHILDREN_PER_USER;
+  const docs = capped ? snap.docs.slice(0, ADMIN_MAX_CHILDREN_PER_USER) : snap.docs;
+  return { refs: docs.map((d) => d.ref), capped };
+}
 /** Run usage-by-day in small waves to reduce Firestore burst + timeouts. */
 const USAGE_DAY_PARALLEL = 2;
 
@@ -191,19 +208,11 @@ function snapshotBoundedCount(snap: QuerySnapshot, cap: number): { n: number; ca
   return { n: cap, capped: true };
 }
 
-/**
- * Räkna dokument utan count()-aggregate. Använder createdAt-projektion (lätt); fallback om Firestore klagar.
- */
+/** Räkna dokument utan count()-aggregate. Ingen field-mask — select() utelämnar dokument som saknar fält. */
 async function boundedSubcollectionCount(col: CollectionReference): Promise<{ n: number; capped: boolean }> {
   const cap = TOTALS_MAX_DOCS_PER_SUBCOL;
-  try {
-    const snap = await col.select('createdAt').limit(cap + 1).get();
-    return snapshotBoundedCount(snap, cap);
-  } catch (e) {
-    console.warn('admin totals: select(createdAt) failed, using full limit().get()', e);
-    const snap = await col.limit(cap + 1).get();
-    return snapshotBoundedCount(snap, cap);
-  }
+  const snap = await col.limit(cap + 1).get();
+  return snapshotBoundedCount(snap, cap);
 }
 
 /**
@@ -222,11 +231,11 @@ async function aggregateTotalsByUserTree(db: Firestore, userIds: string[]) {
     const parts = await Promise.all(
       slice.map(async (uid) => {
         try {
-          const childRefs = await db.collection('users').doc(uid).collection('children').listDocuments();
+          const { refs: childRefs, capped: childrenWalkCapped } = await listUserChildRefs(db, uid);
           let cs = 0;
           let tk = 0;
           let lib = 0;
-          let userCapped = false;
+          let userCapped = childrenWalkCapped;
           for (const cref of childRefs) {
             const [a, b, c] = await Promise.all([
               boundedSubcollectionCount(cref.collection('chatSessions')),
@@ -416,7 +425,7 @@ export async function buildAdminOverviewPayload(db: Firestore) {
   }
   if (!totalsFailed && totalsCapped) {
     insights.push(
-      `totals: minst en barn-underkollektion har fler än ${TOTALS_MAX_DOCS_PER_SUBCOL} dokument — översiktssiffror är avkapade till det taket (samma som analytics).`,
+      `totals: minst en begränsning träffade (${TOTALS_MAX_DOCS_PER_SUBCOL} docs/barn-kollektion eller ${ADMIN_MAX_CHILDREN_PER_USER} barn/användare) — siffror kan vara avkapade.`,
     );
   }
   if (!totalsFailed && totalsUidErrors > 0) {

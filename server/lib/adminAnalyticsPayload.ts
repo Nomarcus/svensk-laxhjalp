@@ -1,5 +1,9 @@
 import type { Firestore } from 'firebase-admin/firestore';
-import { aggregateUsageForRangeDetailed } from './adminOverviewPayload';
+import {
+  ADMIN_MAX_CHILDREN_PER_USER,
+  aggregateUsageForRangeDetailed,
+  listUserChildRefs,
+} from './adminOverviewPayload';
 import { firestoreDocTimeMs } from './firestoreDocTime';
 
 const EMAIL_GET_CHUNK = 15;
@@ -162,27 +166,12 @@ export async function buildAdminAnalyticsPayload(db: Firestore, presetRaw: strin
 
   async function processUser(uid: string) {
     try {
-      const childRefs = await db.collection('users').doc(uid).collection('children').listDocuments();
+      const { refs: childRefs } = await listUserChildRefs(db, uid);
       for (const cref of childRefs) {
         const [tasksSnap, libSnap, sessSnap] = await Promise.all([
-          cref
-            .collection('tasks')
-            .select(
-              'subject',
-              'createdAt',
-              'completed',
-              'taskType',
-              'imageUrl',
-              'imageUrls',
-              'linkedChatSessionId',
-              'aiNotes',
-              'examPrepContent',
-              'progressPercent',
-            )
-            .limit(MAX_DOCS_PER_CHILD_COLLECTION)
-            .get(),
-          cref.collection('library').select('subject', 'createdAt').limit(MAX_DOCS_PER_CHILD_COLLECTION).get(),
-          cref.collection('chatSessions').select('createdAt').limit(MAX_DOCS_PER_CHILD_COLLECTION).get(),
+          cref.collection('tasks').limit(MAX_DOCS_PER_CHILD_COLLECTION).get(),
+          cref.collection('library').limit(MAX_DOCS_PER_CHILD_COLLECTION).get(),
+          cref.collection('chatSessions').limit(MAX_DOCS_PER_CHILD_COLLECTION).get(),
         ]);
 
       for (const doc of tasksSnap.docs) {
@@ -372,6 +361,9 @@ export async function buildAdminAnalyticsPayload(db: Firestore, presetRaw: strin
   if (usersSnap.size > MAX_ANALYTICS_USERS) {
     notes.push(`Analysen begränsas till ${MAX_ANALYTICS_USERS} användare (id-ordning) av ${usersSnap.size} totalt.`);
   }
+  notes.push(
+    `Högst ${ADMIN_MAX_CHILDREN_PER_USER} barnprofiler per användare ingår i analysen (query istället för listDocuments).`,
+  );
   notes.push(
     `Högst ${MAX_DOCS_PER_CHILD_COLLECTION} dokument per barn och underkollektion (tasks/library/chatSessions) räknas — vid extremt mycket data är siffror ett urval.`,
   );
