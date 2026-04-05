@@ -1,5 +1,6 @@
 import type { Firestore } from 'firebase-admin/firestore';
 import { aggregateUsageForRangeDetailed } from './adminOverviewPayload';
+import { firestoreDocTimeMs } from './firestoreDocTime';
 
 const EMAIL_GET_CHUNK = 15;
 
@@ -65,23 +66,6 @@ export function boundsForAnalyticsPreset(preset: AnalyticsPreset): { start: Date
     start.setTime(Date.UTC(2022, 0, 1));
   }
   return { start, end };
-}
-
-function tsToDate(v: unknown): Date | null {
-  if (v == null) return null;
-  const d = v as { toDate?: () => Date };
-  if (typeof d.toDate === 'function') return d.toDate();
-  return null;
-}
-
-function docTimeMs(data: Record<string, unknown>, key: string): number | null {
-  const v = data[key];
-  if (typeof v === 'string') {
-    const t = Date.parse(v);
-    return Number.isNaN(t) ? null : t;
-  }
-  const d = tsToDate(v);
-  return d ? d.getTime() : null;
 }
 
 function enumerateDatesUTC(start: Date, end: Date): string[] {
@@ -203,7 +187,7 @@ export async function buildAdminAnalyticsPayload(db: Firestore, presetRaw: strin
 
       for (const doc of tasksSnap.docs) {
         const r = doc.data() as Record<string, unknown>;
-        const t = docTimeMs(r, 'createdAt');
+        const t = firestoreDocTimeMs(r, 'createdAt');
         if (t != null && t < start.getTime() && r.completed !== true) {
           stalledIncomplete += 1;
         }
@@ -211,7 +195,7 @@ export async function buildAdminAnalyticsPayload(db: Firestore, presetRaw: strin
 
       for (const doc of tasksSnap.docs) {
         const r = doc.data() as Record<string, unknown>;
-        const t = docTimeMs(r, 'createdAt');
+        const t = firestoreDocTimeMs(r, 'createdAt');
         if (t == null || t < start.getTime() || t > end.getTime()) continue;
 
         tasksInRange += 1;
@@ -256,7 +240,7 @@ export async function buildAdminAnalyticsPayload(db: Firestore, presetRaw: strin
 
       for (const doc of libSnap.docs) {
         const r = doc.data() as Record<string, unknown>;
-        const t = docTimeMs(r, 'createdAt');
+        const t = firestoreDocTimeMs(r, 'createdAt');
         if (t == null || t < start.getTime() || t > end.getTime()) continue;
         libraryInRange += 1;
         const subj = typeof r.subject === 'string' ? r.subject : 'Allmänt';
@@ -265,7 +249,7 @@ export async function buildAdminAnalyticsPayload(db: Firestore, presetRaw: strin
 
       for (const doc of sessSnap.docs) {
         const r = doc.data() as Record<string, unknown>;
-        const t = docTimeMs(r, 'createdAt');
+        const t = firestoreDocTimeMs(r, 'createdAt');
         if (t == null || t < start.getTime() || t > end.getTime()) continue;
         chatSessionsInRange += 1;
       }
@@ -373,6 +357,7 @@ export async function buildAdminAnalyticsPayload(db: Firestore, presetRaw: strin
   const featuresLeast = [...featureCandidates].reverse().filter((f) => f.count > 0).slice(0, 5);
 
   const notes: string[] = [
+    'Översikten (ovanför) visar totala chatt-sessioner utan tidsfilter. Här räknas "nya chatt-sessioner" bara om dokumentets createdAt ligger inom vald period (UTC). Vid tvekan, välj "Sedan 2022" eller "12 mån".',
     'Servern loggar AI-chatt, bildanalys och premium-TTS (endast free) i users/{uid}/usage/{YYYY-MM-DD} vid varje lyckat anrop — även när abonnemangsgränser är av.',
     'Uppgifter räknas om de har createdAt inom perioden (ISO-sträng eller Firestore-tid). Äldre uppgifter utan datum syns inte i periodfilter.',
     'Ämnesfördelning: planeringsuppgifter + biblioteksposter (ämnesfält).',

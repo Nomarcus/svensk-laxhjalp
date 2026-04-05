@@ -206,9 +206,9 @@ async function aggregateTotalsByUserTree(db: Firestore, userIds: string[]) {
             cref.collection('tasks').count().get(),
             cref.collection('library').count().get(),
           ]);
-          cs += a.data().count;
-          tk += b.data().count;
-          lib += c.data().count;
+          cs += Number(a.data().count ?? 0);
+          tk += Number(b.data().count ?? 0);
+          lib += Number(c.data().count ?? 0);
         }
         return { children: childRefs.length, chatSessions: cs, tasks: tk, libraryItems: lib };
       }),
