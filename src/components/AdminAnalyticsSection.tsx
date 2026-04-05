@@ -80,11 +80,49 @@ type Props = {
 
 const RANGES: AnalyticsRange[] = ['day', 'week', 'month', 'year', 'all'];
 
+/** API kan sakna nya fält (gammal backend); undvik krasch på .length / undefined. */
+function coerceAnalyticsPayload(p: AnalyticsPayload): AnalyticsPayload {
+  const usageByDay = Array.isArray(p.usage?.byDay) ? p.usage.byDay : [];
+  return {
+    ...p,
+    usage: {
+      sumAiChats: p.usage?.sumAiChats ?? 0,
+      sumImageAnalyses: p.usage?.sumImageAnalyses ?? 0,
+      sumPremiumTts: p.usage?.sumPremiumTts ?? 0,
+      byDay: usageByDay,
+    },
+    usageLeaders: Array.isArray(p.usageLeaders) ? p.usageLeaders : [],
+    subjects: Array.isArray(p.subjects) ? p.subjects : [],
+    features: {
+      most: Array.isArray(p.features?.most) ? p.features.most : [],
+      least: Array.isArray(p.features?.least) ? p.features.least : [],
+    },
+    difficulty: {
+      lowCompletionSubjects: Array.isArray(p.difficulty?.lowCompletionSubjects)
+        ? p.difficulty.lowCompletionSubjects
+        : [],
+      lowAvgProgressSubjects: Array.isArray(p.difficulty?.lowAvgProgressSubjects)
+        ? p.difficulty.lowAvgProgressSubjects
+        : [],
+    },
+    notes: Array.isArray(p.notes) ? p.notes : [],
+    totals: {
+      tasksCreated: p.totals?.tasksCreated ?? 0,
+      chatSessionsCreated: p.totals?.chatSessionsCreated ?? 0,
+      libraryItemsAdded: p.totals?.libraryItemsAdded ?? 0,
+      incompleteTasksOlderThanRange: p.totals?.incompleteTasksOlderThanRange ?? 0,
+    },
+  };
+}
+
 export default function AdminAnalyticsSection({ t, range, onRangeChange, payload, loading, error }: Props) {
+  const display = useMemo(() => (payload ? coerceAnalyticsPayload(payload) : null), [payload]);
+
   const chartMax = useMemo(() => {
-    if (!payload?.usage.byDay.length) return 1;
-    return Math.max(1, ...payload.usage.byDay.map((d) => d.aiChats + d.imageAnalyses));
-  }, [payload]);
+    const days = display?.usage.byDay;
+    if (!days?.length) return 1;
+    return Math.max(1, ...days.map((d) => d.aiChats + d.imageAnalyses));
+  }, [display]);
 
   return (
     <section className="rounded-3xl border border-black/5 dark:border-white/10 bg-white dark:bg-slate-900 p-5 md:p-6 shadow-sm space-y-6">
@@ -122,7 +160,7 @@ export default function AdminAnalyticsSection({ t, range, onRangeChange, payload
         </div>
       )}
 
-      {loading && !payload && (
+      {loading && !display && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-pulse">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="h-20 rounded-2xl bg-stone-200/80 dark:bg-slate-800" />
@@ -130,46 +168,46 @@ export default function AdminAnalyticsSection({ t, range, onRangeChange, payload
         </div>
       )}
 
-      {payload && (
+      {display && (
         <>
           <p className="text-xs text-stone-400 dark:text-stone-500">
-            {t('admin.analytics.period')}: {fmtShort(payload.range.startUtc)} — {fmtShort(payload.range.endUtc)} ·{' '}
-            {t('admin.analytics.sampled', { n: payload.sampledUsers, total: payload.usersTotal })}
+            {t('admin.analytics.period')}: {fmtShort(display.range.startUtc)} — {fmtShort(display.range.endUtc)} ·{' '}
+            {t('admin.analytics.sampled', { n: display.sampledUsers, total: display.usersTotal })}
           </p>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-stone-50 dark:bg-slate-800/50 p-4">
               <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wide">{t('admin.analytics.kpiTasks')}</p>
-              <p className="text-2xl font-semibold text-stone-900 dark:text-stone-100 tabular-nums">{payload.totals.tasksCreated}</p>
+              <p className="text-2xl font-semibold text-stone-900 dark:text-stone-100 tabular-nums">{display.totals.tasksCreated}</p>
             </div>
             <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-stone-50 dark:bg-slate-800/50 p-4">
               <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wide">{t('admin.analytics.kpiSessions')}</p>
-              <p className="text-2xl font-semibold text-stone-900 dark:text-stone-100 tabular-nums">{payload.totals.chatSessionsCreated}</p>
+              <p className="text-2xl font-semibold text-stone-900 dark:text-stone-100 tabular-nums">{display.totals.chatSessionsCreated}</p>
             </div>
             <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-stone-50 dark:bg-slate-800/50 p-4">
               <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wide">{t('admin.analytics.kpiLibrary')}</p>
-              <p className="text-2xl font-semibold text-stone-900 dark:text-stone-100 tabular-nums">{payload.totals.libraryItemsAdded}</p>
+              <p className="text-2xl font-semibold text-stone-900 dark:text-stone-100 tabular-nums">{display.totals.libraryItemsAdded}</p>
             </div>
             <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-stone-50 dark:bg-slate-800/50 p-4">
               <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wide">{t('admin.analytics.kpiStalled')}</p>
               <p className="text-2xl font-semibold text-amber-700 dark:text-amber-400 tabular-nums">
-                {payload.totals.incompleteTasksOlderThanRange}
+                {display.totals.incompleteTasksOlderThanRange}
               </p>
             </div>
           </div>
 
           <p className="text-sm text-stone-600 dark:text-stone-300">
             {t('admin.analytics.usageSum', {
-              ai: payload.usage.sumAiChats,
-              img: payload.usage.sumImageAnalyses,
-              tts: payload.usage.sumPremiumTts,
+              ai: display.usage.sumAiChats,
+              img: display.usage.sumImageAnalyses,
+              tts: display.usage.sumPremiumTts,
             })}
-            {payload.usageChartTruncated && (
+            {display.usageChartTruncated && (
               <span className="block text-xs text-amber-600 dark:text-amber-400 mt-1">{t('admin.analytics.truncatedChart')}</span>
             )}
           </p>
 
-          {!payload.usageFailed && payload.usageLeaders.length > 0 && (
+          {!display.usageFailed && display.usageLeaders.length > 0 && (
             <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-stone-50/80 dark:bg-slate-800/50 p-4">
               <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">
                 {t('admin.analytics.usageLeadersTitle')}
@@ -186,7 +224,7 @@ export default function AdminAnalyticsSection({ t, range, onRangeChange, payload
                     </tr>
                   </thead>
                   <tbody>
-                    {payload.usageLeaders.map((row) => (
+                    {display.usageLeaders.map((row) => (
                       <tr key={row.uid} className="border-b border-black/5 dark:border-white/5 last:border-0">
                         <td className="py-2 pr-2 text-stone-800 dark:text-stone-200">
                           <span className="block truncate max-w-[240px]" title={row.uid}>
@@ -204,11 +242,11 @@ export default function AdminAnalyticsSection({ t, range, onRangeChange, payload
             </div>
           )}
 
-          {!payload.usageFailed && payload.usage.byDay.length > 0 && (
+          {!display.usageFailed && display.usage.byDay.length > 0 && (
             <div>
               <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">{t('admin.analytics.chartTitle')}</h3>
               <div className="flex items-end gap-0.5 h-36 overflow-x-auto pb-1">
-                {payload.usage.byDay.map((d) => {
+                {display.usage.byDay.map((d) => {
                   const total = d.aiChats + d.imageAnalyses;
                   const barH = chartMax > 0 ? (total / chartMax) * 100 : 0;
                   const chatPct = total > 0 ? (d.aiChats / total) * 100 : 50;
@@ -240,7 +278,7 @@ export default function AdminAnalyticsSection({ t, range, onRangeChange, payload
                 {t('admin.analytics.featuresMost')}
               </h3>
               <ul className="space-y-2">
-                {payload.features.most.map((f) => (
+                {display.features.most.map((f) => (
                   <li key={f.id} className="flex justify-between text-sm text-stone-700 dark:text-stone-200">
                     <span>{featLabel(t, f.id)}</span>
                     <span className="tabular-nums font-medium text-emerald-700 dark:text-emerald-400">{f.count}</span>
@@ -254,10 +292,10 @@ export default function AdminAnalyticsSection({ t, range, onRangeChange, payload
                 {t('admin.analytics.featuresLeast')}
               </h3>
               <ul className="space-y-2">
-                {payload.features.least.length === 0 ? (
+                {display.features.least.length === 0 ? (
                   <li className="text-sm text-stone-400">{t('admin.analytics.noLeast')}</li>
                 ) : (
-                  payload.features.least.map((f) => (
+                  display.features.least.map((f) => (
                     <li key={f.id} className="flex justify-between text-sm text-stone-700 dark:text-stone-200">
                       <span>{featLabel(t, f.id)}</span>
                       <span className="tabular-nums font-medium">{f.count}</span>
@@ -286,14 +324,14 @@ export default function AdminAnalyticsSection({ t, range, onRangeChange, payload
                   </tr>
                 </thead>
                 <tbody>
-                  {payload.subjects.length === 0 ? (
+                  {display.subjects.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="py-6 text-stone-500 text-center">
                         {t('admin.analytics.noSubjects')}
                       </td>
                     </tr>
                   ) : (
-                    payload.subjects.map((s) => (
+                    display.subjects.map((s) => (
                       <tr key={s.key} className="border-b border-black/5 dark:border-white/5 last:border-0">
                         <td className="py-2 pr-2 font-medium text-stone-800 dark:text-stone-200">{s.display}</td>
                         <td className="py-2 pr-2 tabular-nums text-stone-600 dark:text-stone-300">
@@ -322,10 +360,10 @@ export default function AdminAnalyticsSection({ t, range, onRangeChange, payload
               </h3>
               <p className="text-xs text-stone-500 mb-3">{t('admin.analytics.difficultyHint')}</p>
               <ul className="space-y-2 text-sm">
-                {payload.difficulty.lowCompletionSubjects.length === 0 ? (
+                {display.difficulty.lowCompletionSubjects.length === 0 ? (
                   <li className="text-stone-500">{t('admin.analytics.noDifficulty')}</li>
                 ) : (
-                  payload.difficulty.lowCompletionSubjects.map((s) => (
+                  display.difficulty.lowCompletionSubjects.map((s) => (
                     <li key={s.key} className="flex justify-between gap-2 text-stone-700 dark:text-stone-200">
                       <span className="truncate">{s.display}</span>
                       <span className="tabular-nums shrink-0 text-amber-700 dark:text-amber-400">
@@ -342,10 +380,10 @@ export default function AdminAnalyticsSection({ t, range, onRangeChange, payload
                 {t('admin.analytics.lowProgress')}
               </h3>
               <ul className="space-y-2 text-sm">
-                {payload.difficulty.lowAvgProgressSubjects.length === 0 ? (
+                {display.difficulty.lowAvgProgressSubjects.length === 0 ? (
                   <li className="text-stone-500">{t('admin.analytics.noProgress')}</li>
                 ) : (
-                  payload.difficulty.lowAvgProgressSubjects.map((s) => (
+                  display.difficulty.lowAvgProgressSubjects.map((s) => (
                     <li key={s.key} className="flex justify-between gap-2 text-stone-700 dark:text-stone-200">
                       <span className="truncate">{s.display}</span>
                       <span className="tabular-nums shrink-0">
@@ -361,7 +399,7 @@ export default function AdminAnalyticsSection({ t, range, onRangeChange, payload
           <div>
             <h3 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">{t('admin.analytics.notesTitle')}</h3>
             <ul className="list-disc pl-5 space-y-1 text-xs text-stone-500 dark:text-stone-400">
-              {payload.notes.map((n, i) => (
+              {display.notes.map((n, i) => (
                 <li key={i}>{n}</li>
               ))}
             </ul>
