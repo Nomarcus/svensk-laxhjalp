@@ -10,7 +10,7 @@ async function getAuthToken(): Promise<string> {
 /** Premium TTS (Google Cloud). Returnerar rå response — kolla ok innan blob(). */
 export async function requestPremiumTts(text: string, lang?: string): Promise<Response> {
   const token = await getAuthToken();
-  return fetch('/api/tts', {
+  return fetch(apiUrl('/api/tts'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
