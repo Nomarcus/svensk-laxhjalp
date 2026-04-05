@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { getServerFirestore } from '../../server/lib/serverFirestore';
 const CLIENT_URL = process.env.CLIENT_URL || 'https://svensk-laxhjalp.vercel.app';
 async function getFirebaseAdmin() { const mod = await import('firebase-admin'); const admin = mod.default; if (!admin.apps?.length) { const sa = process.env.FIREBASE_SERVICE_ACCOUNT; if (sa) admin.initializeApp({ credential: admin.credential.cert(JSON.parse(sa)) }); else admin.initializeApp(); } return admin; }
 export default async function handler(req: any, res: any) {
@@ -8,7 +9,7 @@ export default async function handler(req: any, res: any) {
   try {
     const admin = await getFirebaseAdmin();
     const decoded = await admin.auth().verifyIdToken(authHeader.split('Bearer ')[1]);
-    const customerId = (await admin.firestore().doc('users/' + decoded.uid).get()).data()?.stripeCustomerId;
+    const customerId = (await getServerFirestore().doc('users/' + decoded.uid).get()).data()?.stripeCustomerId;
     if (!customerId) return res.status(400).json({ error: 'Inget abonnemang.' });
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
     const session = await stripe.billingPortal.sessions.create({ customer: customerId, return_url: CLIENT_URL });

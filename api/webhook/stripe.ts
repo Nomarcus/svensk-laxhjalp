@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { getServerFirestore } from '../../server/lib/serverFirestore';
 export const config = { api: { bodyParser: false } };
 async function getRawBody(req: any): Promise<Buffer> { return new Promise((resolve, reject) => { const chunks: Buffer[] = []; req.on('data', (chunk: Buffer) => chunks.push(chunk)); req.on('end', () => resolve(Buffer.concat(chunks))); req.on('error', reject); }); }
 async function getFirebaseAdmin() { const mod = await import('firebase-admin'); const admin = mod.default; if (!admin.apps?.length) { const sa = process.env.FIREBASE_SERVICE_ACCOUNT; if (sa) admin.initializeApp({ credential: admin.credential.cert(JSON.parse(sa)) }); else admin.initializeApp(); } return admin; }
@@ -11,8 +12,8 @@ export default async function handler(req: any, res: any) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
   let event: Stripe.Event;
   try { event = stripe.webhooks.constructEvent(await getRawBody(req), sig, webhookSecret); } catch { return res.status(400).json({ error: 'Signature failed.' }); }
-  const admin = await getFirebaseAdmin();
-  const db = admin.firestore();
+  await getFirebaseAdmin();
+  const db = getServerFirestore();
   try {
     if (event.type === 'checkout.session.completed') { const s = event.data.object as Stripe.Checkout.Session; const uid = s.metadata?.firebaseUID; if (uid && s.subscription) { const sub = await stripe.subscriptions.retrieve(s.subscription as string); await db.doc('users/' + uid).set({ tier: 'pro', subscriptionStatus: 'active', stripeSubscriptionId: sub.id, stripeCustomerId: s.customer as string, currentPeriodEnd: getSubscriptionPeriodEnd(sub), cancelAtPeriodEnd: sub.cancel_at_period_end }, { merge: true }); } }
     else if (event.type === 'customer.subscription.updated') { const sub = event.data.object as Stripe.Subscription; const uid = sub.metadata?.firebaseUID; if (uid) await db.doc('users/' + uid).set({ tier: sub.status === 'active' ? 'pro' : 'free', subscriptionStatus: sub.status === 'active' ? 'active' : 'past_due', currentPeriodEnd: getSubscriptionPeriodEnd(sub), cancelAtPeriodEnd: sub.cancel_at_period_end }, { merge: true }); }

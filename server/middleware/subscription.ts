@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import admin from 'firebase-admin';
 import { AuthenticatedRequest } from './auth';
+import { getServerFirestore } from '../lib/serverFirestore';
 import { enforceSubscriptionLimits } from '../subscriptionEnv';
 
 export interface SubscriptionRequest extends AuthenticatedRequest {
@@ -32,7 +33,7 @@ export async function subscriptionMiddleware(
   }
 
   try {
-    const userDoc = await admin.firestore().doc(`users/${req.uid}`).get();
+    const userDoc = await getServerFirestore().doc(`users/${req.uid}`).get();
     const userData = userDoc.data() || {};
     const tier = userData.tier || 'free';
     const subscriptionStatus = userData.subscriptionStatus || 'none';
@@ -50,7 +51,7 @@ export async function subscriptionMiddleware(
     }
 
     const today = new Date().toISOString().split('T')[0];
-    const usageRef = admin.firestore().doc(`users/${req.uid}/usage/${today}`);
+    const usageRef = getServerFirestore().doc(`users/${req.uid}/usage/${today}`);
     const usageDoc = await usageRef.get();
     const usage = usageDoc.data() || { chatCount: 0, imageCount: 0 };
 

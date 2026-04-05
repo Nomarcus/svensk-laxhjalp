@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import admin from 'firebase-admin';
+import { getServerFirestore } from '../lib/serverFirestore';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { stripMarkdownForTts } from '../lib/stripForTts';
 import { synthesizeMp3 } from '../lib/googleCloudTts';
@@ -42,12 +43,12 @@ router.post('/tts', async (req: AuthenticatedRequest, res: Response) => {
       return;
     }
 
-    const userDoc = await admin.firestore().doc(`users/${uid}`).get();
+    const userDoc = await getServerFirestore().doc(`users/${uid}`).get();
     const userData = userDoc.data();
     const pro = isProUser(userData);
 
     const today = new Date().toISOString().split('T')[0];
-    const usageRef = admin.firestore().doc(`users/${uid}/usage/${today}`);
+    const usageRef = getServerFirestore().doc(`users/${uid}/usage/${today}`);
 
     if (enforceSubscriptionLimits() && !pro) {
       const usageDoc = await usageRef.get();

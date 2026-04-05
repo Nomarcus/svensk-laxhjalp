@@ -1,4 +1,5 @@
 import { buildAdminOverviewPayload, isSoleAdminFromEnv } from '../../server/lib/adminOverviewPayload';
+import { getServerFirestore } from '../../server/lib/serverFirestore';
 
 function parseServiceAccountJson(): object {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
@@ -30,7 +31,7 @@ export default async function handler(req: { method?: string; headers: { authori
     if (!isSoleAdminFromEnv(decoded.uid, decoded.email)) {
       return res.status(403).json({ error: 'Forbidden', code: 'admin_forbidden' });
     }
-    const db = admin.firestore();
+    const db = getServerFirestore();
     const payload = await buildAdminOverviewPayload(db);
     return res.status(200).json(payload);
   } catch (err: unknown) {

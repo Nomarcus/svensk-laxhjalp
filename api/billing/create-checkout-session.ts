@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { getServerFirestore } from '../../server/lib/serverFirestore';
 const CLIENT_URL = process.env.CLIENT_URL || 'https://svensk-laxhjalp.vercel.app';
 async function getFirebaseAdmin() { const mod = await import('firebase-admin'); const admin = mod.default; if (!admin.apps?.length) { const sa = process.env.FIREBASE_SERVICE_ACCOUNT; if (sa) admin.initializeApp({ credential: admin.credential.cert(JSON.parse(sa)) }); else admin.initializeApp(); } return admin; }
 export default async function handler(req: any, res: any) {
@@ -13,7 +14,7 @@ export default async function handler(req: any, res: any) {
     const priceMap: Record<string, string | undefined> = { monthly: process.env.STRIPE_PRICE_ID_MONTHLY, yearly: process.env.STRIPE_PRICE_ID_YEARLY };
     const stripePriceId = priceMap[priceId] || priceId;
     if (!stripePriceId) return res.status(400).json({ error: 'Ogiltigt pris.' });
-    const db = admin.firestore();
+    const db = getServerFirestore();
     let customerId = (await db.doc('users/' + decoded.uid).get()).data()?.stripeCustomerId;
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
     if (!customerId) { const c = await stripe.customers.create({ email: decoded.email, metadata: { firebaseUID: decoded.uid } }); customerId = c.id; await db.doc('users/' + decoded.uid).set({ stripeCustomerId: customerId }, { merge: true }); }

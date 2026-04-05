@@ -1,4 +1,5 @@
 import { enforceSubscriptionLimits } from '../server/subscriptionEnv';
+import { getServerFirestore } from '../server/lib/serverFirestore';
 
 async function getFirebaseAdmin() {
   const mod = await import('firebase-admin');
@@ -59,7 +60,7 @@ export default async function handler(req: any, res: any) {
 
   try {
     const admin = await getFirebaseAdmin();
-    const db = admin.firestore();
+    const db = getServerFirestore();
     const userDoc = await db.doc(`users/${uid}`).get();
     const userData = userDoc.data();
     const pro = isProUser(userData);

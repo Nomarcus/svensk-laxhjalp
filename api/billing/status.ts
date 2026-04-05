@@ -1,3 +1,4 @@
+import { getServerFirestore } from '../../server/lib/serverFirestore';
 async function getFirebaseAdmin() { const mod = await import('firebase-admin'); const admin = mod.default; if (!admin.apps?.length) { const sa = process.env.FIREBASE_SERVICE_ACCOUNT; if (sa) admin.initializeApp({ credential: admin.credential.cert(JSON.parse(sa)) }); else admin.initializeApp(); } return admin; }
 export default async function handler(req: any, res: any) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
@@ -6,7 +7,7 @@ export default async function handler(req: any, res: any) {
   try {
     const admin = await getFirebaseAdmin();
     const decoded = await admin.auth().verifyIdToken(authHeader.split('Bearer ')[1]);
-    const db = admin.firestore();
+    const db = getServerFirestore();
     const data = (await db.doc('users/' + decoded.uid).get()).data() || {};
     const today = new Date().toISOString().split('T')[0];
     const usage = (await db.doc('users/' + decoded.uid + '/usage/' + today).get()).data() || { chatCount: 0, imageCount: 0, aiTtsCount: 0 };

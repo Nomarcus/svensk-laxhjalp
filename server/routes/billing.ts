@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import Stripe from 'stripe';
-import admin from 'firebase-admin';
 import { AuthenticatedRequest } from '../middleware/auth';
+import { getServerFirestore } from '../lib/serverFirestore';
 
 const router = Router();
 
@@ -52,7 +52,7 @@ router.post('/billing/create-checkout-session', async (req: AuthenticatedRequest
     }
 
     // Look up or create Stripe customer
-    const userDoc = await admin.firestore().doc(`users/${uid}`).get();
+    const userDoc = await getServerFirestore().doc(`users/${uid}`).get();
     const userData = userDoc.data();
     let customerId = userData?.stripeCustomerId;
 
@@ -62,7 +62,7 @@ router.post('/billing/create-checkout-session', async (req: AuthenticatedRequest
         metadata: { firebaseUID: uid },
       });
       customerId = customer.id;
-      await admin.firestore().doc(`users/${uid}`).set(
+      await getServerFirestore().doc(`users/${uid}`).set(
         { stripeCustomerId: customerId },
         { merge: true }
       );
@@ -97,7 +97,7 @@ router.post('/billing/create-portal-session', async (req: AuthenticatedRequest, 
       return;
     }
 
-    const userDoc = await admin.firestore().doc(`users/${uid}`).get();
+    const userDoc = await getServerFirestore().doc(`users/${uid}`).get();
     const customerId = userDoc.data()?.stripeCustomerId;
 
     if (!customerId) {
@@ -126,12 +126,12 @@ router.get('/billing/status', async (req: AuthenticatedRequest, res: Response) =
       return;
     }
 
-    const userDoc = await admin.firestore().doc(`users/${uid}`).get();
+    const userDoc = await getServerFirestore().doc(`users/${uid}`).get();
     const data = userDoc.data() || {};
 
     // Get today's usage
     const today = new Date().toISOString().split('T')[0];
-    const usageDoc = await admin.firestore().doc(`users/${uid}/usage/${today}`).get();
+    const usageDoc = await getServerFirestore().doc(`users/${uid}/usage/${today}`).get();
     const usage = usageDoc.data() || { chatCount: 0, imageCount: 0, aiTtsCount: 0 };
 
     res.json({
@@ -179,7 +179,7 @@ export async function stripeWebhookHandler(req: Request, res: Response) {
 
         if (session.subscription) {
           const subscription = await getStripe().subscriptions.retrieve(session.subscription as string);
-          await admin.firestore().doc(`users/${firebaseUID}`).set({
+          await getServerFirestore().doc(`users/${firebaseUID}`).set({
             tier: 'pro',
             subscriptionStatus: 'active',
             stripeSubscriptionId: subscription.id,
@@ -203,7 +203,7 @@ export async function stripeWebhookHandler(req: Request, res: Response) {
           unpaid: 'past_due',
         };
 
-        await admin.firestore().doc(`users/${firebaseUID}`).set({
+        await getServerFirestore().doc(`users/${firebaseUID}`).set({
           tier: subscription.status === 'active' ? 'pro' : 'free',
           subscriptionStatus: statusMap[subscription.status] || 'none',
           currentPeriodEnd: getSubscriptionPeriodEnd(subscription),
@@ -217,7 +217,7 @@ export async function stripeWebhookHandler(req: Request, res: Response) {
         const firebaseUID = subscription.metadata?.firebaseUID;
         if (!firebaseUID) break;
 
-        await admin.firestore().doc(`users/${firebaseUID}`).set({
+        await getServerFirestore().doc(`users/${firebaseUID}`).set({
           tier: 'free',
           subscriptionStatus: 'none',
           stripeSubscriptionId: null,
@@ -232,7 +232,7 @@ export async function stripeWebhookHandler(req: Request, res: Response) {
         const customerId = invoice.customer as string;
 
         // Find user by stripeCustomerId
-        const snapshot = await admin.firestore()
+        const snapshot = await getServerFirestore()
           .collection('users')
           .where('stripeCustomerId', '==', customerId)
           .limit(1)
