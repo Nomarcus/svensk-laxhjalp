@@ -369,55 +369,57 @@ export default function Layout({
       {showMobileMenu && (
         <div className="md:hidden fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowMobileMenu(false)} />
-          <div className="relative ml-auto w-[300px] max-w-[85vw] bg-white dark:bg-slate-900 h-full flex flex-col animate-in slide-in-from-right duration-200">
-            <div className="flex items-center justify-between p-4 border-b border-black/5 dark:border-white/5">
+          <div className="relative ml-auto w-[300px] max-w-[85vw] self-stretch min-h-0 max-h-dvh bg-white dark:bg-slate-900 flex flex-col shadow-xl animate-in slide-in-from-right duration-200">
+            <div className="flex shrink-0 items-center justify-between p-4 border-b border-black/5 dark:border-white/5">
               <h2 className="font-serif italic text-lg">{t('nav.menu')}</h2>
               <button onClick={() => setShowMobileMenu(false)} className="p-2 hover:bg-stone-100 dark:hover:bg-slate-800 rounded-full transition-colors">
                 <X size={20} className="text-stone-400" />
               </button>
             </div>
 
-            {/* Child Selector in mobile menu */}
-            <div className="p-4 border-b border-black/5 dark:border-white/5">
-              <p className="text-[10px] font-medium text-stone-400 uppercase tracking-widest mb-2">{t('child.label')}</p>
-              <div className="space-y-1">
-                {childrenList.map((child) => (
+            {/* Scrollbar mittdel: iOS kräver min-h-0 + overflow-y-auto; fot med utloggning ligger fast under */}
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+              {/* Child Selector in mobile menu */}
+              <div className="p-4 border-b border-black/5 dark:border-white/5">
+                <p className="text-[10px] font-medium text-stone-400 uppercase tracking-widest mb-2">{t('child.label')}</p>
+                <div className="space-y-1">
+                  {childrenList.map((child) => (
+                    <button
+                      key={child.id}
+                      onClick={() => onSelectChild(child.id)}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left",
+                        selectedChildId === child.id
+                          ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-medium"
+                          : "text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium",
+                        selectedChildId === child.id ? "bg-emerald-200 dark:bg-emerald-800 text-emerald-800 dark:text-emerald-200" : "bg-stone-100 dark:bg-slate-700 text-stone-500 dark:text-stone-400"
+                      )}>
+                        {child.name[0]}
+                      </div>
+                      <span className="flex-1 text-sm">{child.name}</span>
+                      {isSharedChild(child) && (
+                        <span className="text-[9px] bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded-full">{t('child.shared')}</span>
+                      )}
+                      {!isSharedChild(child) && hasSharing(child) && (
+                        <Users size={12} className="text-blue-400" />
+                      )}
+                    </button>
+                  ))}
                   <button
-                    key={child.id}
-                    onClick={() => onSelectChild(child.id)}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left",
-                      selectedChildId === child.id
-                        ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-medium"
-                        : "text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800"
-                    )}
+                    onClick={() => { onManageChildren(); setShowMobileMenu(false); }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-xl transition-all text-left text-sm"
                   >
-                    <div className={cn(
-                      "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium",
-                      selectedChildId === child.id ? "bg-emerald-200 dark:bg-emerald-800 text-emerald-800 dark:text-emerald-200" : "bg-stone-100 dark:bg-slate-700 text-stone-500 dark:text-stone-400"
-                    )}>
-                      {child.name[0]}
-                    </div>
-                    <span className="flex-1 text-sm">{child.name}</span>
-                    {isSharedChild(child) && (
-                      <span className="text-[9px] bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded-full">{t('child.shared')}</span>
-                    )}
-                    {!isSharedChild(child) && hasSharing(child) && (
-                      <Users size={12} className="text-blue-400" />
-                    )}
+                    <Settings size={16} />
+                    <span>{t('child.manage')}</span>
                   </button>
-                ))}
-                <button
-                  onClick={() => { onManageChildren(); setShowMobileMenu(false); }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-xl transition-all text-left text-sm"
-                >
-                  <Settings size={16} />
-                  <span>{t('child.manage')}</span>
-                </button>
+                </div>
               </div>
-            </div>
 
-            <div className="p-4 space-y-1 flex-1">
+              <div className="p-4 space-y-1 pb-6">
               <button
                 onClick={() => handleTabChange('info')}
                 className={cn(
@@ -510,9 +512,10 @@ export default function Layout({
                   <span>{dark ? t('nav.lightMode') : t('nav.darkMode')}</span>
                 </button>
               )}
+              </div>
             </div>
 
-            <div className="p-4 border-t border-black/5 dark:border-white/5 mt-auto">
+            <div className="shrink-0 p-4 border-t border-black/5 dark:border-white/5 bg-white dark:bg-slate-900 safe-area-bottom">
               <div className="flex items-center gap-3 px-3 py-3 mb-2">
                 {user.photoURL ? (
                   <img src={user.photoURL} alt={user.displayName || ''} className="w-8 h-8 rounded-full" referrerPolicy="no-referrer" />
