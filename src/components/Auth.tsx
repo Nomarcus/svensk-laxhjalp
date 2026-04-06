@@ -532,11 +532,6 @@ export default function Auth({ onShowPrivacy, onShowTerms, dark, onToggleDark }:
                 icon: <Star size={20} className="text-emerald-600" />,
               },
               {
-                title: t('landing.reason3Title'),
-                desc: t('landing.reason3Desc'),
-                icon: <Users size={20} className="text-emerald-600" />,
-              },
-              {
                 title: t('landing.reason4Title'),
                 desc: t('landing.reason4Desc'),
                 icon: <Shield size={20} className="text-emerald-600" />,
