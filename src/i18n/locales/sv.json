@@ -76,7 +76,7 @@
     "generic": "Något gick fel. Försök igen."
   },
   "landing": {
-    "heroTitle": "AI-driven läxhjälp för svenska föräldrar",
+    "heroTitle": "AI-driven läxhjälp för föräldrar med barn i svensk skola",
     "missionTitle": "Varför jag skapade Föräldrahjälpen",
     "missionText": "Jag skapade Föräldrahjälpen för att alla barn ska få samma chans att lyckas i skolan, oavsett vilka förutsättningar familjen har hemma. Föräldrar har olika tid, skolbakgrund, språk och trygghet i dagens undervisning. Med hjälp av ny teknik vill jag minska det gapet genom att göra stödet tydligt, pedagogiskt och tillgängligt för alla.",
     "freeToStart": "Gratis att starta",
@@ -419,7 +419,7 @@
     "faq5A": "Ja! Föräldrahjälpen fungerar som en webbapp och kan installeras på din hemskärm — både på iPhone och Android.",
     "faq6Q": "Kan båda föräldrarna använda appen?",
     "faq6A": "Ja, du kan bjuda in den andra föräldern via 'Hantera barn'. Ni delar då planering, chatt-historik och bibliotek.",
-    "footerLine1": "Föräldrahjälpen — AI-driven läxhjälp för svenska föräldrar",
+    "footerLine1": "Föräldrahjälpen — AI-driven läxhjälp för föräldrar med barn i svensk skola",
     "footerLine2": "Kopplad till läroplanen Lgr22 för grundskolan åk 1–9"
   },
   "subscription": {
