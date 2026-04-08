@@ -5,7 +5,7 @@
 
 export const MAX_CHAT_CONTENT_CHARS = 9999;
 export const MAX_HISTORY_PAIRS = 10;
-export const MAX_INLINE_IMAGES = 4;
+export const MAX_INLINE_IMAGES = 5;
 /** Approximate decoded image size per image (base64 payload). */
 export const MAX_IMAGE_DECODED_BYTES = 2 * 1024 * 1024;
 

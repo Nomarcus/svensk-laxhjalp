@@ -90,6 +90,8 @@
     "inputPlaceholder": "اطرح سؤالاً أو صوّر الواجب بزر الكاميرا...",
     "takePhoto": "صوّر الواجب",
     "chooseImage": "اختر صورة",
+    "removeAttachment": "إزالة المرفق",
+    "multiImageHint": "حتى {{max}} صور (مثلاً الوجهان الأمامي والخلفي)",
     "stopRecording": "أوقف التسجيل",
     "speakQuestion": "انطق سؤالك",
     "listening": "أستمع... تحدث الآن",
@@ -203,7 +205,11 @@
     "masteryPercent": "مدى التقدم (%)",
     "remainingPercent": "المتبقي {{value}}%",
     "streakWeeks": "سلسلة أسبوعية ×{{count}}",
-    "streakHint": "خط streak أسبوعي: علام واجباً أو اختباراً كمكتمل مرة واحدة على الأقل كل أسبوع."
+    "streakHint": "خط streak أسبوعي: علام واجباً أو اختباراً كمكتمل مرة واحدة على الأقل كل أسبوع.",
+    "scheduleCalendarTitle": "اختر يوم التسليم",
+    "scheduleCalendarSelected": "الأسبوع {{week}}، {{year}} — {{day}}",
+    "scheduleCalendarConfirm": "استخدام هذا التاريخ",
+    "pickDateInCalendar": "اختر اليوم في التقويم"
   },
   "library": {
     "title": "المكتبة",

@@ -171,6 +171,8 @@
     "inputPlaceholder": "Ask a question or photo homework with the camera button...",
     "takePhoto": "Photo homework",
     "chooseImage": "Choose image",
+    "removeAttachment": "Remove attachment",
+    "multiImageHint": "Up to {{max}} photos (e.g. front and back)",
     "stopRecording": "Stop recording",
     "speakQuestion": "Speak your question",
     "listening": "Listening... Speak now",
@@ -280,7 +282,11 @@
     "masteryPercent": "How far you've progressed (%)",
     "remainingPercent": "{{value}}% left",
     "streakWeeks": "Weekly streak ×{{count}}",
-    "streakHint": "Weekly streak: mark at least one homework or test as done during the week."
+    "streakHint": "Weekly streak: mark at least one homework or test as done during the week.",
+    "scheduleCalendarTitle": "Pick due date",
+    "scheduleCalendarSelected": "Week {{week}}, {{year}} — {{day}}",
+    "scheduleCalendarConfirm": "Use this date",
+    "pickDateInCalendar": "Pick day in calendar"
   },
   "library": {
     "title": "Resource Library",

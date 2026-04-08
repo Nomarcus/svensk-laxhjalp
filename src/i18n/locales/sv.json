@@ -171,6 +171,8 @@
     "inputPlaceholder": "Ställ en fråga eller fota läxan med kameraknappen...",
     "takePhoto": "Fota läxan",
     "chooseImage": "Välj bild",
+    "removeAttachment": "Ta bort bilaga",
+    "multiImageHint": "Högst {{max}} bilder (t.ex. fram- och baksida)",
     "stopRecording": "Stoppa inspelning",
     "speakQuestion": "Tala in din fråga",
     "listening": "Lyssnar... Tala nu",
@@ -280,7 +282,11 @@
     "masteryPercent": "Hur långt du har kommit (%)",
     "remainingPercent": "{{value}}% kvar",
     "streakWeeks": "Veckostreak ×{{count}}",
-    "streakHint": "Du håller en veckostreak när du markerar minst en läxa eller ett prov som klart under veckan."
+    "streakHint": "Du håller en veckostreak när du markerar minst en läxa eller ett prov som klart under veckan.",
+    "scheduleCalendarTitle": "Välj inlämningsdag",
+    "scheduleCalendarSelected": "Vecka {{week}}, {{year}} — {{day}}",
+    "scheduleCalendarConfirm": "Använd detta datum",
+    "pickDateInCalendar": "Välj dag i kalender"
   },
   "library": {
     "title": "Resursbibliotek",

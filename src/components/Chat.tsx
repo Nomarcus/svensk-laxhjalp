@@ -13,12 +13,14 @@ import ChatInput from './chat/ChatInput';
 import ChatEmptyState from './chat/ChatEmptyState';
 import { useSpeech } from '../hooks/useSpeech';
 
+const CHAT_MAX_IMAGES = 5;
+
 interface ChatProps {
   childId: string;
   childName: string;
   ownerId: string;
   tasks?: Task[];
-  taskContext?: { taskId: string; subject: string; description: string; imageUrl?: string } | null;
+  taskContext?: { taskId: string; subject: string; description: string; imageUrl?: string; imageUrls?: string[] } | null;
   onTaskContextUsed?: () => void;
   onCreateTask?: (subject: string, description: string) => void;
   onCreateTaskFromPhoto?: (data: { subject: string; description: string; workDays: string[]; dueDay: string; minutesPerDay: number; imageUrl?: string }) => void;
@@ -34,7 +36,7 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [image, setImage] = useState<string | null>(null);
+  const [images, setImages] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [generatingImageId, setGeneratingImageId] = useState<string | null>(null);
   const [savedMessageIds, setSavedMessageIds] = useState<Set<string>>(new Set());
@@ -104,9 +106,12 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
       taskContextProcessed.current = true;
       const prompt = `Jag behöver hjälp med denna läxa:\n\nÄmne: ${taskContext.subject}\n${taskContext.description ? `Beskrivning: ${taskContext.description}\n` : ''}Förklara vad uppgiften handlar om och ge tips på hur jag som förälder kan hjälpa mitt barn.`;
 
-      if (taskContext.imageUrl) {
-        setImage(taskContext.imageUrl);
-      }
+      const fromTask = taskContext.imageUrls?.length
+        ? taskContext.imageUrls.slice(0, CHAT_MAX_IMAGES)
+        : taskContext.imageUrl
+          ? [taskContext.imageUrl]
+          : [];
+      if (fromTask.length) setImages(fromTask);
 
       // Small delay to ensure session is ready
       setTimeout(() => {
@@ -229,7 +234,8 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
       // Find the user message before this AI response to get the image
       const aiMsgIndex = messages.findIndex(m => m.id === messageId);
       const prevMsg = aiMsgIndex > 0 ? messages[aiMsgIndex - 1] : null;
-      const imageUrl = prevMsg?.attachments?.[0] || undefined;
+      const urls = prevMsg?.attachments?.length ? prevMsg.attachments : undefined;
+      const imageUrl = urls?.[0];
 
       const taskData = await analyzeHomeworkForTask(aiContent);
       onCreateTaskFromPhoto({
@@ -250,16 +256,17 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
   const sendMessage = async (e: React.FormEvent | string, displayText?: string) => {
     if (typeof e !== 'string') e.preventDefault();
     const messageText = typeof e === 'string' ? e : input.trim();
-    if ((!messageText && !image) || loading || !auth.currentUser || !childId || !activeSessionId) return;
+    if ((!messageText && images.length === 0) || loading || !auth.currentUser || !childId || !activeSessionId) return;
 
-    const currentImage = image;
+    const currentImages = [...images];
     if (typeof e !== 'string') setInput('');
-    setImage(null);
+    setImages([]);
     setLoading(true);
     setError(null);
 
     // Use displayText for the visible user message if provided (e.g. "Visa facit" instead of the full prompt)
     const visibleText = displayText || messageText || t('chat.analyzeImage');
+    const imagePayload = currentImages.map((img) => (img.includes(',') ? img.split(',')[1] : img));
 
     try {
       const messagesRef = collection(db, 'users', ownerId, 'children', childId, 'chatSessions', activeSessionId, 'messages');
@@ -269,7 +276,7 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
           role: 'user',
           content: visibleText,
           timestamp: serverTimestamp(),
-          attachments: currentImage ? [currentImage] : [],
+          attachments: currentImages,
         });
       } catch (err: any) {
         if (err.message?.includes('exceeds the maximum allowed size')) {
@@ -288,9 +295,10 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
       const response = await generateHomeworkHelp(
         messageText || t('chat.analyzeImage'),
         history,
-        currentImage?.split(',')[1],
+        undefined,
         simpleSwedish,
-        i18n.language
+        i18n.language,
+        imagePayload.length ? imagePayload : undefined
       );
 
       await addDoc(messagesRef, { role: 'model', content: response, timestamp: serverTimestamp() });
@@ -316,19 +324,27 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
       onDrop={(e) => {
         e.preventDefault();
         setIsDragging(false);
-        const file = e.dataTransfer.files?.[0];
-        if (file && file.type.startsWith('image/')) {
-          const reader = new FileReader();
-          reader.onloadend = async () => {
+        const files = e.dataTransfer.files;
+        if (!files?.length) return;
+        void (async () => {
+          const toAdd: string[] = [];
+          for (let i = 0; i < files.length && toAdd.length < CHAT_MAX_IMAGES; i++) {
+            const file = files[i];
+            if (!file.type.startsWith('image/')) continue;
+            const dataUrl = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.onerror = () => reject(reader.error);
+              reader.readAsDataURL(file);
+            });
             try {
-              const compressed = await compressImage(reader.result as string);
-              setImage(compressed);
-            } catch (err) {
-              console.error('Error processing dropped image:', err);
+              toAdd.push(await compressImage(dataUrl));
+            } catch {
+              toAdd.push(dataUrl);
             }
-          };
-          reader.readAsDataURL(file);
-        }
+          }
+          if (toAdd.length) setImages((prev) => [...prev, ...toAdd].slice(0, CHAT_MAX_IMAGES));
+        })();
       }}
     >
       {isDragging && (
@@ -467,8 +483,9 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
       <ChatInput
         input={input}
         setInput={setInput}
-        image={image}
-        setImage={setImage}
+        images={images}
+        setImages={setImages}
+        maxImages={CHAT_MAX_IMAGES}
         loading={loading}
         onSubmit={sendMessage}
       />

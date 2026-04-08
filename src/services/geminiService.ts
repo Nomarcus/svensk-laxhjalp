@@ -39,14 +39,30 @@ async function apiRequest(endpoint: string, body: object): Promise<any> {
   return response.json();
 }
 
+function stripDataUrl(b64: string): string {
+  const s = b64.trim();
+  const i = s.indexOf(',');
+  return i >= 0 && s.startsWith('data:') ? s.slice(i + 1) : s;
+}
+
 export async function generateHomeworkHelp(
   prompt: string,
   history: { role: 'user' | 'model'; content: string }[] = [],
   imageBase64?: string,
   simpleSwedish?: boolean,
-  language?: string
+  language?: string,
+  imageBase64s?: string[]
 ): Promise<string> {
-  const data = await apiRequest('chat', { prompt, history, imageBase64, simpleSwedish, language });
+  const manyRaw = imageBase64s?.filter((x) => typeof x === 'string' && x.length > 0) ?? [];
+  const many = manyRaw.map(stripDataUrl);
+  const single = imageBase64 ? stripDataUrl(imageBase64) : '';
+  const body: Record<string, unknown> = { prompt, history, simpleSwedish, language };
+  if (many.length > 0) {
+    body.imageBase64s = many;
+  } else if (single) {
+    body.imageBase64 = single;
+  }
+  const data = await apiRequest('chat', body);
   return data.text;
 }
 

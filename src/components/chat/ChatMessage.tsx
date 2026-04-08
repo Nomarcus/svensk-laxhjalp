@@ -121,15 +121,19 @@ export default function ChatMessage({
         {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
       </div>
       <div className={cn('space-y-2', msg.role === 'user' ? 'items-end' : 'items-start')}>
-        {msg.attachments?.map((att, i) => (
-          <img
-            key={i}
-            src={att}
-            alt="Attachment"
-            className="max-w-xs rounded-xl border border-black/5 shadow-sm cursor-zoom-in active:scale-[0.98] transition-transform"
-            onClick={() => setZoomedImage(att)}
-          />
-        ))}
+        {msg.attachments && msg.attachments.length > 0 && (
+          <div className="flex flex-wrap gap-2 justify-end max-w-md">
+            {msg.attachments.map((att, i) => (
+              <img
+                key={i}
+                src={att}
+                alt=""
+                className="max-w-[7.5rem] h-24 w-auto object-cover rounded-xl border border-black/5 shadow-sm cursor-zoom-in active:scale-[0.98] transition-transform"
+                onClick={() => setZoomedImage(att)}
+              />
+            ))}
+          </div>
+        )}
         <div
           className={cn(
             'px-4 py-3 rounded-2xl text-[15px] leading-relaxed relative group/msg',

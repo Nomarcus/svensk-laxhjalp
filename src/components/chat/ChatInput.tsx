@@ -2,12 +2,14 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Send, Image as ImageIcon, Camera, X, Mic, MicOff } from 'lucide-react';
 import { compressImage } from '../../utils/image';
+import { cn } from '../../utils/cn';
 
 interface ChatInputProps {
   input: string;
   setInput: (val: string) => void;
-  image: string | null;
-  setImage: (val: string | null) => void;
+  images: string[];
+  setImages: React.Dispatch<React.SetStateAction<string[]>>;
+  maxImages?: number;
   loading: boolean;
   onSubmit: (e: React.FormEvent) => void;
 }
@@ -16,7 +18,7 @@ const SpeechRecognitionAPI = typeof window !== 'undefined'
   ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
   : null;
 
-export default function ChatInput({ input, setInput, image, setImage, loading, onSubmit }: ChatInputProps) {
+export default function ChatInput({ input, setInput, images, setImages, maxImages = 5, loading, onSubmit }: ChatInputProps) {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -34,7 +36,6 @@ export default function ChatInput({ input, setInput, image, setImage, loading, o
     recognition.interimResults = false;
     recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
-      // setInput is a simple setter, not a React state setter, so we read current value via ref
       const currentInput = inputRef.current;
       setInput(currentInput ? currentInput + ' ' + transcript : transcript);
     };
@@ -54,54 +55,91 @@ export default function ChatInput({ input, setInput, image, setImage, loading, o
     }
   }, [isListening]);
 
-  const processFile = async (file: File) => {
-    if (!file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      try {
-        const compressed = await compressImage(reader.result as string);
-        setImage(compressed);
-      } catch (error) {
-        console.error('Error compressing uploaded image:', error);
-      }
-    };
-    reader.readAsDataURL(file);
+  const pushOneDataUrl = async (dataUrl: string) => {
+    let finalUrl = dataUrl;
+    try {
+      finalUrl = await compressImage(dataUrl);
+    } catch {
+      /* raw */
+    }
+    setImages((prev) => (prev.length >= maxImages ? prev : [...prev, finalUrl].slice(0, maxImages)));
+  };
+
+  const readFileAsDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+
+  const handleFiles = async (list: FileList | null) => {
+    if (!list?.length) return;
+    for (const file of Array.from(list)) {
+      if (!file.type.startsWith('image/')) continue;
+      const dataUrl = await readFileAsDataUrl(file);
+      await pushOneDataUrl(dataUrl);
+    }
   };
 
   const handlePaste = (e: React.ClipboardEvent) => {
-    const items = e.clipboardData.items;
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.indexOf('image') !== -1) {
-        const file = items[i].getAsFile();
-        if (file) processFile(file);
+    void (async () => {
+      for (const item of Array.from(e.clipboardData.items)) {
+        if (!item.type.startsWith('image')) continue;
+        const file = item.getAsFile();
+        if (!file) continue;
+        const dataUrl = await readFileAsDataUrl(file);
+        await pushOneDataUrl(dataUrl);
       }
-    }
+    })();
   };
+
+  const atMax = images.length >= maxImages;
 
   return (
     <div className="p-4 md:p-8 bg-white dark:bg-slate-950 md:bg-transparent md:dark:bg-transparent border-t md:border-t-0 dark:border-white/5">
       <form onSubmit={onSubmit} className="max-w-3xl mx-auto relative">
-        {image && (
-          <div className="absolute bottom-full left-0 mb-4 p-2 bg-white dark:bg-slate-800 rounded-xl border border-black/5 dark:border-white/5 shadow-lg flex items-center gap-2">
-            <img src={image} alt="Preview" className="w-12 h-12 object-cover rounded-lg" />
-            <button type="button" onClick={() => setImage(null)} className="p-1 hover:bg-stone-100 rounded-full text-stone-400">
-              <X size={16} />
-            </button>
+        {images.length > 0 && (
+          <div className="absolute bottom-full left-0 mb-4 p-2 bg-white dark:bg-slate-800 rounded-xl border border-black/5 dark:border-white/5 shadow-lg flex flex-wrap gap-2 max-w-full">
+            {images.map((img, idx) => (
+              <div key={idx} className="relative group/thumb">
+                <img src={img} alt="" className="w-12 h-12 object-cover rounded-lg border border-black/5" />
+                <button
+                  type="button"
+                  onClick={() => setImages((prev) => prev.filter((_, i) => i !== idx))}
+                  className="absolute -top-1 -right-1 p-0.5 bg-stone-800 text-white rounded-full opacity-0 group-hover/thumb:opacity-100 transition-opacity"
+                  aria-label={t('chat.removeAttachment')}
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+            <span className="self-center text-[10px] text-stone-400 tabular-nums">
+              {images.length}/{maxImages}
+            </span>
           </div>
         )}
         <div className="relative flex items-end gap-2 bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl p-2 shadow-sm focus-within:border-emerald-500/50 transition-all">
           <button
             type="button"
+            disabled={atMax || loading}
             onClick={() => cameraInputRef.current?.click()}
-            className="p-2 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-colors"
+            className={cn(
+              'p-2 rounded-xl transition-colors',
+              atMax || loading ? 'text-stone-200 cursor-not-allowed' : 'text-stone-400 hover:text-amber-600 hover:bg-amber-50'
+            )}
             title={t('chat.takePhoto')}
           >
             <Camera size={20} />
           </button>
           <button
             type="button"
+            disabled={atMax || loading}
             onClick={() => fileInputRef.current?.click()}
-            className="p-2 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors"
+            className={cn(
+              'p-2 rounded-xl transition-colors',
+              atMax || loading ? 'text-stone-200 cursor-not-allowed' : 'text-stone-400 hover:text-emerald-600 hover:bg-emerald-50'
+            )}
             title={t('chat.chooseImage')}
           >
             <ImageIcon size={20} />
@@ -123,7 +161,7 @@ export default function ChatInput({ input, setInput, image, setImage, loading, o
           <input
             type="file"
             ref={cameraInputRef}
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) processFile(f); e.target.value = ''; }}
+            onChange={(e) => { void handleFiles(e.target.files); e.target.value = ''; }}
             accept="image/*"
             capture="environment"
             className="hidden"
@@ -131,8 +169,9 @@ export default function ChatInput({ input, setInput, image, setImage, loading, o
           <input
             type="file"
             ref={fileInputRef}
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) processFile(f); e.target.value = ''; }}
+            onChange={(e) => { void handleFiles(e.target.files); e.target.value = ''; }}
             accept="image/*"
+            multiple
             className="hidden"
           />
           <textarea
@@ -151,7 +190,7 @@ export default function ChatInput({ input, setInput, image, setImage, loading, o
           />
           <button
             type="submit"
-            disabled={(!input.trim() && !image) || loading}
+            disabled={(!input.trim() && images.length === 0) || loading}
             className="p-2 bg-emerald-600 text-white rounded-xl disabled:opacity-50 disabled:bg-stone-300 transition-all shadow-sm hover:bg-emerald-700"
           >
             <Send size={20} />
@@ -162,7 +201,12 @@ export default function ChatInput({ input, setInput, image, setImage, loading, o
             {t('chat.listening')}
           </p>
         )}
-        <p className="text-[10px] text-center text-stone-400 mt-2 uppercase tracking-widest">
+        {!atMax && (
+          <p className="text-[10px] text-center text-stone-400 mt-2">
+            {t('chat.multiImageHint', { max: maxImages })}
+          </p>
+        )}
+        <p className="text-[10px] text-center text-stone-400 mt-1 uppercase tracking-widest">
           {t('chat.aiDisclaimer')}
         </p>
       </form>

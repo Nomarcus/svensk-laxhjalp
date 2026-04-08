@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, CheckCircle2, Circle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, LayoutList, Calendar, Calculator, BookOpen, Languages, Beaker, Globe, Book, Clock, CalendarCheck, Camera, MessageSquare, X, Image as ImageIcon, Eye, EyeOff, Sparkles, Loader2, GraduationCap, Flame } from 'lucide-react';
 import { db, auth, onAuthStateChanged, OperationType, handleFirestoreError } from '../firebase';
 import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc, where, arrayUnion, arrayRemove, getDocs, orderBy, limit, getDoc, setDoc } from 'firebase/firestore';
-import { format, startOfWeek, addDays, getWeek, getYear, addWeeks, subWeeks } from 'date-fns';
+import { format, startOfWeek, addDays, getWeek, getYear, addWeeks, subWeeks, isSameDay } from 'date-fns';
 import { sv } from 'date-fns/locale';
 import { cn } from '../utils/cn';
 import { compressImage } from '../utils/image';
@@ -12,14 +12,17 @@ import { computeNextStreakOnCompletion, type ParentStreakDoc } from '../utils/pa
 import { generateStudyPlan, generateExamPrep } from '../services/geminiService';
 import StudyPlanModal from './StudyPlanModal';
 import ExamPrepModal from './ExamPrepModal';
+import ScheduleCalendarModal, { getDateInPlannerWeek } from './ScheduleCalendarModal';
 
 interface PlannerProps {
   childId: string;
   ownerId: string;
   prefill?: { subject: string; description: string; workDays?: string[]; dueDay?: string; minutesPerDay?: number; imageUrl?: string; imageUrls?: string[] } | null;
   onPrefillUsed?: () => void;
-  onOpenAiForTask?: (taskId: string, subject: string, description: string, imageUrl?: string) => void;
+  onOpenAiForTask?: (taskId: string, subject: string, description: string, imageUrls?: string[]) => void;
 }
+
+const PLANNER_WEEK_OPTS = { weekStartsOn: 1 as const, firstWeekContainsDate: 4 as const };
 
 const DAYS = ['måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag', 'söndag'];
 
@@ -444,6 +447,15 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
   const [editDueDay, setEditDueDay] = useState('');
   const [editWorkDays, setEditWorkDays] = useState<string[]>([]);
   const [editDateType, setEditDateType] = useState<'due' | 'work'>('due');
+  const [showScheduleCalendar, setShowScheduleCalendar] = useState(false);
+  const [editScheduleAnchorDate, setEditScheduleAnchorDate] = useState(() => new Date());
+
+  const taskDueAnchorDate = (task: Task, fallbackYear: number, fallbackWeek: number) => {
+    const y = task.year ?? fallbackYear;
+    const w = task.weekNumber ?? fallbackWeek;
+    const wd = (task.dueDay || task.day || 'måndag').toLowerCase();
+    return getDateInPlannerWeek(y, w, wd);
+  };
 
   const openTaskDetail = (task: Task) => {
     setSelectedTask(task);
@@ -455,6 +467,8 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
     setEditDueDay(task.dueDay || '');
     setEditWorkDays(task.workDays || []);
     setEditDateType(task.dateType || 'due');
+    setEditScheduleAnchorDate(taskDueAnchorDate(task, viewYear, viewWeek));
+    setShowScheduleCalendar(false);
   };
 
   const saveTaskEdits = async () => {
@@ -474,7 +488,10 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
         workDays: editWorkDays,
         dateType: editDateType,
         day: editDateType === 'due' ? editDueDay : (editWorkDays[0] || selectedTask.day),
+        weekNumber: getWeek(editScheduleAnchorDate, PLANNER_WEEK_OPTS),
+        year: getYear(editScheduleAnchorDate),
       });
+      setShowScheduleCalendar(false);
       setSelectedTask(null);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `tasks/${selectedTask.id}`);
@@ -1142,7 +1159,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
 
       {/* Task Detail Modal */}
       {selectedTask && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in" onClick={() => setSelectedTask(null)}>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in" onClick={() => { setShowScheduleCalendar(false); setSelectedTask(null); }}>
           <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-lg shadow-2xl border border-black/5 dark:border-white/5 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="p-6 border-b border-black/5 dark:border-white/5">
               <div className="flex items-center justify-between">
@@ -1158,7 +1175,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                     <p className="text-xs text-stone-400 dark:text-stone-500 capitalize">{selectedTask.day}</p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedTask(null)} className="p-2 hover:bg-stone-100 dark:hover:bg-slate-700 rounded-full text-stone-400 dark:text-stone-500 transition-colors">
+                <button onClick={() => { setShowScheduleCalendar(false); setSelectedTask(null); }} className="p-2 hover:bg-stone-100 dark:hover:bg-slate-700 rounded-full text-stone-400 dark:text-stone-500 transition-colors">
                   <X size={20} />
                 </button>
               </div>
@@ -1308,12 +1325,36 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                 <label className="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-2">
                   {selectedTask.taskType === 'exam' ? t('planner.examDay') : t('planner.submissionDay')}
                 </label>
+                <button
+                  type="button"
+                  onClick={() => setShowScheduleCalendar(true)}
+                  className="mb-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-stone-200 dark:border-slate-600 bg-stone-50 dark:bg-slate-800 text-stone-700 dark:text-stone-200 text-sm font-medium hover:bg-stone-100 dark:hover:bg-slate-700 transition-colors"
+                >
+                  <CalendarIcon size={18} />
+                  {t('planner.pickDateInCalendar')}
+                </button>
+                <p className="text-xs text-stone-500 dark:text-stone-400 mb-2">
+                  {t('planner.scheduleCalendarSelected', {
+                    week: getWeek(editScheduleAnchorDate, PLANNER_WEEK_OPTS),
+                    year: getYear(editScheduleAnchorDate),
+                    day: format(editScheduleAnchorDate, 'EEEE d MMMM', { locale: sv }),
+                  })}
+                </p>
                 <div className="flex flex-wrap gap-1.5">
                   {DAYS.map(day => (
                     <button
                       key={day}
                       type="button"
-                      onClick={() => setEditDueDay(day)}
+                      onClick={() => {
+                        setEditDueDay(day);
+                        setEditScheduleAnchorDate(
+                          getDateInPlannerWeek(
+                            getYear(editScheduleAnchorDate),
+                            getWeek(editScheduleAnchorDate, PLANNER_WEEK_OPTS),
+                            day
+                          )
+                        );
+                      }}
                       className={cn(
                         "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border capitalize",
                         editDueDay === day
@@ -1376,7 +1417,12 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                   editMinutesPerDay !== (selectedTask.minutesPerDay || '') ||
                   editProgressPercent !== getTaskProgressPercent(selectedTask) ||
                   editDueDay !== (selectedTask.dueDay || '') ||
-                  JSON.stringify(editWorkDays) !== JSON.stringify(selectedTask.workDays || [])
+                  JSON.stringify(editWorkDays) !== JSON.stringify(selectedTask.workDays || []) ||
+                  JSON.stringify(editImages) !== JSON.stringify(getTaskImages(selectedTask)) ||
+                  !isSameDay(
+                    editScheduleAnchorDate,
+                    taskDueAnchorDate(selectedTask, viewYear, viewWeek)
+                  )
                 ) && (
                   <button
                     onClick={saveTaskEdits}
@@ -1391,8 +1437,15 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                 {onOpenAiForTask && (
                   <button
                     onClick={() => {
-                      onOpenAiForTask(selectedTask.id, selectedTask.subject, selectedTask.description, editImages[0]);
+                      const urls = editImages.slice(0, 5);
+                      onOpenAiForTask(
+                        selectedTask.id,
+                        selectedTask.subject,
+                        selectedTask.description,
+                        urls.length ? urls : undefined
+                      );
                       setSelectedTask(null);
+                      setShowScheduleCalendar(false);
                     }}
                     className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white rounded-2xl font-medium shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all"
                   >
@@ -1422,7 +1475,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                     {selectedTask.completed ? 'Markera som ej klar' : 'Markera som klar'}
                   </button>
                   <button
-                    onClick={() => { deleteTask(selectedTask.id); setSelectedTask(null); }}
+                    onClick={() => { deleteTask(selectedTask.id); setShowScheduleCalendar(false); setSelectedTask(null); }}
                     className="py-3 px-4 bg-red-50 border border-red-200 text-red-600 rounded-2xl font-medium hover:bg-red-100 transition-all"
                   >
                     <Trash2 size={18} />
@@ -1449,6 +1502,16 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
           onClose={() => { setExamPrepTask(null); setExamPrepContent(null); }}
         />
       )}
+      <ScheduleCalendarModal
+        open={Boolean(selectedTask) && showScheduleCalendar}
+        initialDate={editScheduleAnchorDate}
+        onClose={() => setShowScheduleCalendar(false)}
+        onConfirm={(d) => {
+          setEditScheduleAnchorDate(d);
+          setEditDueDay(format(d, 'EEEE', { locale: sv }).toLowerCase());
+          setShowScheduleCalendar(false);
+        }}
+      />
     </div>
   );
 }

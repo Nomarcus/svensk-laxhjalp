@@ -42,7 +42,13 @@ export default function App() {
   const [showTerms, setShowTerms] = useState(false);
   const [plannerPrefill, setPlannerPrefill] = useState<{ subject: string; description: string; workDays?: string[]; dueDay?: string; minutesPerDay?: number; imageUrl?: string } | null>(null);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
-  const [chatFromTask, setChatFromTask] = useState<{ taskId: string; subject: string; description: string; imageUrl?: string } | null>(null);
+  const [chatFromTask, setChatFromTask] = useState<{
+    taskId: string;
+    subject: string;
+    description: string;
+    imageUrl?: string;
+    imageUrls?: string[];
+  } | null>(null);
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const { dark, toggle: toggleDark } = useTheme();
   const { t } = useTranslation();
@@ -309,7 +315,16 @@ export default function App() {
             {activeTab === 'chat' ? (
               <Chat childId={selectedChildId!} childName={selectedChild?.name || ''} ownerId={selectedChild?.ownerId || user.uid} tasks={allTasks} taskContext={chatFromTask} onTaskContextUsed={() => setChatFromTask(null)} onCreateTask={(subject, description) => { setPlannerPrefill({ subject, description }); setActiveTab('planner'); }} onCreateTaskFromPhoto={(data) => { setPlannerPrefill(data); setActiveTab('planner'); }} />
             ) : activeTab === 'planner' ? (
-              <Planner childId={selectedChildId!} ownerId={selectedChild?.ownerId || user.uid} prefill={plannerPrefill} onPrefillUsed={() => setPlannerPrefill(null)} onOpenAiForTask={(taskId, subject, description, imageUrl) => { setChatFromTask({ taskId, subject, description, imageUrl }); setActiveTab('chat'); }} />
+              <Planner childId={selectedChildId!} ownerId={selectedChild?.ownerId || user.uid} prefill={plannerPrefill} onPrefillUsed={() => setPlannerPrefill(null)} onOpenAiForTask={(taskId, subject, description, imageUrls) => {
+                setChatFromTask({
+                  taskId,
+                  subject,
+                  description,
+                  imageUrls: imageUrls?.length ? imageUrls : undefined,
+                  imageUrl: imageUrls?.[0],
+                });
+                setActiveTab('chat');
+              }} />
             ) : activeTab === 'library' ? (
               <Library childId={selectedChildId!} ownerId={selectedChild?.ownerId || user.uid} />
             ) : (
