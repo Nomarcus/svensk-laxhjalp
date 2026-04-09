@@ -1,4 +1,5 @@
-export const STRIPE_BUY_BUTTON_ENABLED = import.meta.env.VITE_ENABLE_STRIPE_BUY_BUTTON === 'true';
+// Enabled by default for operator testing. Can still be disabled explicitly via env.
+export const STRIPE_BUY_BUTTON_ENABLED = import.meta.env.VITE_ENABLE_STRIPE_BUY_BUTTON !== 'false';
 // Owner-provided defaults; can be overridden via VITE_* env vars.
 const DEFAULT_BUY_BUTTON_ID = 'buy_btn_1TKNE64oQsUeST1NUUUDVkWL';
 const DEFAULT_PUBLISHABLE_KEY = 'pk_live_51TKMlH4oQsUeST1NP1i8kZ5hvVCT1s5QqPnA7QMBaAo4fzn3pQLoJeQAvEl4pj2zphioL0G8FU4ULtvXmwdoxIa800PILjG8jf';
