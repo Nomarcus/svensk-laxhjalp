@@ -482,7 +482,16 @@
     "stripeAnonymous": "Sign in to subscribe. Create an account or sign in with email.",
     "stripeEmailRequired": "A subscription needs an account with email so the purchase is linked to the right user.",
     "stripeDisabled": "The payment button is temporarily disabled in this environment.",
-    "stripeMissingConfig": "Payments are not configured. Please contact us if this persists."
+    "stripeMissingConfig": "Payments are not configured. Please contact us if this persists.",
+    "syncStripeHint": "Paid but don’t see Premium? Pull the latest status from Stripe (e.g. right after checkout).",
+    "syncStripeButton": "Refresh Premium status from Stripe",
+    "syncStripeLoading": "Refreshing…",
+    "syncSuccess": "Done! Your account is updated. You should see Premium above if the subscription is active.",
+    "syncNoCustomer": "No Stripe customer found for your email. Make sure you paid with the same email as your account.",
+    "syncNoSubscription": "No active or trial subscription found in Stripe yet. Wait a minute after paying or check Stripe.",
+    "syncError": "Couldn’t sync right now. Try again shortly.",
+    "syncDuplicatesWarning": "Note: you have {{count}} extra active subscriptions in Stripe. Cancel duplicates in the customer portal so you’re only charged once.",
+    "syncServerError": "The server returned an error. Are you signed in and online?"
   },
   "contact": {
     "title": "Contact Us",

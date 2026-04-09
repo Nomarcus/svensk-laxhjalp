@@ -482,7 +482,16 @@
     "stripeAnonymous": "Betalning kräver inloggning. Skapa konto eller logga in med e-post för att kunna abonnera.",
     "stripeEmailRequired": "Abonnemang kräver ett konto med e-post så köpet kopplas till rätt användare.",
     "stripeDisabled": "Betalningsknappen är tillfälligt avstängd i den här miljön.",
-    "stripeMissingConfig": "Betalning är inte konfigurerad. Kontakta oss om problemet kvarstår."
+    "stripeMissingConfig": "Betalning är inte konfigurerad. Kontakta oss om problemet kvarstår.",
+    "syncStripeHint": "Har du betalat men ser inte Premium? Hämta senaste status från Stripe (t.ex. om bekräftelsen precis kommit).",
+    "syncStripeButton": "Hämta Premium-status från Stripe",
+    "syncStripeLoading": "Hämtar…",
+    "syncSuccess": "Klart! Ditt konto är uppdaterat. Premium-rutan ovan ska synas om prenumerationen är aktiv.",
+    "syncNoCustomer": "Hittade ingen Stripe-kund med din e-post. Kontrollera att du betalat med samma e-postadress som på kontot.",
+    "syncNoSubscription": "Hittade ingen aktiv eller prov-prenumeration i Stripe ännu. Vänta en minut efter betalning eller kolla i Stripe att köpet gick igenom.",
+    "syncError": "Kunde inte synka just nu. Försök igen om en stund.",
+    "syncDuplicatesWarning": "OBS: Du har {{count}} extra aktiva prenumerationer i Stripe. Avsluta dubbletter i kundportalen så du bara betalar en gång.",
+    "syncServerError": "Servern svarade med fel. Är du inloggad och har du internet?"
   },
   "contact": {
     "title": "Kontakta oss",

@@ -1,10 +1,11 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Timestamp } from 'firebase/firestore';
-import { Heart, MessageCircle, Image, Palette, BookOpen, Sparkles, FileText, CreditCard, CheckCircle2, Crown } from 'lucide-react';
+import { Heart, MessageCircle, Image, Palette, BookOpen, Sparkles, FileText, CreditCard, CheckCircle2, Crown, RefreshCw } from 'lucide-react';
 import { auth } from '../firebase';
 import type { UserSubscription } from '../types';
 import { hasPremiumAccess } from '../utils/subscriptionAccess';
+import { apiUrl } from '../utils/apiBase';
 import {
   STRIPE_BUY_BUTTON_ENABLED,
   STRIPE_BUY_BUTTON_ID,
@@ -37,6 +38,8 @@ interface SubscriptionProps {
 export default function Subscription({ subscription }: SubscriptionProps) {
   const { t, i18n } = useTranslation();
   const [stripeScriptReady, setStripeScriptReady] = React.useState(false);
+  const [syncLoading, setSyncLoading] = React.useState(false);
+  const [syncFeedback, setSyncFeedback] = React.useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const user = auth.currentUser;
   const isAnonymous = Boolean(user?.isAnonymous);
   const userUid = user?.uid || '';
@@ -61,6 +64,56 @@ export default function Subscription({ subscription }: SubscriptionProps) {
     script.onload = () => setStripeScriptReady(true);
     document.body.appendChild(script);
   }, []);
+
+  const syncFromStripe = React.useCallback(async () => {
+    const u = auth.currentUser;
+    if (!u || !u.email) return;
+    setSyncLoading(true);
+    setSyncFeedback(null);
+    try {
+      const token = await u.getIdToken();
+      const res = await fetch(apiUrl('/api/billing/sync-stripe-subscription'), {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      let data: {
+        ok?: boolean;
+        synced?: boolean;
+        reason?: string;
+        error?: string;
+        duplicateActiveCount?: number;
+      } = {};
+      try {
+        data = await res.json();
+      } catch {
+        /* ignore */
+      }
+      if (!res.ok) {
+        setSyncFeedback({
+          kind: 'err',
+          text: (data as { error?: string }).error || t('subscription.syncServerError'),
+        });
+        return;
+      }
+      if (data.synced) {
+        const dup = data.duplicateActiveCount || 0;
+        setSyncFeedback({
+          kind: 'ok',
+          text: dup > 0 ? t('subscription.syncDuplicatesWarning', { count: dup }) : t('subscription.syncSuccess'),
+        });
+      } else if (data.reason === 'no_stripe_customer') {
+        setSyncFeedback({ kind: 'err', text: t('subscription.syncNoCustomer') });
+      } else if (data.reason === 'no_active_subscription') {
+        setSyncFeedback({ kind: 'err', text: t('subscription.syncNoSubscription') });
+      } else {
+        setSyncFeedback({ kind: 'err', text: t('subscription.syncNoSubscription') });
+      }
+    } catch {
+      setSyncFeedback({ kind: 'err', text: t('subscription.syncError') });
+    } finally {
+      setSyncLoading(false);
+    }
+  }, [t]);
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 bg-[#F5F5F0] dark:bg-slate-950">
@@ -177,6 +230,31 @@ export default function Subscription({ subscription }: SubscriptionProps) {
               />
             </div>
           )}
+          {!isAnonymous && userEmail ? (
+            <div className="mt-5 pt-4 border-t border-stone-100 dark:border-white/10">
+              <p className="text-xs text-stone-500 dark:text-stone-400 mb-2">{t('subscription.syncStripeHint')}</p>
+              <button
+                type="button"
+                onClick={syncFromStripe}
+                disabled={syncLoading}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-stone-100 dark:bg-slate-800 text-stone-800 dark:text-stone-200 hover:bg-stone-200 dark:hover:bg-slate-700 disabled:opacity-60 transition-colors"
+              >
+                <RefreshCw size={16} className={syncLoading ? 'animate-spin' : ''} />
+                {syncLoading ? t('subscription.syncStripeLoading') : t('subscription.syncStripeButton')}
+              </button>
+              {syncFeedback ? (
+                <p
+                  className={
+                    syncFeedback.kind === 'ok'
+                      ? 'text-sm mt-2 text-emerald-700 dark:text-emerald-400'
+                      : 'text-sm mt-2 text-rose-700 dark:text-rose-400'
+                  }
+                >
+                  {syncFeedback.text}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-900/20 dark:to-emerald-900/10 rounded-2xl p-6 shadow-sm border border-emerald-200/50 dark:border-emerald-800/30">

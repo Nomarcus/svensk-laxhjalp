@@ -16,11 +16,6 @@ function getStripe(): Stripe {
   }
   return _stripe;
 }
-function getSubscriptionPeriodEnd(sub: Stripe.Subscription | Stripe.Response<Stripe.Subscription>): string | null {
-  const ts = (sub as any).current_period_end;
-  return typeof ts === 'number' ? new Date(ts * 1000).toISOString() : null;
-}
-
 async function findUserByStripeCustomerId(customerId?: string | null) {
   if (!customerId) return null;
   const snapshot = await getServerFirestore()
@@ -162,6 +157,78 @@ router.get('/billing/status', async (req: AuthenticatedRequest, res: Response) =
   }
 });
 
+/** Om webhook inte nått servern (fel URL i Stripe): koppla Firebase-användaren till Stripe via e-post och skriv tier/status till Firestore. */
+router.post('/billing/sync-stripe-subscription', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const uid = req.uid;
+    const email = req.email;
+    if (!uid) {
+      res.status(401).json({ error: 'Inte autentiserad.' });
+      return;
+    }
+    if (!email) {
+      res.status(400).json({ error: 'E-post krävs för att hitta Stripe-kund.' });
+      return;
+    }
+
+    const userRef = getServerFirestore().doc(`users/${uid}`);
+    const userSnapshot = await userRef.get();
+    let customerId = userSnapshot.data()?.stripeCustomerId as string | undefined;
+    const stripe = getStripe();
+
+    if (!customerId) {
+      const esc = email.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      const found = await stripe.customers.search({ query: `email:'${esc}'`, limit: 10 });
+      if (found.data.length === 1) {
+        customerId = found.data[0].id;
+      } else if (found.data.length > 1) {
+        for (const c of found.data) {
+          const subs = await stripe.subscriptions.list({ customer: c.id, status: 'all', limit: 5 });
+          if (subs.data.some((s) => s.status === 'active' || s.status === 'trialing')) {
+            customerId = c.id;
+            break;
+          }
+        }
+        customerId = customerId || found.data[0].id;
+      }
+      if (customerId) {
+        await userRef.set({ stripeCustomerId: customerId }, { merge: true });
+      }
+    }
+
+    if (!customerId) {
+      res.json({ ok: true, synced: false, reason: 'no_stripe_customer' });
+      return;
+    }
+
+    const subs = await stripe.subscriptions.list({
+      customer: customerId,
+      status: 'all',
+      limit: 25,
+    });
+    const activeOrTrial = subs.data
+      .filter((s) => s.status === 'active' || s.status === 'trialing')
+      .sort((a, b) => b.created - a.created);
+    const best = activeOrTrial[0];
+    if (!best) {
+      res.json({ ok: true, synced: false, reason: 'no_active_subscription' });
+      return;
+    }
+
+    const patch = patchFromStripeSubscription(best, { stripeCustomerId: customerId });
+    await userRef.set(patch, { merge: true });
+    res.json({
+      ok: true,
+      synced: true,
+      status: best.status,
+      duplicateActiveCount: Math.max(0, activeOrTrial.length - 1),
+    });
+  } catch (error: any) {
+    console.error('Sync stripe subscription error:', error.message);
+    res.status(500).json({ error: 'Kunde inte synka prenumeration.' });
+  }
+});
+
 // Stripe webhook handler (called from index.ts with raw body)
 export async function stripeWebhookHandler(req: Request, res: Response) {
   const sig = req.headers['stripe-signature'];
@@ -182,6 +249,7 @@ export async function stripeWebhookHandler(req: Request, res: Response) {
   }
 
   try {
+    console.info('[stripe webhook]', event.type);
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;

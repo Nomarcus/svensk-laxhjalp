@@ -18,7 +18,14 @@ const app = express();
 app.set('trust proxy', true);
 const PORT = process.env.PORT || 3001;
 
-// CRITICAL: Stripe webhook MUST come before express.json() — needs raw body
+// CRITICAL: Stripe webhook MUST come before express.json() — needs raw body.
+// Firebase Hosting rewrites only /api/** to Cloud Run, so the live URL must be /api/webhook/stripe
+// (see firebase.json). Keep /webhook/stripe for backwards compatibility / Vercel-style proxies.
+app.post(
+  '/api/webhook/stripe',
+  express.raw({ type: 'application/json' }),
+  stripeWebhookHandler,
+);
 app.post('/webhook/stripe', express.raw({ type: 'application/json' }), stripeWebhookHandler);
 
 const DEFAULT_CORS_ORIGINS = [
@@ -66,7 +73,10 @@ const limiter = rateLimit({
   message: { error: 'För många förfrågningar. Försök igen om en minut.' },
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => (req.originalUrl || req.url || '').includes('/admin/'),
+  skip: (req) => {
+    const u = req.originalUrl || req.url || '';
+    return u.includes('/admin/') || u.includes('/webhook/');
+  },
 });
 
 app.use('/api', limiter);
