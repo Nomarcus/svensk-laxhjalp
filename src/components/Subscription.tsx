@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Timestamp } from 'firebase/firestore';
-import { Heart, Construction, MessageCircle, Image, Palette, BookOpen, Sparkles, FileText, CreditCard, CheckCircle2, Crown } from 'lucide-react';
+import { Heart, MessageCircle, Image, Palette, BookOpen, Sparkles, FileText, CreditCard, CheckCircle2, Crown } from 'lucide-react';
 import { auth } from '../firebase';
 import type { UserSubscription } from '../types';
 import { hasPremiumAccess } from '../utils/subscriptionAccess';
@@ -10,7 +10,6 @@ import {
   STRIPE_BUY_BUTTON_ID,
   STRIPE_BUY_BUTTON_READY,
   STRIPE_PUBLISHABLE_KEY,
-  STRIPE_TRIAL_DAYS,
 } from '../utils/stripeBuyButton';
 
 function formatPeriodEnd(value: unknown, locale: string): string | null {
@@ -67,8 +66,8 @@ export default function Subscription({ subscription }: SubscriptionProps) {
     <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 bg-[#F5F5F0] dark:bg-slate-950">
       <div className="max-w-lg mx-auto space-y-6">
         <header className="text-center">
-          <h2 className="text-3xl font-serif italic mb-2 dark:text-stone-100">Abonnemang</h2>
-          <p className="text-stone-500 dark:text-stone-400">Tack för att du testar Föräldrahjälpen!</p>
+          <h2 className="text-3xl font-serif italic mb-2 dark:text-stone-100">{t('subscription.title')}</h2>
+          <p className="text-stone-500 dark:text-stone-400">{t('subscription.pageIntro')}</p>
         </header>
 
         {premium && (
@@ -107,19 +106,9 @@ export default function Subscription({ subscription }: SubscriptionProps) {
         )}
 
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-black/5 dark:border-white/5">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
-              <Construction size={24} />
-            </div>
-            <div>
-              <h3 className="font-medium text-lg dark:text-stone-100">Abonnemang under planering</h3>
-              <p className="text-sm text-stone-400">Kommer snart!</p>
-            </div>
-          </div>
-          <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed">
-            Just nu är Föräldrahjälpen gratis att använda utan dagliga gränser. Vi jobbar på abonnemangsplaner
-            som kan ge extra funktioner — de kommer snart!
-          </p>
+          <h3 className="font-medium text-lg dark:text-stone-100 mb-3">{t('subscription.introTitle')}</h3>
+          <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed mb-3">{t('subscription.introP1')}</p>
+          <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed">{t('subscription.introP2')}</p>
         </div>
 
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-black/5 dark:border-white/5">
@@ -147,47 +136,22 @@ export default function Subscription({ subscription }: SubscriptionProps) {
         </div>
 
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-black/5 dark:border-white/5">
-          <div className="flex items-center gap-3 mb-3">
+          <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
               <CreditCard size={22} />
             </div>
             <div>
-              <h3 className="font-medium text-lg dark:text-stone-100">Stripe-betalning (UNDER TEST)</h3>
-              <p className="text-sm text-stone-400">Testläge först, inte live för alla ännu</p>
+              <h3 className="font-medium text-lg dark:text-stone-100">{t('subscription.paymentTitle')}</h3>
+              <p className="text-sm text-stone-400">{t('subscription.paymentSubtitle')}</p>
             </div>
           </div>
-          <div className="rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800/30 p-3 text-sm text-blue-800 dark:text-blue-300 mb-4 font-medium">
-            TEST: Detta är en testsektion. Kontrollera flödet här innan aktivering för alla användare.
-          </div>
-          <ul className="space-y-2 text-sm text-stone-600 dark:text-stone-300 mb-4">
-            <li className="flex items-center gap-2">
-              <CheckCircle2 size={16} className="text-emerald-600" />
-              {`Gratisperiod: ${STRIPE_TRIAL_DAYS} dagar`}
-            </li>
-            <li className="flex items-center gap-2">
-              <CheckCircle2 size={16} className="text-emerald-600" />
-              Ett abonnemang (single plan) via Stripe Buy Button
-            </li>
-            <li className="flex items-center gap-2">
-              <CheckCircle2 size={16} className="text-emerald-600" />
-              Endast inloggad användare (inte anonym)
-            </li>
-            <li className="flex items-center gap-2">
-              <CheckCircle2 size={16} className="text-emerald-600" />
-              Max ett abonnemang per konto (köpknappen döljs om du redan har Premium)
-            </li>
-            <li className="flex items-center gap-2">
-              <CheckCircle2 size={16} className="text-emerald-600" />
-              Stäng av med `VITE_ENABLE_STRIPE_BUY_BUTTON=false` om du vill dölja knappen helt
-            </li>
-          </ul>
           {isAnonymous ? (
             <div className="rounded-xl border border-rose-200 bg-rose-50 dark:bg-rose-900/20 dark:border-rose-800/30 p-3 text-sm text-rose-800 dark:text-rose-300">
-              Betaltest är blockerat för anonym användare. Logga in med e-postkonto för att testa betalning.
+              {t('subscription.stripeAnonymous')}
             </div>
           ) : !userUid || !userEmail ? (
             <div className="rounded-xl border border-rose-200 bg-rose-50 dark:bg-rose-900/20 dark:border-rose-800/30 p-3 text-sm text-rose-800 dark:text-rose-300">
-              Betaltest kräver inloggad användare med e-post så köpet kan kopplas till rätt konto.
+              {t('subscription.stripeEmailRequired')}
             </div>
           ) : premium ? (
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-800/30 p-3 text-sm text-emerald-900 dark:text-emerald-200">
@@ -195,12 +159,11 @@ export default function Subscription({ subscription }: SubscriptionProps) {
             </div>
           ) : !STRIPE_BUY_BUTTON_ENABLED ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800/30 p-3 text-sm text-amber-800 dark:text-amber-300">
-              Stripe-knappen är avstängd. Ta bort `VITE_ENABLE_STRIPE_BUY_BUTTON=false` eller sätt variabeln
-              till `true` om du vill visa den igen.
+              {t('subscription.stripeDisabled')}
             </div>
           ) : !STRIPE_BUY_BUTTON_READY ? (
             <div className="rounded-xl border border-rose-200 bg-rose-50 dark:bg-rose-900/20 dark:border-rose-800/30 p-3 text-sm text-rose-800 dark:text-rose-300">
-              Stripe är påslaget men saknar konfiguration. Lägg till `VITE_STRIPE_BUY_BUTTON_ID` och `VITE_STRIPE_PUBLISHABLE_KEY`.
+              {t('subscription.stripeMissingConfig')}
             </div>
           ) : !stripeScriptReady ? (
             <div className="text-sm text-stone-500">Laddar Stripe…</div>
@@ -222,18 +185,17 @@ export default function Subscription({ subscription }: SubscriptionProps) {
               <Heart size={24} />
             </div>
             <div>
-              <h3 className="font-medium text-lg text-emerald-900 dark:text-emerald-300">Stötta Föräldrahjälpen</h3>
-              <p className="text-sm text-emerald-700/70 dark:text-emerald-400/70">Hjälp oss fortsätta utveckla appen</p>
+              <h3 className="font-medium text-lg text-emerald-900 dark:text-emerald-300">{t('subscription.supportTitle')}</h3>
+              <p className="text-sm text-emerald-700/70 dark:text-emerald-400/70">{t('subscription.supportSubtitle')}</p>
             </div>
           </div>
           <p className="text-sm text-emerald-800/80 dark:text-emerald-300/80 leading-relaxed mb-4">
-            Föräldrahjälpen är ett ideellt projekt som hjälper svenska föräldrar med barnens läxor.
-            Om du gillar appen och vill att den ska fortsätta finnas — swisha gärna en valfri summa!
+            {t('subscription.supportCompanyBody')}
           </p>
           <div className="bg-white dark:bg-slate-800 rounded-xl p-4 text-center">
-            <p className="text-sm text-stone-500 dark:text-stone-400 mb-1">Swish</p>
-            <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400 tracking-wider">Kommer snart</p>
-            <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">Swish-nummer läggs till inom kort</p>
+            <p className="text-sm text-stone-500 dark:text-stone-400 mb-1">{t('subscription.swishLabel')}</p>
+            <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400 tracking-wider">{t('subscription.swishComingSoon')}</p>
+            <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">{t('subscription.swishNumberNote')}</p>
           </div>
         </div>
       </div>
