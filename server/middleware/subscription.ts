@@ -68,7 +68,10 @@ export async function subscriptionMiddleware(
       return;
     }
 
-    if (tier === 'pro' && (subscriptionStatus === 'active' || subscriptionStatus === 'canceled')) {
+    if (
+      tier === 'pro'
+      && (subscriptionStatus === 'active' || subscriptionStatus === 'trialing' || subscriptionStatus === 'canceled')
+    ) {
       next();
       return;
     }

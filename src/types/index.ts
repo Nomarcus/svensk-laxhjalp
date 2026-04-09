@@ -58,7 +58,7 @@ export interface Task {
 }
 
 export type SubscriptionTier = 'free' | 'plus' | 'pro';
-export type SubscriptionStatus = 'active' | 'canceled' | 'past_due' | 'none';
+export type SubscriptionStatus = 'active' | 'trialing' | 'canceled' | 'past_due' | 'none';
 
 export interface UserSubscription {
   tier: SubscriptionTier;

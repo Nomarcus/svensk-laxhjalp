@@ -1,6 +1,10 @@
 import React from 'react';
-import { Heart, Construction, MessageCircle, Image, Palette, BookOpen, Sparkles, FileText, CreditCard, CheckCircle2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Timestamp } from 'firebase/firestore';
+import { Heart, Construction, MessageCircle, Image, Palette, BookOpen, Sparkles, FileText, CreditCard, CheckCircle2, Crown } from 'lucide-react';
 import { auth } from '../firebase';
+import type { UserSubscription } from '../types';
+import { hasPremiumAccess } from '../utils/subscriptionAccess';
 import {
   STRIPE_BUY_BUTTON_ENABLED,
   STRIPE_BUY_BUTTON_ID,
@@ -9,12 +13,40 @@ import {
   STRIPE_TRIAL_DAYS,
 } from '../utils/stripeBuyButton';
 
-export default function Subscription() {
+function formatPeriodEnd(value: unknown, locale: string): string | null {
+  if (value == null) return null;
+  try {
+    let d: Date;
+    if (value instanceof Timestamp) {
+      d = value.toDate();
+    } else if (typeof value === 'string') {
+      d = new Date(value);
+    } else {
+      return null;
+    }
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toLocaleDateString(locale, { dateStyle: 'long' });
+  } catch {
+    return null;
+  }
+}
+
+interface SubscriptionProps {
+  subscription: UserSubscription;
+}
+
+export default function Subscription({ subscription }: SubscriptionProps) {
+  const { t, i18n } = useTranslation();
   const [stripeScriptReady, setStripeScriptReady] = React.useState(false);
   const user = auth.currentUser;
   const isAnonymous = Boolean(user?.isAnonymous);
   const userUid = user?.uid || '';
   const userEmail = user?.email || '';
+
+  const premium = hasPremiumAccess(subscription);
+  const periodLabel = formatPeriodEnd(subscription.currentPeriodEnd, i18n.language);
+  const statusLine =
+    subscription.status === 'trialing' ? t('subscription.statusTrialing') : t('subscription.statusActive');
 
   React.useEffect(() => {
     if (!STRIPE_BUY_BUTTON_ENABLED) return;
@@ -38,6 +70,41 @@ export default function Subscription() {
           <h2 className="text-3xl font-serif italic mb-2 dark:text-stone-100">Abonnemang</h2>
           <p className="text-stone-500 dark:text-stone-400">Tack för att du testar Föräldrahjälpen!</p>
         </header>
+
+        {premium && (
+          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/80 dark:from-emerald-900/30 dark:to-emerald-900/15 rounded-2xl p-6 shadow-sm border border-emerald-200/60 dark:border-emerald-800/40">
+            <div className="flex items-start gap-3">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm shrink-0">
+                <Crown size={26} />
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-semibold text-lg text-emerald-900 dark:text-emerald-200">{t('subscription.premiumTitle')}</h3>
+                <p className="text-sm text-emerald-800/85 dark:text-emerald-300/90 mt-1">{t('subscription.premiumSubtitle')}</p>
+                <p className="text-sm font-medium text-emerald-900 dark:text-emerald-200 mt-3 flex items-center gap-2">
+                  <CheckCircle2 size={16} className="shrink-0" />
+                  {statusLine}
+                </p>
+                {periodLabel && (
+                  <p className="text-sm text-emerald-800/80 dark:text-emerald-400/85 mt-1">
+                    {t('subscription.periodEnds', { date: periodLabel })}
+                  </p>
+                )}
+                {subscription.cancelAtPeriodEnd && (
+                  <p className="text-xs text-amber-800 dark:text-amber-300/90 mt-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-800/40 px-2 py-1.5">
+                    {t('subscription.cancelAtPeriodEnd')}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {subscription.status === 'past_due' && !premium && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800/40 p-4 text-sm text-amber-950 dark:text-amber-200">
+            <p className="font-medium">{t('subscription.pastDueTitle')}</p>
+            <p className="mt-1 opacity-90">{t('subscription.pastDueBody')}</p>
+          </div>
+        )}
 
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-black/5 dark:border-white/5">
           <div className="flex items-center gap-3 mb-4">
@@ -107,7 +174,11 @@ export default function Subscription() {
             </li>
             <li className="flex items-center gap-2">
               <CheckCircle2 size={16} className="text-emerald-600" />
-              Säkrad med feature flag: `VITE_ENABLE_STRIPE_BUY_BUTTON`
+              Max ett abonnemang per konto (köpknappen döljs om du redan har Premium)
+            </li>
+            <li className="flex items-center gap-2">
+              <CheckCircle2 size={16} className="text-emerald-600" />
+              Stäng av med `VITE_ENABLE_STRIPE_BUY_BUTTON=false` om du vill dölja knappen helt
             </li>
           </ul>
           {isAnonymous ? (
@@ -118,9 +189,14 @@ export default function Subscription() {
             <div className="rounded-xl border border-rose-200 bg-rose-50 dark:bg-rose-900/20 dark:border-rose-800/30 p-3 text-sm text-rose-800 dark:text-rose-300">
               Betaltest kräver inloggad användare med e-post så köpet kan kopplas till rätt konto.
             </div>
+          ) : premium ? (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-800/30 p-3 text-sm text-emerald-900 dark:text-emerald-200">
+              {t('subscription.alreadySubscribed')}
+            </div>
           ) : !STRIPE_BUY_BUTTON_ENABLED ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800/30 p-3 text-sm text-amber-800 dark:text-amber-300">
-              Stripe-knappen är förberedd men avstängd. Sätt `VITE_ENABLE_STRIPE_BUY_BUTTON=true` när du vill testa.
+              Stripe-knappen är avstängd. Ta bort `VITE_ENABLE_STRIPE_BUY_BUTTON=false` eller sätt variabeln
+              till `true` om du vill visa den igen.
             </div>
           ) : !STRIPE_BUY_BUTTON_READY ? (
             <div className="rounded-xl border border-rose-200 bg-rose-50 dark:bg-rose-900/20 dark:border-rose-800/30 p-3 text-sm text-rose-800 dark:text-rose-300">

@@ -457,7 +457,16 @@
     "pro": "Pro",
     "currentPlan": "Current plan",
     "upgrade": "Upgrade",
-    "features": "Features"
+    "features": "Features",
+    "premiumTitle": "You have Premium",
+    "premiumSubtitle": "Your account is on Pro with an active subscription or trial.",
+    "statusActive": "Active subscription",
+    "statusTrialing": "Free trial",
+    "periodEnds": "Current period ends: {{date}}",
+    "cancelAtPeriodEnd": "Subscription is canceled and will end after this period.",
+    "alreadySubscribed": "You already have a subscription on this account. The purchase button is hidden to avoid duplicate subscriptions.",
+    "pastDueTitle": "Payment needs attention",
+    "pastDueBody": "We couldn’t complete the latest charge. Update your payment method in Stripe or contact us if this persists."
   },
   "contact": {
     "title": "Contact Us",

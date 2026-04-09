@@ -257,7 +257,16 @@
     "pro": "Pro",
     "currentPlan": "الخطة الحالية",
     "upgrade": "ترقية",
-    "features": "المميزات"
+    "features": "المميزات",
+    "premiumTitle": "لديك بريميوم",
+    "premiumSubtitle": "حسابك على برو مع اشتراك نشط أو فترة تجريبية.",
+    "statusActive": "اشتراك نشط",
+    "statusTrialing": "فترة تجريبية مجانية",
+    "periodEnds": "تنتهي الفترة الحالية: {{date}}",
+    "cancelAtPeriodEnd": "تم إلغاء الاشتراك وينتهي بعد هذه الفترة.",
+    "alreadySubscribed": "لديك بالفعل اشتراك على هذا الحساب. زر الشراء مخفي لتجنب اشتراك مزدوج.",
+    "pastDueTitle": "يلزم تحديث الدفع",
+    "pastDueBody": "تعذر إتمام آخر عملية دفع. حدّث وسيلة الدفع في Stripe أو تواصل معنا."
   },
   "contact": {
     "title": "اتصل بنا",

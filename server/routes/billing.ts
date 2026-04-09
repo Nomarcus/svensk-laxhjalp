@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import Stripe from 'stripe';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { getServerFirestore } from '../lib/serverFirestore';
+import { patchFromStripeSubscription } from '../lib/stripeUserSubscriptionSync';
 
 const router = Router();
 
@@ -189,14 +190,10 @@ export async function stripeWebhookHandler(req: Request, res: Response) {
 
         if (session.subscription) {
           const subscription = await getStripe().subscriptions.retrieve(session.subscription as string);
-          await getServerFirestore().doc(`users/${firebaseUID}`).set({
-            tier: 'pro',
-            subscriptionStatus: 'active',
-            stripeSubscriptionId: subscription.id,
+          const patch = patchFromStripeSubscription(subscription, {
             stripeCustomerId: session.customer as string,
-            currentPeriodEnd: getSubscriptionPeriodEnd(subscription),
-            cancelAtPeriodEnd: subscription.cancel_at_period_end,
-          }, { merge: true });
+          });
+          await getServerFirestore().doc(`users/${firebaseUID}`).set(patch, { merge: true });
         }
         break;
       }
@@ -210,19 +207,8 @@ export async function stripeWebhookHandler(req: Request, res: Response) {
         }
         if (!firebaseUID) break;
 
-        const statusMap: Record<string, string> = {
-          active: 'active',
-          past_due: 'past_due',
-          canceled: 'canceled',
-          unpaid: 'past_due',
-        };
-
-        await getServerFirestore().doc(`users/${firebaseUID}`).set({
-          tier: subscription.status === 'active' ? 'pro' : 'free',
-          subscriptionStatus: statusMap[subscription.status] || 'none',
-          currentPeriodEnd: getSubscriptionPeriodEnd(subscription),
-          cancelAtPeriodEnd: subscription.cancel_at_period_end,
-        }, { merge: true });
+        const patch = patchFromStripeSubscription(subscription);
+        await getServerFirestore().doc(`users/${firebaseUID}`).set(patch, { merge: true });
         break;
       }
 

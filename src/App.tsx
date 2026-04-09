@@ -298,7 +298,7 @@ export default function App() {
         {activeTab === 'contact' ? (
           <Contact />
         ) : activeTab === 'subscription' ? (
-          <Subscription />
+          <Subscription subscription={subscription} />
         ) : activeTab === 'admin' ? (
           <Admin />
         ) : activeTab === 'info' ? (

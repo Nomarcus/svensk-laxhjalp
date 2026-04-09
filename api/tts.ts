@@ -18,7 +18,10 @@ const MAX_TTS_CHARS = 4500;
 function isProUser(userData: { tier?: string; subscriptionStatus?: string } | undefined): boolean {
   const tier = userData?.tier || 'free';
   const subscriptionStatus = userData?.subscriptionStatus || 'none';
-  return tier === 'pro' && (subscriptionStatus === 'active' || subscriptionStatus === 'canceled');
+  return (
+    tier === 'pro'
+    && (subscriptionStatus === 'active' || subscriptionStatus === 'trialing' || subscriptionStatus === 'canceled')
+  );
 }
 
 export default async function handler(req: any, res: any) {

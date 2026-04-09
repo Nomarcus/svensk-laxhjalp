@@ -457,7 +457,16 @@
     "pro": "Pro",
     "currentPlan": "Nuvarande plan",
     "upgrade": "Uppgradera",
-    "features": "Funktioner"
+    "features": "Funktioner",
+    "premiumTitle": "Du har Premium",
+    "premiumSubtitle": "Ditt konto är uppgraderat till Pro med aktiv betalning eller gratisperiod.",
+    "statusActive": "Aktivt abonnemang",
+    "statusTrialing": "Gratisperiod (prov)",
+    "periodEnds": "Nästa period slutar: {{date}}",
+    "cancelAtPeriodEnd": "Abonnemanget är uppsagt och löper ut vid periodens slut.",
+    "alreadySubscribed": "Du har redan ett abonnemang på det här kontot. Köpknappen visas inte så du inte råkar dubbelprenumerera.",
+    "pastDueTitle": "Betalning behöver uppdateras",
+    "pastDueBody": "Vi kunde inte genomföra senaste betalningen. Uppdatera ditt betalmedel hos Stripe eller kontakta oss om problemet kvarstår."
   },
   "contact": {
     "title": "Kontakta oss",
