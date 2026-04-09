@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { auth, onAuthStateChanged, User, db, OperationType, handleFirestoreError } from './firebase';
-import { doc, setDoc, serverTimestamp, collection, onSnapshot, query, orderBy, collectionGroup, where } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, collection, onSnapshot, query, orderBy, collectionGroup, where, limit } from 'firebase/firestore';
 import Auth from './components/Auth';
 import Layout from './components/Layout';
 import Chat from './components/Chat';
@@ -31,6 +31,8 @@ const isFirestorePermissionError = (error: unknown) => {
   return error.message.includes('permission-denied') || error.message.includes('insufficient permissions');
 };
 
+const LAST_LOGIN_STORAGE_KEY = 'foraldrahjalpen_lastLoginDate';
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,9 +61,13 @@ export default function App() {
     imageUrls?: string[];
   } | null>(null);
   const [allTasks, setAllTasks] = useState<Task[]>([]);
+  /** Bumps when child list / owner map changes so task listener picks up correct ownerId for shared children. */
+  const [childMapVersion, setChildMapVersion] = useState(0);
   const { dark, toggle: toggleDark } = useTheme();
   const { t } = useTranslation();
   const [routePath, setRoutePath] = useState(() => normalizePathname(window.location.pathname));
+  const userDocUnsubRef = useRef<(() => void) | null>(null);
+  const childOwnerByIdRef = useRef<Map<string, string>>(new Map());
 
   const goToPath = (path: string) => {
     const next = normalizePathname(path);
@@ -99,26 +105,47 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      userDocUnsubRef.current?.();
+      userDocUnsubRef.current = null;
+
       if (user) {
-        // Sync user profile to Firestore (don't block on failure)
+        const today = new Date().toISOString().split('T')[0];
+        const lastWritten = typeof localStorage !== 'undefined' ? localStorage.getItem(LAST_LOGIN_STORAGE_KEY) : null;
         try {
           const userRef = doc(db, 'users', user.uid);
-          await setDoc(userRef, {
-            uid: user.uid,
-            displayName: user.displayName || null,
-            email: user.email || null,
-            photoURL: user.photoURL || null,
-            lastLogin: serverTimestamp()
-          }, { merge: true });
+          if (lastWritten !== today) {
+            await setDoc(
+              userRef,
+              {
+                uid: user.uid,
+                displayName: user.displayName || null,
+                email: user.email || null,
+                photoURL: user.photoURL || null,
+                lastLogin: serverTimestamp(),
+              },
+              { merge: true },
+            );
+            localStorage.setItem(LAST_LOGIN_STORAGE_KEY, today);
+          } else {
+            await setDoc(
+              userRef,
+              {
+                uid: user.uid,
+                displayName: user.displayName || null,
+                email: user.email || null,
+                photoURL: user.photoURL || null,
+              },
+              { merge: true },
+            );
+          }
         } catch (err) {
           console.warn('Could not sync user profile:', err);
         }
         setUser(user);
 
-        // Listen for subscription changes on user doc
         const userDocRef = doc(db, 'users', user.uid);
-        onSnapshot(userDocRef, (snap) => {
+        userDocUnsubRef.current = onSnapshot(userDocRef, (snap) => {
           const data = snap.data();
           if (data) {
             setSubscription({
@@ -139,7 +166,6 @@ export default function App() {
       }
       setLoading(false);
 
-      // Handle Stripe redirect query params
       const params = new URLSearchParams(window.location.search);
       if (params.get('subscription') === 'success') {
         window.history.replaceState({}, '', window.location.pathname);
@@ -148,7 +174,11 @@ export default function App() {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+      userDocUnsubRef.current?.();
+      userDocUnsubRef.current = null;
+    };
   }, []);
 
   useEffect(() => {
@@ -161,9 +191,10 @@ export default function App() {
     const canFetchShared = Boolean(user.email);
     const qShared = canFetchShared
       ? query(
-        collectionGroup(db, 'children'),
-        where('sharedWith', 'array-contains', user.email!)
-      )
+          collectionGroup(db, 'children'),
+          where('sharedWith', 'array-contains', user.email!),
+          limit(10),
+        )
       : null;
 
     let ownChildren: Child[] = [];
@@ -171,20 +202,22 @@ export default function App() {
 
     const updateChildren = () => {
       const combined = [...ownChildren];
-      sharedChildren.forEach(sc => {
-        if (!combined.find(c => c.id === sc.id)) {
+      sharedChildren.forEach((sc) => {
+        if (!combined.find((c) => c.id === sc.id)) {
           combined.push(sc);
         }
       });
+      const m = new Map<string, string>();
+      combined.forEach((c) => m.set(c.id, c.ownerId));
+      childOwnerByIdRef.current = m;
+
       setChildren(combined);
-      
-      if (combined.length > 0) {
-        if (!selectedChildId || !combined.find(c => c.id === selectedChildId)) {
-          setSelectedChildId(combined[0].id);
-        }
-      } else {
-        setSelectedChildId(null);
-      }
+      setSelectedChildId((prev) => {
+        if (combined.length === 0) return null;
+        if (!prev || !combined.find((c) => c.id === prev)) return combined[0].id;
+        return prev;
+      });
+      setChildMapVersion((v) => v + 1);
     };
 
     const unsubscribeOwn = onSnapshot(qOwn, (snapshot) => {
@@ -219,19 +252,26 @@ export default function App() {
       unsubscribeOwn();
       unsubscribeShared();
     };
-  }, [user, selectedChildId]);
+  }, [user]);
 
-  // Listen to all tasks for the selected child (for AI-planner linking)
+  // Listen to tasks for the selected child (capped) for AI-planner linking
   useEffect(() => {
-    if (!user || !selectedChildId) { setAllTasks([]); return; }
-    const selectedChild = children.find(c => c.id === selectedChildId);
-    const ownerId = selectedChild?.ownerId || user.uid;
+    if (!user || !selectedChildId) {
+      setAllTasks([]);
+      return;
+    }
+    const ownerId = childOwnerByIdRef.current.get(selectedChildId) || user.uid;
     const tasksRef = collection(db, 'users', ownerId, 'children', selectedChildId, 'tasks');
-    const unsub = onSnapshot(tasksRef, (snap) => {
-      setAllTasks(snap.docs.map(d => ({ id: d.id, ...d.data() })) as Task[]);
-    }, () => setAllTasks([]));
+    const tasksQ = query(tasksRef, limit(100));
+    const unsub = onSnapshot(
+      tasksQ,
+      (snap) => {
+        setAllTasks(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Task[]);
+      },
+      () => setAllTasks([]),
+    );
     return () => unsub();
-  }, [user, selectedChildId, children]);
+  }, [user, selectedChildId, childMapVersion]);
 
   if (loading) {
     return (

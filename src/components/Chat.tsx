@@ -1,8 +1,23 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image as ImageIcon, Loader2, Bot, X, Calculator, BookOpen, Languages, Beaker, Globe, Book, Check } from 'lucide-react';
 import { db, auth, OperationType, handleFirestoreError } from '../firebase';
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, deleteDoc, doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import {
+  collection,
+  addDoc,
+  query,
+  orderBy,
+  onSnapshot,
+  serverTimestamp,
+  deleteDoc,
+  doc,
+  updateDoc,
+  arrayUnion,
+  limit,
+  startAfter,
+  getDocs,
+  type QueryDocumentSnapshot,
+} from 'firebase/firestore';
 import { generateHomeworkHelp, generateImage, analyzeHomeworkForTask } from '../services/geminiService';
 import { compressImage } from '../utils/image';
 import { cn } from '../utils/cn';
@@ -31,6 +46,10 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
   const speech = useSpeech();
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [olderMessages, setOlderMessages] = useState<Message[]>([]);
+  const [hasMoreOlder, setHasMoreOlder] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const oldestMsgCursorRef = useRef<QueryDocumentSnapshot | null>(null);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [input, setInput] = useState('');
@@ -62,78 +81,114 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
     }
   }, [isActive, speakingMessageId]);
 
+  const createNewSession = useCallback(async () => {
+    if (!auth.currentUser || !childId) return;
+    try {
+      const ref = collection(db, 'users', ownerId, 'children', childId, 'chatSessions');
+      const docRef = await addDoc(ref, {
+        title: `Chatt ${new Date().toLocaleDateString()}`,
+        createdAt: serverTimestamp(),
+      });
+      setActiveSessionId(docRef.id);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'chatSessions');
+    }
+  }, [childId, ownerId]);
+
   useEffect(() => {
     if (!auth.currentUser || !childId) return;
     const sessionsRef = collection(db, 'users', ownerId, 'children', childId, 'chatSessions');
     const q = query(sessionsRef, orderBy('createdAt', 'desc'));
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as ChatSession[];
-      setSessions(data);
-      if (data.length > 0) {
-        if (!activeSessionId || !data.find(s => s.id === activeSessionId)) {
-          setActiveSessionId(data[0].id);
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as ChatSession[];
+        setSessions(data);
+        if (data.length > 0) {
+          setActiveSessionId((prev) => {
+            if (!prev || !data.find((s) => s.id === prev)) return data[0].id;
+            return prev;
+          });
+        } else {
+          void createNewSession();
         }
-      } else {
-        createNewSession();
-      }
-    }, (err) => handleFirestoreError(err, OperationType.GET, 'chatSessions'));
+      },
+      (err) => handleFirestoreError(err, OperationType.GET, 'chatSessions'),
+    );
 
     return () => unsubscribe();
-  }, [childId, activeSessionId]);
+  }, [childId, ownerId, createNewSession]);
 
   useEffect(() => {
     if (!auth.currentUser || !childId || !activeSessionId) return;
-    const q = query(
-      collection(db, 'users', ownerId, 'children', childId, 'chatSessions', activeSessionId, 'messages'),
-      orderBy('timestamp', 'asc')
+    setOlderMessages([]);
+    setHasMoreOlder(false);
+    oldestMsgCursorRef.current = null;
+
+    const coll = collection(
+      db,
+      'users',
+      ownerId,
+      'children',
+      childId,
+      'chatSessions',
+      activeSessionId,
+      'messages',
     );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setMessages(snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Message[]);
-    }, (err) => handleFirestoreError(err, OperationType.GET, 'messages'));
+    const q = query(coll, orderBy('timestamp', 'desc'), limit(50));
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const chronological = [...snapshot.docs].reverse().map((d) => ({ id: d.id, ...d.data() })) as Message[];
+        setMessages(chronological);
+        oldestMsgCursorRef.current = snapshot.docs.length ? snapshot.docs[snapshot.docs.length - 1]! : null;
+        setHasMoreOlder(snapshot.docs.length === 50);
+      },
+      (err) => handleFirestoreError(err, OperationType.GET, 'messages'),
+    );
 
     return () => unsubscribe();
-  }, [childId, activeSessionId]);
+  }, [childId, activeSessionId, ownerId]);
+
+  const loadOlderMessages = async () => {
+    if (!auth.currentUser || !childId || !activeSessionId || !oldestMsgCursorRef.current || loadingOlder) return;
+    setLoadingOlder(true);
+    try {
+      const coll = collection(
+        db,
+        'users',
+        ownerId,
+        'children',
+        childId,
+        'chatSessions',
+        activeSessionId,
+        'messages',
+      );
+      const q = query(coll, orderBy('timestamp', 'desc'), startAfter(oldestMsgCursorRef.current), limit(50));
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        setHasMoreOlder(false);
+        return;
+      }
+      const batch = [...snap.docs].reverse().map((d) => ({ id: d.id, ...d.data() })) as Message[];
+      setOlderMessages((prev) => [...batch, ...prev]);
+      oldestMsgCursorRef.current = snap.docs[snap.docs.length - 1]!;
+      setHasMoreOlder(snap.docs.length === 50);
+    } catch (err) {
+      console.error('loadOlderMessages:', err);
+    } finally {
+      setLoadingOlder(false);
+    }
+  };
+
+  const displayMessages = [...olderMessages, ...messages];
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
-  // Handle task context from planner - auto-send question about the task
   const taskContextProcessed = useRef(false);
-  useEffect(() => {
-    if (taskContext && activeSessionId && !loading && !taskContextProcessed.current) {
-      taskContextProcessed.current = true;
-      const prompt = `Jag behöver hjälp med denna läxa:\n\nÄmne: ${taskContext.subject}\n${taskContext.description ? `Beskrivning: ${taskContext.description}\n` : ''}Förklara vad uppgiften handlar om och ge tips på hur jag som förälder kan hjälpa mitt barn.`;
-
-      const fromTask = taskContext.imageUrls?.length
-        ? taskContext.imageUrls.slice(0, CHAT_MAX_IMAGES)
-        : taskContext.imageUrl
-          ? [taskContext.imageUrl]
-          : [];
-      if (fromTask.length) setImages(fromTask);
-
-      // Small delay to ensure session is ready
-      setTimeout(() => {
-        sendMessage(prompt);
-        onTaskContextUsed?.();
-      }, 500);
-    }
-    if (!taskContext) {
-      taskContextProcessed.current = false;
-    }
-  }, [taskContext, activeSessionId]);
-
-  const createNewSession = async () => {
-    if (!auth.currentUser || !childId) return;
-    try {
-      const ref = collection(db, 'users', ownerId, 'children', childId, 'chatSessions');
-      const docRef = await addDoc(ref, { title: `Chatt ${new Date().toLocaleDateString()}`, createdAt: serverTimestamp() });
-      setActiveSessionId(docRef.id);
-    } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, 'chatSessions');
-    }
-  };
 
   const clearChat = async () => {
     if (!auth.currentUser || !childId || !activeSessionId) return;
@@ -219,6 +274,15 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
       if (imageUrl) {
         const compressed = await compressImage(imageUrl, 800, 800, 0.6);
         await updateDoc(doc(db, path), { generatedImage: compressed });
+        const libraryRef = collection(db, 'users', ownerId, 'children', childId, 'library');
+        await addDoc(libraryRef, {
+          title: content.split('\n')[0].replace(/[#*]/g, '').slice(0, 50) || t('chat.saved'),
+          content,
+          type: 'image',
+          imageUrl: compressed,
+          createdAt: serverTimestamp(),
+          subject: 'Chatt',
+        });
       }
     } catch (err) {
       console.error('Error generating image:', err);
@@ -232,8 +296,8 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
     setCreatingAutoTask(true);
     try {
       // Find the user message before this AI response to get the image
-      const aiMsgIndex = messages.findIndex(m => m.id === messageId);
-      const prevMsg = aiMsgIndex > 0 ? messages[aiMsgIndex - 1] : null;
+      const aiMsgIndex = displayMessages.findIndex((m) => m.id === messageId);
+      const prevMsg = aiMsgIndex > 0 ? displayMessages[aiMsgIndex - 1] : null;
       const urls = prevMsg?.attachments?.length ? prevMsg.attachments : undefined;
       const imageUrl = urls?.[0];
 
@@ -291,7 +355,7 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
         }
       }
 
-      const history = messages.map(m => ({ role: m.role, content: m.content }));
+      const history = displayMessages.map((m) => ({ role: m.role, content: m.content }));
       const response = await generateHomeworkHelp(
         messageText || t('chat.analyzeImage'),
         history,
@@ -315,6 +379,28 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (taskContext && activeSessionId && !loading && !taskContextProcessed.current) {
+      taskContextProcessed.current = true;
+      const prompt = `Jag behöver hjälp med denna läxa:\n\nÄmne: ${taskContext.subject}\n${taskContext.description ? `Beskrivning: ${taskContext.description}\n` : ''}Förklara vad uppgiften handlar om och ge tips på hur jag som förälder kan hjälpa mitt barn.`;
+
+      const fromTask = taskContext.imageUrls?.length
+        ? taskContext.imageUrls.slice(0, CHAT_MAX_IMAGES)
+        : taskContext.imageUrl
+          ? [taskContext.imageUrl]
+          : [];
+      if (fromTask.length) setImages(fromTask);
+
+      setTimeout(() => {
+        void sendMessage(prompt);
+        onTaskContextUsed?.();
+      }, 500);
+    }
+    if (!taskContext) {
+      taskContextProcessed.current = false;
+    }
+  }, [taskContext, activeSessionId, loading, onTaskContextUsed]);
 
   return (
     <div
@@ -394,12 +480,25 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
           </div>
         )}
 
-        {messages.length === 0 && !loading ? (
+        {hasMoreOlder && (
+          <div className="max-w-3xl mx-auto flex justify-center pb-2">
+            <button
+              type="button"
+              onClick={() => void loadOlderMessages()}
+              disabled={loadingOlder}
+              className="text-sm text-emerald-700 dark:text-emerald-400 hover:underline disabled:opacity-50"
+            >
+              {loadingOlder ? t('chat.loadingOlder') : t('chat.loadOlder')}
+            </button>
+          </div>
+        )}
+
+        {displayMessages.length === 0 && !loading ? (
           <ChatEmptyState childName={childName} onSendStarter={sendMessage} />
         ) : (
-          messages.map((msg, idx) => {
+          displayMessages.map((msg, idx) => {
             // Check if the user message before this AI response had an image
-            const prevMsg = idx > 0 ? messages[idx - 1] : null;
+            const prevMsg = idx > 0 ? displayMessages[idx - 1] : null;
             const hasImage = msg.role === 'model' && prevMsg?.role === 'user' && (prevMsg.attachments?.length ?? 0) > 0;
 
             return (

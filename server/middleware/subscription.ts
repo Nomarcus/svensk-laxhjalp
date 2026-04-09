@@ -3,6 +3,7 @@ import admin from 'firebase-admin';
 import { AuthenticatedRequest } from './auth';
 import { getServerFirestore } from '../lib/serverFirestore';
 import { enforceSubscriptionLimits } from '../subscriptionEnv';
+import { getCachedUserSubscription, setCachedUserSubscription } from '../lib/subscriptionUserCache';
 
 export interface SubscriptionRequest extends AuthenticatedRequest {
   tier?: 'free' | 'pro';
@@ -33,10 +34,19 @@ export async function subscriptionMiddleware(
   }
 
   try {
-    const userDoc = await getServerFirestore().doc(`users/${req.uid}`).get();
-    const userData = userDoc.data() || {};
-    const tier = userData.tier || 'free';
-    const subscriptionStatus = userData.subscriptionStatus || 'none';
+    let tier: string;
+    let subscriptionStatus: string;
+    const cached = getCachedUserSubscription(req.uid);
+    if (cached) {
+      tier = cached.tier;
+      subscriptionStatus = cached.subscriptionStatus;
+    } else {
+      const userDoc = await getServerFirestore().doc(`users/${req.uid}`).get();
+      const userData = userDoc.data() || {};
+      tier = userData.tier || 'free';
+      subscriptionStatus = userData.subscriptionStatus || 'none';
+      setCachedUserSubscription(req.uid, tier, subscriptionStatus);
+    }
 
     req.tier = tier as 'free' | 'pro';
 

@@ -163,6 +163,8 @@
     "clearChat": "Clear chat",
     "clearChatConfirm": "Are you sure you want to clear this chat?",
     "thinking": "Thinking...",
+    "loadOlder": "Show older messages",
+    "loadingOlder": "Loading…",
     "dropImageHere": "Drop image here",
     "toAnalyzeHomework": "to analyze the homework",
     "analyzeImage": "Analyze this image.",

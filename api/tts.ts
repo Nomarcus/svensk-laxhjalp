@@ -1,5 +1,6 @@
 import { enforceSubscriptionLimits } from '../server/subscriptionEnv';
 import { getServerFirestore } from '../server/lib/serverFirestore';
+import { getCachedUserSubscription, setCachedUserSubscription } from '../server/lib/subscriptionUserCache';
 
 async function getFirebaseAdmin() {
   const mod = await import('firebase-admin');
@@ -64,8 +65,17 @@ export default async function handler(req: any, res: any) {
   try {
     const admin = await getFirebaseAdmin();
     const db = getServerFirestore();
-    const userDoc = await db.doc(`users/${uid}`).get();
-    const userData = userDoc.data();
+    let userData: { tier?: string; subscriptionStatus?: string } | undefined;
+    const cached = getCachedUserSubscription(uid);
+    if (cached) {
+      userData = { tier: cached.tier, subscriptionStatus: cached.subscriptionStatus };
+    } else {
+      const userDoc = await db.doc(`users/${uid}`).get();
+      userData = userDoc.data();
+      const tier = userData?.tier || 'free';
+      const subscriptionStatus = userData?.subscriptionStatus || 'none';
+      setCachedUserSubscription(uid, tier, subscriptionStatus);
+    }
     const pro = isProUser(userData);
 
     const today = new Date().toISOString().split('T')[0];

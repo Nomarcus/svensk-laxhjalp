@@ -86,6 +86,8 @@
     "clearChat": "مسح المحادثة",
     "clearChatConfirm": "هل أنت متأكد أنك تريد مسح هذه المحادثة؟",
     "thinking": "جارٍ التفكير...",
+    "loadOlder": "عرض رسائل أقدم",
+    "loadingOlder": "جارٍ التحميل…",
     "dropImageHere": "أسقط الصورة هنا",
     "toAnalyzeHomework": "لتحليل الواجب",
     "analyzeImage": "حلل هذه الصورة.",
