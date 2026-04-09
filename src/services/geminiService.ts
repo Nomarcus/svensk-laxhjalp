@@ -183,12 +183,16 @@ VIKTIGT ARBETSSÄTT:
 5) För varje fel: förklara vad felet är, varför det blir fel och hur det blir rätt.
 6) Ge ett kort nästa steg som barnet kan göra direkt.
 
-Skriv svaret på svenska med denna struktur:
-- "Din läxa i korthet"
-- "Bedömning per uppgift" (punktlista)
-- "Det som är fel och varför" (endast de felaktiga delarna)
-- "Så gör du rätt" (konkreta steg)
-- "Sammanfattning till förälder"
+SVARFORMAT (viktigt):
+- Skriv på svenska.
+- Använd INTE markdown-tecken som stjärnor, nummertecken eller tabeller.
+- Använd tydliga rubriker exakt så här:
+Din läxa i korthet:
+Bedömning per uppgift:
+Det som är fel och varför:
+Så gör du rätt:
+Sammanfattning till förälder:
+- Under rubriker, använd enkla listor med "- ".
 ${context}`;
 
   return generateHomeworkHelp(

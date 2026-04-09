@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { db, auth, OperationType, handleFirestoreError } from '../firebase';
 import { collection, query, onSnapshot, deleteDoc, doc, orderBy, collectionGroup, getDocs } from 'firebase/firestore';
-import { Trash2, BookOpen, Image as ImageIcon, ExternalLink, Share2, Search, Plus, MessageSquare } from 'lucide-react';
+import { Trash2, BookOpen, Image as ImageIcon, Share2, Search, Plus, MessageSquare, CheckSquare } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '../utils/cn';
 import type { LibraryItem } from '../types';
@@ -18,7 +18,7 @@ export default function Library({ childId, ownerId }: LibraryProps) {
   const [chatImages, setChatImages] = useState<LibraryItem[]>([]);
   const [search, setSearch] = useState('');
   const [selectedItem, setSelectedItem] = useState<LibraryItem | null>(null);
-  const [filter, setFilter] = useState<'all' | 'images' | 'text'>('all');
+  const [filter, setFilter] = useState<'all' | 'images' | 'text' | 'corrections'>('all');
 
   useEffect(() => {
     if (!auth.currentUser || !childId) return;
@@ -118,7 +118,8 @@ export default function Library({ childId, ownerId }: LibraryProps) {
       item.content?.toLowerCase().includes(search.toLowerCase());
     const matchesFilter = filter === 'all' ||
       (filter === 'images' && item.type === 'image') ||
-      (filter === 'text' && item.type === 'text');
+      (filter === 'text' && item.type === 'text') ||
+      (filter === 'corrections' && item.type === 'correction');
     return matchesSearch && matchesFilter;
   });
 
@@ -144,7 +145,12 @@ export default function Library({ childId, ownerId }: LibraryProps) {
               </div>
             </div>
             <div className="flex gap-2">
-              {([['all', t('library.all')], ['images', t('library.images')], ['text', t('library.texts')]] as [['all', string], ['images', string], ['text', string]]).map(([key, label]) => (
+              {([
+                ['all', t('library.all')],
+                ['images', t('library.images')],
+                ['text', t('library.texts')],
+                ['corrections', t('library.corrections')],
+              ] as Array<['all' | 'images' | 'text' | 'corrections', string]>).map(([key, label]) => (
                 <button
                   key={key}
                   onClick={() => setFilter(key)}
@@ -195,9 +201,9 @@ export default function Library({ childId, ownerId }: LibraryProps) {
                   <div className="p-5 flex-1 flex flex-col">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        {item.type === 'text' && (
+                        {(item.type === 'text' || item.type === 'correction') && (
                           <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
-                            <BookOpen size={14} />
+                            {item.type === 'correction' ? <CheckSquare size={14} /> : <BookOpen size={14} />}
                           </div>
                         )}
                         <h4 className="font-semibold text-stone-900 dark:text-stone-100 line-clamp-1">{item.title}</h4>
@@ -246,7 +252,7 @@ export default function Library({ childId, ownerId }: LibraryProps) {
             <div className="p-6 border-b border-black/5 flex items-center justify-between bg-white sticky top-0 z-10">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
-                  {selectedItem.type === 'image' ? <ImageIcon size={20} /> : <BookOpen size={20} />}
+                  {selectedItem.type === 'image' ? <ImageIcon size={20} /> : selectedItem.type === 'correction' ? <CheckSquare size={20} /> : <BookOpen size={20} />}
                 </div>
                 <div>
                   <h3 className="text-xl font-serif italic">{selectedItem.title}</h3>

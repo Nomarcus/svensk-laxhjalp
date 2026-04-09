@@ -73,8 +73,9 @@ export interface LibraryItem {
   id: string;
   title: string;
   content?: string;
-  type: 'text' | 'image';
+  type: 'text' | 'image' | 'correction';
   imageUrl?: string;
+  imageUrls?: string[];
   createdAt: Timestamp | null;
   subject?: string;
 }

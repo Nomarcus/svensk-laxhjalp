@@ -245,7 +245,12 @@
     "creatingTask": "Creating task...",
     "resultTitle": "Correction",
     "emptyResult": "No correction yet. Add images and press \"Correct homework\".",
-    "emptyResultFallback": "I could not read enough from the photos. Try clearer photos and run again."
+    "emptyResultFallback": "I could not read enough from the photos. Try clearer photos and run again.",
+    "saveCorrection": "Save correction to library",
+    "saved": "Saved to library",
+    "recentTitle": "Recent corrections",
+    "recentEmpty": "No saved corrections yet.",
+    "subjectLabel": "Correction"
   },
   "planner": {
     "weeklyHomework": "Weekly Homework",
@@ -319,7 +324,8 @@
     "general": "General",
     "share": "Share",
     "shareText": "Check out this resource from Föräldrahjälpen!",
-    "copiedToClipboard": "Copied to clipboard!"
+    "copiedToClipboard": "Copied to clipboard!",
+    "corrections": "Corrections"
   },
   "info": {
     "title": "How It Works",

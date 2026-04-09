@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Camera, Image as ImageIcon, Loader2, Send, X, CheckSquare, CalendarPlus } from 'lucide-react';
+import { Camera, Image as ImageIcon, Loader2, Send, X, CheckSquare, CalendarPlus, History, Save } from 'lucide-react';
 import { compressImage } from '../utils/image';
 import { analyzeHomeworkForTask, correctHomeworkFromImages } from '../services/geminiService';
 import { cn } from '../utils/cn';
+import { auth, db, OperationType, handleFirestoreError } from '../firebase';
+import { addDoc, collection, onSnapshot, orderBy, query, serverTimestamp } from 'firebase/firestore';
+import type { LibraryItem } from '../types';
 
 interface HomeworkCorrectorProps {
   childName: string;
+  childId: string;
+  ownerId: string;
   onCreateTaskFromCorrection?: (data: {
     subject: string;
     description: string;
@@ -20,15 +25,44 @@ interface HomeworkCorrectorProps {
 
 const MAX_IMAGES = 5;
 
-export default function HomeworkCorrector({ childName, onCreateTaskFromCorrection }: HomeworkCorrectorProps) {
+export default function HomeworkCorrector({ childName, childId, ownerId, onCreateTaskFromCorrection }: HomeworkCorrectorProps) {
   const { t, i18n } = useTranslation();
   const [images, setImages] = useState<string[]>([]);
   const [extraContext, setExtraContext] = useState('');
   const [loading, setLoading] = useState(false);
   const [creatingTask, setCreatingTask] = useState(false);
+  const [savingCorrection, setSavingCorrection] = useState(false);
+  const [savedNow, setSavedNow] = useState(false);
   const [result, setResult] = useState('');
+  const [recentCorrections, setRecentCorrections] = useState<LibraryItem[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const cameraInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (!auth.currentUser || !childId) return;
+    const q = query(
+      collection(db, 'users', ownerId, 'children', childId, 'library'),
+      orderBy('createdAt', 'desc')
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      const data = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }) as LibraryItem)
+        .filter((x) => x.type === 'correction')
+        .slice(0, 10);
+      setRecentCorrections(data);
+    });
+    return () => unsub();
+  }, [childId, ownerId]);
+
+  const formatCorrectionText = (raw: string) =>
+    raw
+      .replace(/\r/g, '')
+      .replace(/```[\s\S]*?```/g, '')
+      .replace(/\*\*/g, '')
+      .replace(/^\s*\*\s+/gm, '- ')
+      .replace(/`/g, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
 
   const pushImage = async (dataUrl: string) => {
     let finalUrl = dataUrl;
@@ -81,11 +115,33 @@ export default function HomeworkCorrector({ childName, onCreateTaskFromCorrectio
     setLoading(true);
     try {
       const text = await correctHomeworkFromImages(images, extraContext, i18n.language || 'sv');
-      setResult(text || t('corrector.emptyResultFallback'));
+      setResult(formatCorrectionText(text || t('corrector.emptyResultFallback')));
+      setSavedNow(false);
     } catch {
       setResult(t('chat.unexpectedError'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const onSaveCorrection = async () => {
+    if (!result.trim() || savingCorrection || !auth.currentUser) return;
+    setSavingCorrection(true);
+    try {
+      await addDoc(collection(db, 'users', ownerId, 'children', childId, 'library'), {
+        title: (result.split('\n')[0] || t('corrector.title')).slice(0, 80),
+        content: result,
+        type: 'correction',
+        imageUrl: images[0] || null,
+        imageUrls: images,
+        subject: t('corrector.subjectLabel'),
+        createdAt: serverTimestamp(),
+      });
+      setSavedNow(true);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `users/${ownerId}/children/${childId}/library`);
+    } finally {
+      setSavingCorrection(false);
     }
   };
 
@@ -202,22 +258,59 @@ export default function HomeworkCorrector({ childName, onCreateTaskFromCorrectio
               <div className="text-sm leading-relaxed whitespace-pre-wrap text-stone-700 dark:text-stone-200">
                 {result}
               </div>
-              {onCreateTaskFromCorrection && (
+              <div className="flex flex-wrap gap-2">
+                {onCreateTaskFromCorrection && (
+                  <button
+                    type="button"
+                    onClick={onCreateTask}
+                    disabled={creatingTask}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 disabled:opacity-60 transition-colors"
+                  >
+                    {creatingTask ? <Loader2 size={16} className="animate-spin" /> : <CalendarPlus size={16} />}
+                    {creatingTask ? t('corrector.creatingTask') : t('corrector.createTask')}
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={onCreateTask}
-                  disabled={creatingTask}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 disabled:opacity-60 transition-colors"
+                  onClick={onSaveCorrection}
+                  disabled={savingCorrection || savedNow}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 disabled:opacity-60 transition-colors"
                 >
-                  {creatingTask ? <Loader2 size={16} className="animate-spin" /> : <CalendarPlus size={16} />}
-                  {creatingTask ? t('corrector.creatingTask') : t('corrector.createTask')}
+                  {savingCorrection ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                  {savedNow ? t('corrector.saved') : t('corrector.saveCorrection')}
                 </button>
-              )}
+              </div>
             </div>
           ) : (
             <p className="text-sm text-stone-500 dark:text-stone-400">
               {t('corrector.emptyResult')}
             </p>
+          )}
+        </div>
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 border border-black/5 dark:border-white/5 shadow-[0_20px_50px_-42px_rgba(15,23,42,0.45)]">
+          <div className="flex items-center gap-2 mb-3">
+            <History size={16} className="text-stone-500" />
+            <h3 className="text-base font-semibold">{t('corrector.recentTitle')}</h3>
+          </div>
+          {recentCorrections.length === 0 ? (
+            <p className="text-sm text-stone-500 dark:text-stone-400">{t('corrector.recentEmpty')}</p>
+          ) : (
+            <div className="space-y-2">
+              {recentCorrections.slice(0, 10).map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    setResult(item.content || '');
+                    setImages(item.imageUrls?.length ? item.imageUrls : item.imageUrl ? [item.imageUrl] : []);
+                  }}
+                  className="w-full text-left p-3 rounded-xl border border-black/5 dark:border-white/10 hover:bg-stone-50 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <div className="text-sm font-medium text-stone-800 dark:text-stone-100 line-clamp-1">{item.title}</div>
+                  <div className="text-xs text-stone-500 dark:text-stone-400 line-clamp-2">{item.content}</div>
+                </button>
+              ))}
+            </div>
           )}
         </div>
       </div>

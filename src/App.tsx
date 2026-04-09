@@ -337,6 +337,8 @@ export default function App() {
             ) : activeTab === 'corrector' ? (
               <HomeworkCorrector
                 childName={selectedChild?.name || ''}
+                childId={selectedChildId!}
+                ownerId={selectedChild?.ownerId || user.uid}
                 onCreateTaskFromCorrection={(data) => {
                   setPlannerPrefill(data);
                   setActiveTab('planner');

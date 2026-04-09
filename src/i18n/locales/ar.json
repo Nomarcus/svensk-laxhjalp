@@ -168,7 +168,12 @@
     "creatingTask": "جارٍ إنشاء الواجب...",
     "resultTitle": "نتيجة التصحيح",
     "emptyResult": "لا توجد نتيجة بعد. أضف صوراً واضغط \"تصحيح الواجب\".",
-    "emptyResultFallback": "لم أتمكن من قراءة ما يكفي من الصور. جرّب صوراً أوضح ثم أعد المحاولة."
+    "emptyResultFallback": "لم أتمكن من قراءة ما يكفي من الصور. جرّب صوراً أوضح ثم أعد المحاولة.",
+    "saveCorrection": "حفظ التصحيح في المكتبة",
+    "saved": "تم الحفظ في المكتبة",
+    "recentTitle": "أحدث التصحيحات",
+    "recentEmpty": "لا توجد تصحيحات محفوظة بعد.",
+    "subjectLabel": "تصحيح"
   },
   "planner": {
     "weeklyHomework": "واجبات الأسبوع",
@@ -242,7 +247,8 @@
     "general": "عام",
     "share": "مشاركة",
     "shareText": "شاهد هذا المورد من Föräldrahjälpen!",
-    "copiedToClipboard": "تم النسخ!"
+    "copiedToClipboard": "تم النسخ!",
+    "corrections": "تصحيحات"
   },
   "subscription": {
     "title": "الاشتراك",
