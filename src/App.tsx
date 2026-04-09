@@ -6,6 +6,7 @@ import Auth from './components/Auth';
 import Layout from './components/Layout';
 import Chat from './components/Chat';
 import Planner from './components/Planner';
+import HomeworkCorrector from './components/HomeworkCorrector';
 import Info from './components/Info';
 import Library from './components/Library';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -33,14 +34,22 @@ const isFirestorePermissionError = (error: unknown) => {
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'chat' | 'planner' | 'info' | 'library' | 'subscription' | 'contact' | 'admin'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'planner' | 'corrector' | 'info' | 'library' | 'subscription' | 'contact' | 'admin'>('chat');
   const [subscription, setSubscription] = useState<UserSubscription>({ tier: 'free', status: 'none' });
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [showChildManager, setShowChildManager] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
-  const [plannerPrefill, setPlannerPrefill] = useState<{ subject: string; description: string; workDays?: string[]; dueDay?: string; minutesPerDay?: number; imageUrl?: string } | null>(null);
+  const [plannerPrefill, setPlannerPrefill] = useState<{
+    subject: string;
+    description: string;
+    workDays?: string[];
+    dueDay?: string;
+    minutesPerDay?: number;
+    imageUrl?: string;
+    imageUrls?: string[];
+  } | null>(null);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
   const [chatFromTask, setChatFromTask] = useState<{
     taskId: string;
@@ -325,6 +334,14 @@ export default function App() {
                 });
                 setActiveTab('chat');
               }} />
+            ) : activeTab === 'corrector' ? (
+              <HomeworkCorrector
+                childName={selectedChild?.name || ''}
+                onCreateTaskFromCorrection={(data) => {
+                  setPlannerPrefill(data);
+                  setActiveTab('planner');
+                }}
+              />
             ) : activeTab === 'library' ? (
               <Library childId={selectedChildId!} ownerId={selectedChild?.ownerId || user.uid} />
             ) : (

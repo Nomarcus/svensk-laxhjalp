@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, MessageSquare, Calendar, BookOpen, User as UserIcon, ChevronDown, Settings, Info, Library, Crown, Download, Users, X, Menu, Moon, Sun, Mail, Shield, FileText, Share2, BarChart3 } from 'lucide-react';
+import { LogOut, MessageSquare, Calendar, BookOpen, User as UserIcon, ChevronDown, Settings, Info, Library, Crown, Download, Users, X, Menu, Moon, Sun, Mail, Shield, FileText, Share2, BarChart3, CheckSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { logout, User } from '../firebase';
 import { cn } from '../utils/cn';
@@ -9,8 +9,8 @@ import LanguageSwitcher from './LanguageSwitcher';
 interface LayoutProps {
   children: React.ReactNode;
   user: User;
-  activeTab: 'chat' | 'planner' | 'info' | 'library' | 'subscription' | 'contact' | 'admin';
-  setActiveTab: (tab: 'chat' | 'planner' | 'info' | 'library' | 'subscription' | 'contact' | 'admin') => void;
+  activeTab: 'chat' | 'planner' | 'corrector' | 'info' | 'library' | 'subscription' | 'contact' | 'admin';
+  setActiveTab: (tab: 'chat' | 'planner' | 'corrector' | 'info' | 'library' | 'subscription' | 'contact' | 'admin') => void;
   showAdminNav?: boolean;
   childrenList: Child[];
   selectedChildId: string | null;
@@ -160,6 +160,7 @@ export default function Layout({
           {[
             { id: 'chat' as const, icon: <MessageSquare size={20} />, label: t('nav.aiAssistant') },
             { id: 'planner' as const, icon: <Calendar size={20} />, label: t('nav.planner') },
+            { id: 'corrector' as const, icon: <CheckSquare size={20} />, label: t('nav.corrector') },
             { id: 'library' as const, icon: <Library size={20} />, label: t('nav.library') },
             { id: 'info' as const, icon: <Info size={20} />, label: t('nav.info') },
           ].map(item => (
@@ -339,6 +340,7 @@ export default function Layout({
         {[
           { id: 'chat' as const, icon: <MessageSquare size={20} />, label: t('nav.aiHelp') },
           { id: 'planner' as const, icon: <Calendar size={20} />, label: t('nav.plannerShort') },
+          { id: 'corrector' as const, icon: <CheckSquare size={20} />, label: t('nav.correctorShort') },
           { id: 'library' as const, icon: <Library size={20} />, label: t('nav.libraryShort') },
         ].map(item => (
           <button

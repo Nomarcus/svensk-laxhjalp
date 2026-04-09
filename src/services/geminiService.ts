@@ -162,3 +162,41 @@ Skriv på svenska, kortfattat och handlingsbart.`;
 
   return generateHomeworkHelp(prompt);
 }
+
+export async function correctHomeworkFromImages(
+  imageBase64s: string[],
+  extraContext?: string,
+  language: string = 'sv'
+): Promise<string> {
+  const context = extraContext?.trim()
+    ? `\n\nExtra kontext från föräldern:\n${extraContext.trim().slice(0, 1000)}`
+    : '';
+
+  const prompt = `Du är en pedagogisk rättningsassistent för svenska grundskolan.
+Mål: Rätta elevens svar utifrån bilderna av läxan.
+
+VIKTIGT ARBETSSÄTT:
+1) Läs bilderna noggrant först (OCR/visuell tolkning): uppgiftstext, elevens svar, siffror, enheter, tecken, diagram, stavning.
+2) Om någon del är oskarp eller saknas, säg exakt vilken del och vad som behövs.
+3) Rätta sedan svaren ämnesoberoende (matte, svenska, språk, NO, SO m.m.).
+4) Markera tydligt vad som är korrekt och vad som är fel.
+5) För varje fel: förklara vad felet är, varför det blir fel och hur det blir rätt.
+6) Ge ett kort nästa steg som barnet kan göra direkt.
+
+Skriv svaret på svenska med denna struktur:
+- "Din läxa i korthet"
+- "Bedömning per uppgift" (punktlista)
+- "Det som är fel och varför" (endast de felaktiga delarna)
+- "Så gör du rätt" (konkreta steg)
+- "Sammanfattning till förälder"
+${context}`;
+
+  return generateHomeworkHelp(
+    prompt,
+    [],
+    undefined,
+    false,
+    language,
+    imageBase64s.slice(0, 5)
+  );
+}

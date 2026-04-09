@@ -22,6 +22,8 @@
     "more": "Mer",
     "aiHelp": "AI-Hjälp",
     "plannerShort": "Planering",
+    "corrector": "Rätta läxan",
+    "correctorShort": "Rätta",
     "libraryShort": "Bibliotek",
     "admin": "Admin"
   },
@@ -230,6 +232,20 @@
     "starter3": "Hur skriver man en bra berättelse?",
     "starter4": "Vad är ett verb?",
     "starter5": "Berätta om rymden"
+  },
+  "corrector": {
+    "title": "Rätta läxan",
+    "subtitle": "Fota läxan så rättar AI steg för steg för {{name}}.",
+    "imageHint": "Lägg till upp till {{max}} bilder (fram- och baksida går bra).",
+    "extraContext": "Extra kontext (valfritt)",
+    "extraContextPlaceholder": "T.ex. årskurs, vilket kapitel eller vad läraren bett om.",
+    "submit": "Rätta läxan",
+    "correcting": "Rättar läxan...",
+    "createTask": "Skapa läxa i planeringen",
+    "creatingTask": "Skapar läxa...",
+    "resultTitle": "Rättning",
+    "emptyResult": "Ingen rättning ännu. Lägg till bilder och tryck på \"Rätta läxan\".",
+    "emptyResultFallback": "Jag kunde inte tolka tillräckligt från bilderna. Ta gärna tydligare bilder och försök igen."
   },
   "planner": {
     "weeklyHomework": "Veckans Läxor",
