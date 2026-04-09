@@ -81,6 +81,7 @@ export default function Subscription({ subscription }: SubscriptionProps) {
         synced?: boolean;
         reason?: string;
         error?: string;
+        detail?: string;
         duplicateActiveCount?: number;
       } = {};
       try {
@@ -89,9 +90,12 @@ export default function Subscription({ subscription }: SubscriptionProps) {
         /* ignore */
       }
       if (!res.ok) {
+        const parts = [(data as { error?: string }).error, (data as { detail?: string }).detail].filter(
+          Boolean,
+        ) as string[];
         setSyncFeedback({
           kind: 'err',
-          text: (data as { error?: string }).error || t('subscription.syncServerError'),
+          text: parts.length > 0 ? parts.join(' — ') : t('subscription.syncServerError'),
         });
         return;
       }

@@ -16,6 +16,91 @@ function getStripe(): Stripe {
   }
   return _stripe;
 }
+
+function normalizeStripeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function escapeStripeSearchEmail(email: string): string {
+  return normalizeStripeEmail(email).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+/** List customers page-by-page (cap) and match e-post — backup om `customers.search` failar eller hittar inget. */
+async function findCustomersByEmailListPages(
+  stripe: Stripe,
+  normalizedEmail: string,
+): Promise<Stripe.Customer[]> {
+  const matches: Stripe.Customer[] = [];
+  let startingAfter: string | undefined;
+  const maxPages = 8;
+  for (let p = 0; p < maxPages; p++) {
+    const page = await stripe.customers.list({ limit: 100, starting_after: startingAfter });
+    for (const c of page.data) {
+      if ((c.email || '').trim().toLowerCase() === normalizedEmail) {
+        matches.push(c);
+      }
+    }
+    if (!page.has_more || page.data.length === 0) break;
+    startingAfter = page.data[page.data.length - 1]?.id;
+    if (!startingAfter) break;
+  }
+  return matches;
+}
+
+/**
+ * Hitta Stripe customer id från inloggad användares e-post (sök först, sedan sidvis listing).
+ */
+async function findStripeCustomerIdForEmail(
+  stripe: Stripe,
+  email: string,
+  existingCustomerId?: string | null,
+): Promise<string | undefined> {
+  if (existingCustomerId) return existingCustomerId;
+  const normalized = normalizeStripeEmail(email);
+  const esc = escapeStripeSearchEmail(email);
+  let candidates: Stripe.Customer[] = [];
+  try {
+    const found = await stripe.customers.search({ query: `email:'${esc}'`, limit: 25 });
+    candidates = found.data;
+  } catch (searchErr) {
+    console.warn(
+      'Stripe customers.search failed, using list fallback:',
+      searchErr instanceof Error ? searchErr.message : searchErr,
+    );
+  }
+  if (candidates.length === 0) {
+    candidates = await findCustomersByEmailListPages(stripe, normalized);
+  }
+  if (candidates.length === 0) return undefined;
+  if (candidates.length === 1) return candidates[0].id;
+  for (const c of candidates) {
+    const subs = await stripe.subscriptions.list({ customer: c.id, status: 'all', limit: 5 });
+    if (subs.data.some((s) => s.status === 'active' || s.status === 'trialing')) {
+      return c.id;
+    }
+  }
+  return candidates[0].id;
+}
+
+function syncErrorPayload(err: unknown): { status: number; body: { error: string; detail: string } } {
+  const raw = err instanceof Error ? err.message : String(err);
+  const detail = raw.length > 280 ? `${raw.slice(0, 280)}…` : raw;
+  if (raw.includes('Stripe är inte konfigurerat') || raw.includes('STRIPE_SECRET_KEY')) {
+    return {
+      status: 503,
+      body: {
+        error: 'Kunde inte synka prenumeration.',
+        detail:
+          'STRIPE_SECRET_KEY saknas eller är ogiltig på servern. Lägg in Stripe secret key under Cloud Run → Variables.',
+      },
+    };
+  }
+  return {
+    status: 500,
+    body: { error: 'Kunde inte synka prenumeration.', detail },
+  };
+}
+
 async function findUserByStripeCustomerId(customerId?: string | null) {
   if (!customerId) return null;
   const snapshot = await getServerFirestore()
@@ -170,30 +255,23 @@ router.post('/billing/sync-stripe-subscription', async (req: AuthenticatedReques
       res.status(400).json({ error: 'E-post krävs för att hitta Stripe-kund.' });
       return;
     }
+    if (!process.env.STRIPE_SECRET_KEY?.trim()) {
+      res.status(503).json({
+        error: 'Kunde inte synka prenumeration.',
+        detail:
+          'STRIPE_SECRET_KEY saknas på servern. Lägg in den under Cloud Run → laxhjalp-api → Edit → Variables.',
+      });
+      return;
+    }
 
     const userRef = getServerFirestore().doc(`users/${uid}`);
     const userSnapshot = await userRef.get();
-    let customerId = userSnapshot.data()?.stripeCustomerId as string | undefined;
+    const existingCus = userSnapshot.data()?.stripeCustomerId as string | undefined;
     const stripe = getStripe();
 
-    if (!customerId) {
-      const esc = email.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-      const found = await stripe.customers.search({ query: `email:'${esc}'`, limit: 10 });
-      if (found.data.length === 1) {
-        customerId = found.data[0].id;
-      } else if (found.data.length > 1) {
-        for (const c of found.data) {
-          const subs = await stripe.subscriptions.list({ customer: c.id, status: 'all', limit: 5 });
-          if (subs.data.some((s) => s.status === 'active' || s.status === 'trialing')) {
-            customerId = c.id;
-            break;
-          }
-        }
-        customerId = customerId || found.data[0].id;
-      }
-      if (customerId) {
-        await userRef.set({ stripeCustomerId: customerId }, { merge: true });
-      }
+    let customerId = await findStripeCustomerIdForEmail(stripe, email, existingCus);
+    if (customerId && customerId !== existingCus) {
+      await userRef.set({ stripeCustomerId: customerId }, { merge: true });
     }
 
     if (!customerId) {
@@ -223,9 +301,10 @@ router.post('/billing/sync-stripe-subscription', async (req: AuthenticatedReques
       status: best.status,
       duplicateActiveCount: Math.max(0, activeOrTrial.length - 1),
     });
-  } catch (error: any) {
-    console.error('Sync stripe subscription error:', error.message);
-    res.status(500).json({ error: 'Kunde inte synka prenumeration.' });
+  } catch (error: unknown) {
+    console.error('Sync stripe subscription error:', error);
+    const { status, body } = syncErrorPayload(error);
+    res.status(status).json(body);
   }
 });
 
