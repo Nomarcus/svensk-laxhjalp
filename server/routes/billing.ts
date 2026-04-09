@@ -20,6 +20,16 @@ function getSubscriptionPeriodEnd(sub: Stripe.Subscription | Stripe.Response<Str
   return typeof ts === 'number' ? new Date(ts * 1000).toISOString() : null;
 }
 
+async function findUserByStripeCustomerId(customerId?: string | null) {
+  if (!customerId) return null;
+  const snapshot = await getServerFirestore()
+    .collection('users')
+    .where('stripeCustomerId', '==', customerId)
+    .limit(1)
+    .get();
+  return snapshot.empty ? null : snapshot.docs[0];
+}
+
 const CLIENT_URL = process.env.CLIENT_URL || 'https://lead-agent-489101.web.app';
 
 // POST /api/billing/create-checkout-session
@@ -174,7 +184,7 @@ export async function stripeWebhookHandler(req: Request, res: Response) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
-        const firebaseUID = session.metadata?.firebaseUID;
+        const firebaseUID = session.metadata?.firebaseUID || session.client_reference_id || null;
         if (!firebaseUID) break;
 
         if (session.subscription) {
@@ -193,7 +203,11 @@ export async function stripeWebhookHandler(req: Request, res: Response) {
 
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
-        const firebaseUID = subscription.metadata?.firebaseUID;
+        let firebaseUID = subscription.metadata?.firebaseUID || null;
+        if (!firebaseUID) {
+          const userDoc = await findUserByStripeCustomerId(subscription.customer as string);
+          firebaseUID = userDoc?.id || null;
+        }
         if (!firebaseUID) break;
 
         const statusMap: Record<string, string> = {
@@ -214,7 +228,11 @@ export async function stripeWebhookHandler(req: Request, res: Response) {
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
-        const firebaseUID = subscription.metadata?.firebaseUID;
+        let firebaseUID = subscription.metadata?.firebaseUID || null;
+        if (!firebaseUID) {
+          const userDoc = await findUserByStripeCustomerId(subscription.customer as string);
+          firebaseUID = userDoc?.id || null;
+        }
         if (!firebaseUID) break;
 
         await getServerFirestore().doc(`users/${firebaseUID}`).set({
@@ -231,15 +249,9 @@ export async function stripeWebhookHandler(req: Request, res: Response) {
         const invoice = event.data.object as Stripe.Invoice;
         const customerId = invoice.customer as string;
 
-        // Find user by stripeCustomerId
-        const snapshot = await getServerFirestore()
-          .collection('users')
-          .where('stripeCustomerId', '==', customerId)
-          .limit(1)
-          .get();
-
-        if (!snapshot.empty) {
-          await snapshot.docs[0].ref.set({
+        const userDoc = await findUserByStripeCustomerId(customerId);
+        if (userDoc) {
+          await userDoc.ref.set({
             subscriptionStatus: 'past_due',
           }, { merge: true });
         }
