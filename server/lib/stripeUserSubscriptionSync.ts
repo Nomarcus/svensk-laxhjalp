@@ -6,7 +6,7 @@ export function subscriptionPeriodEndIso(sub: Stripe.Subscription): string | nul
 }
 
 export type FirestoreSubscriptionPatch = {
-  tier: 'free' | 'pro';
+  tier: 'free' | 'plus' | 'pro';
   subscriptionStatus: 'active' | 'trialing' | 'past_due' | 'canceled' | 'none';
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
@@ -14,13 +14,26 @@ export type FirestoreSubscriptionPatch = {
   stripeCustomerId?: string;
 };
 
+function paidTierFromSubscription(sub: Stripe.Subscription): 'free' | 'plus' | 'pro' {
+  const status = sub.status;
+  const paid = status === 'active' || status === 'trialing';
+  if (!paid) return 'free';
+  const plusPriceId = process.env.STRIPE_PRICE_ID_PLUS?.trim();
+  const priceId = sub.items.data[0]?.price?.id;
+  if (plusPriceId) {
+    if (priceId === plusPriceId) return 'plus';
+    return 'pro';
+  }
+  // En betalningsnivå (t.ex. endast 49 kr): all aktiv prenumeration → plus
+  return 'plus';
+}
+
 /** Maps a Stripe subscription object to fields stored on `users/{uid}` (merged with set(..., { merge: true })). */
 export function patchFromStripeSubscription(
   sub: Stripe.Subscription,
   opts?: { stripeCustomerId?: string },
 ): FirestoreSubscriptionPatch {
   const status = sub.status;
-  const pro = status === 'active' || status === 'trialing';
   let subscriptionStatus: FirestoreSubscriptionPatch['subscriptionStatus'];
   if (status === 'trialing') subscriptionStatus = 'trialing';
   else if (status === 'active') subscriptionStatus = 'active';
@@ -29,7 +42,7 @@ export function patchFromStripeSubscription(
   else subscriptionStatus = 'none';
 
   const patch: FirestoreSubscriptionPatch = {
-    tier: pro ? 'pro' : 'free',
+    tier: paidTierFromSubscription(sub),
     subscriptionStatus,
     currentPeriodEnd: subscriptionPeriodEndIso(sub),
     cancelAtPeriodEnd: sub.cancel_at_period_end,

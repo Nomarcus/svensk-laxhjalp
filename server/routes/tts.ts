@@ -15,7 +15,7 @@ function isProUser(userData: { tier?: string; subscriptionStatus?: string } | un
   const tier = userData?.tier || 'free';
   const subscriptionStatus = userData?.subscriptionStatus || 'none';
   return (
-    tier === 'pro'
+    (tier === 'pro' || tier === 'plus')
     && (subscriptionStatus === 'active' || subscriptionStatus === 'trialing' || subscriptionStatus === 'canceled')
   );
 }

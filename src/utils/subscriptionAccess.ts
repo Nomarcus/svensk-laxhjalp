@@ -1,6 +1,12 @@
 import type { UserSubscription } from '../types';
 
-/** In-app and UI: full Pro access (paid period or free trial). */
+/** Aktiv Plus- eller Premium-prenumeration (samma apptillgång). */
+export function hasPaidPlanAccess(sub: Pick<UserSubscription, 'tier' | 'status'>): boolean {
+  const paid = sub.tier === 'pro' || sub.tier === 'plus';
+  return paid && (sub.status === 'active' || sub.status === 'trialing');
+}
+
+/** @deprecated Använd hasPaidPlanAccess; alias kvar för bakåtkompabilitet. */
 export function hasPremiumAccess(sub: Pick<UserSubscription, 'tier' | 'status'>): boolean {
-  return sub.tier === 'pro' && (sub.status === 'active' || sub.status === 'trialing');
+  return hasPaidPlanAccess(sub);
 }

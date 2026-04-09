@@ -13,6 +13,12 @@ interface ImportMetaEnv {
   readonly VITE_STRIPE_PUBLISHABLE_KEY?: string;
   /** Visningscopy för gratisperiod i dagar (standard 10). */
   readonly VITE_STRIPE_TRIAL_DAYS?: string;
+  /** En gemensam Payment Link för månadsprenumeration (49 kr); har företräde före PLUS/PREMIUM nedan. */
+  readonly VITE_STRIPE_PAYMENT_LINK?: string;
+  /** Stripe Payment Link URL för Plus (t.ex. https://buy.stripe.com/...). */
+  readonly VITE_STRIPE_PAYMENT_LINK_PLUS?: string;
+  /** Stripe Payment Link URL för Premium (t.ex. https://buy.stripe.com/...). */
+  readonly VITE_STRIPE_PAYMENT_LINK_PREMIUM?: string;
 }
 
 interface ImportMeta {

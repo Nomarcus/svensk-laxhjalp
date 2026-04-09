@@ -8,3 +8,8 @@ coverage/
 .env*
 !.env.example
 .firebase/
+android/keystore.properties
+android/*.keystore
+android/*.jks
+android/app/*.keystore
+android/app/*.jks
