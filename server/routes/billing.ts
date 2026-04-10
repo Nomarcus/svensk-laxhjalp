@@ -53,15 +53,29 @@ async function findCustomersByEmailListPages(
 async function findStripeCustomerIdForEmail(
   stripe: Stripe,
   email: string,
+  uid: string,
   existingCustomerId?: string | null,
 ): Promise<string | undefined> {
   if (existingCustomerId) return existingCustomerId;
   const normalized = normalizeStripeEmail(email);
-  const esc = escapeStripeSearchEmail(email);
+  const escapedEmail = escapeStripeSearchEmail(email);
+  const escapedUid = uid.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   let candidates: Stripe.Customer[] = [];
+  // Best-effort: prefer explicit firebaseUID mapping when present.
   try {
-    const found = await stripe.customers.search({ query: `email:'${esc}'`, limit: 25 });
-    candidates = found.data;
+    const byUid = await stripe.customers.search({ query: `metadata['firebaseUID']:'${escapedUid}'`, limit: 10 });
+    if (byUid.data.length > 0) candidates = byUid.data;
+  } catch (searchErr) {
+    console.warn(
+      'Stripe customers.search by metadata failed, falling back:',
+      searchErr instanceof Error ? searchErr.message : searchErr,
+    );
+  }
+  try {
+    if (candidates.length === 0) {
+      const found = await stripe.customers.search({ query: `email:'${escapedEmail}'`, limit: 25 });
+      candidates = found.data;
+    }
   } catch (searchErr) {
     console.warn(
       'Stripe customers.search failed, using list fallback:',
@@ -269,7 +283,7 @@ router.post('/billing/sync-stripe-subscription', async (req: AuthenticatedReques
     const existingCus = userSnapshot.data()?.stripeCustomerId as string | undefined;
     const stripe = getStripe();
 
-    let customerId = await findStripeCustomerIdForEmail(stripe, email, existingCus);
+    let customerId = await findStripeCustomerIdForEmail(stripe, email, uid, existingCus);
     if (customerId && customerId !== existingCus) {
       await userRef.set({ stripeCustomerId: customerId }, { merge: true });
     }
