@@ -33,6 +33,7 @@ const CHAT_MAX_IMAGES = 5;
 interface ChatProps {
   childId: string;
   childName: string;
+  childGrade?: string;
   ownerId: string;
   tasks?: Task[];
   taskContext?: { taskId: string; subject: string; description: string; imageUrl?: string; imageUrls?: string[] } | null;
@@ -41,7 +42,7 @@ interface ChatProps {
   onCreateTaskFromPhoto?: (data: { subject: string; description: string; workDays: string[]; dueDay: string; minutesPerDay: number; imageUrl?: string }) => void;
 }
 
-export default function Chat({ childId, childName, ownerId, tasks = [], taskContext, onTaskContextUsed, onCreateTask, onCreateTaskFromPhoto }: ChatProps) {
+export default function Chat({ childId, childName, childGrade, ownerId, tasks = [], taskContext, onTaskContextUsed, onCreateTask, onCreateTaskFromPhoto }: ChatProps) {
   const { t, i18n } = useTranslation();
   const speech = useSpeech();
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
@@ -270,7 +271,7 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
     setGeneratingImageId(messageId);
     const path = `users/${ownerId}/children/${childId}/chatSessions/${activeSessionId}/messages/${messageId}`;
     try {
-      const imageUrl = await generateImage(content);
+      const imageUrl = await generateImage(content, childGrade);
       if (imageUrl) {
         const compressed = await compressImage(imageUrl, 800, 800, 0.6);
         await updateDoc(doc(db, path), { generatedImage: compressed });
@@ -362,7 +363,8 @@ export default function Chat({ childId, childName, ownerId, tasks = [], taskCont
         undefined,
         simpleSwedish,
         i18n.language,
-        imagePayload.length ? imagePayload : undefined
+        imagePayload.length ? imagePayload : undefined,
+        childGrade
       );
 
       await addDoc(messagesRef, { role: 'model', content: response, timestamp: serverTimestamp() });

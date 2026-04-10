@@ -15,6 +15,33 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 const TEXT_MODEL = process.env.AI_TEXT_MODEL || 'gemini-2.5-flash-lite';
 const IMAGE_MODEL = process.env.AI_IMAGE_MODEL || 'gemini-2.5-flash-image';
 
+function parseGradeLevel(raw?: unknown): number | null {
+  if (typeof raw !== 'string') return null;
+  const t = raw.trim().toLowerCase();
+  if (!t) return null;
+  const m = t.match(/(\d{1,2})/);
+  if (!m) return null;
+  const n = Number(m[1]);
+  return Number.isFinite(n) && n >= 0 && n <= 12 ? n : null;
+}
+
+function buildAudienceGuidance(rawGrade?: unknown): string {
+  const grade = parseGradeLevel(rawGrade);
+  if (grade === null) {
+    return 'Neutral nivå: tydligt men inte barnsligt språk. Undvik överförenkling.';
+  }
+  if (grade <= 3) {
+    return 'Lågstadium: enkel och varm ton, mycket konkreta exempel, lekfull pedagogik.';
+  }
+  if (grade <= 6) {
+    return 'Mellanstadium: tydlig och coachande ton, konkreta exempel, mindre lekfullt.';
+  }
+  if (grade <= 9) {
+    return 'Högstadium: mer mogen ton, rak och respektfull, ämneskorrekt terminologi.';
+  }
+  return 'Gymnasienivå: vuxnare ton, precision och struktur, undvik barnsliga metaforer.';
+}
+
 const SYSTEM_INSTRUCTION = `
 Du är en pedagogisk assistent för svenska föräldrar som hjälper till med barnens läxor.
 Skriv som en kunnig kompis vid köksbordet — inte som en lärare. Korta meningar, vardagligt språk.
@@ -48,7 +75,7 @@ När du analyserar bilder av läxor:
 
 router.post('/chat', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { prompt, history, imageBase64, imageBase64s } = req.body;
+    const { prompt, history, imageBase64, imageBase64s, childGrade } = req.body;
 
     const images = validateInlineImages(imageBase64, imageBase64s);
     if (images.ok === false) {
@@ -68,6 +95,7 @@ router.post('/chat', async (req: AuthenticatedRequest, res: Response) => {
       return;
     }
 
+    const audienceGuidance = buildAudienceGuidance(childGrade);
     const response = await ai.models.generateContent({
       model: images.parts.length > 0 ? 'gemini-2.5-flash' : TEXT_MODEL,
       contents: [
@@ -84,7 +112,12 @@ router.post('/chat', async (req: AuthenticatedRequest, res: Response) => {
         },
       ],
       config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
+        systemInstruction: `${SYSTEM_INSTRUCTION}
+
+Anpassning för detta barn:
+- ${audienceGuidance}
+- För äldre elever: håll tonen mogen och undvik barnsliga formuleringar.
+`,
       },
     });
 
@@ -108,19 +141,20 @@ router.post('/chat', async (req: AuthenticatedRequest, res: Response) => {
 
 router.post('/image', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { prompt } = req.body;
+    const { prompt, childGrade } = req.body;
     const np = normalizeImageGenerationPrompt(prompt);
     if (np.ok === false) {
       res.status(np.status).json({ error: np.error });
       return;
     }
 
+    const audienceGuidance = buildAudienceGuidance(childGrade);
     const response = await ai.models.generateContent({
       model: IMAGE_MODEL,
       contents: {
         parts: [
           {
-            text: `Skapa en pedagogisk illustration för en svensk skoluppgift. Ämne: ${np.text}. Illustrationen ska vara tydlig, vänlig och hjälpsam för en förälder som förklarar för sitt barn. Undvik text i bilden om möjligt.`,
+            text: `Skapa en pedagogisk illustration för en svensk skoluppgift. Ämne: ${np.text}. Illustrationen ska vara tydlig, hjälpsam och åldersanpassad. Målgrupp: ${audienceGuidance} För äldre elever: mer neutral, mindre barnslig stil. Undvik text i bilden om möjligt.`,
           },
         ],
       },
