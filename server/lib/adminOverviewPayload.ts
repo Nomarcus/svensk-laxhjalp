@@ -413,7 +413,7 @@ export async function buildAdminOverviewPayload(db: Firestore) {
   const insights: string[] = [];
   const fsDbId = resolveFirestoreDatabaseId();
   insights.push(
-    `firestore: serverläser databas "${fsDbId ?? '(default)'}" — ska matcha klientens firestoreDatabaseId i firebase-applet-config. Om barn/chatt är 0 men syns i konsolen: sätt FIRESTORE_DATABASE_ID på Cloud Run eller deploya om med senaste deploy:api.`,
+    `firestore: serverläser databas "${fsDbId ?? '(default)'}". Standard är (default); om du avsiktligt satt FIRESTORE_DATABASE_ID måste den matcha databasen med produktionsdata.`,
   );
   insights.push(
     'totals: users/children tree with throttled Firestore calls (avoids collectionGroup + client overload).',

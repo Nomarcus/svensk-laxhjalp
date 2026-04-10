@@ -10,4 +10,4 @@ alwaysApply: true
 - **Lösning i kod:** `src/utils/apiBase.ts` — i **produktion** anropas API direkt mot Cloud Run (`https://laxhjalp-api-288867992327.europe-west1.run.app`), om inte `VITE_API_ORIGIN` sätts. Lokalt (`npm run dev`) används Vite-proxy till `localhost:3001`.
 - **CORS på Cloud Run** (`server/index.ts`) måste inkludera `foraldrahjalpen.se`, `www`, och `web.app`.
 - Om Cloud Run-URL byts: uppdatera `CLOUD_RUN_API_ORIGIN` i `apiBase.ts` eller bygg med `VITE_API_ORIGIN`.
-- **Firestore:** Klienten använder namngiven databas (`firebase-applet-config.json` → `firestoreDatabaseId`). Servern måste använda samma id via `server/lib/serverFirestore.ts` (läser config eller `FIRESTORE_DATABASE_ID`), inte bara `admin.firestore()` som är `(default)`.
+- **Firestore:** Klient och server använder nu alltid **`(default)`**. Lämna `FIRESTORE_DATABASE_ID` tom/inte satt om du inte avsiktligt vill peka om backend.

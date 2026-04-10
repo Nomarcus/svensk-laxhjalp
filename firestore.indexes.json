@@ -33,5 +33,21 @@
       ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "messages",
+      "fieldPath": "content",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "messages",
+      "fieldPath": "attachments",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "library",
+      "fieldPath": "content",
+      "indexes": []
+    }
+  ]
 }
