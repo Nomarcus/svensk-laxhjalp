@@ -711,7 +711,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 bg-[#F5F5F0] dark:bg-slate-950">
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="w-full space-y-8 xl:px-2">
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div className="flex items-center justify-between w-full md:w-auto">
             <div className="flex items-center gap-4">
@@ -789,7 +789,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
               </div>
             </div>
           </div>
-          <div className="flex bg-white dark:bg-slate-900 rounded-xl p-1 shadow-sm border border-black/5 dark:border-white/5 overflow-x-auto">
+          <div className="w-full flex bg-white dark:bg-slate-900 rounded-xl p-1 shadow-sm border border-black/5 dark:border-white/5 overflow-x-auto">
             {DAYS.map((day) => (
               <button
                 key={day}
@@ -884,9 +884,9 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
         )}
 
         {viewMode === 'list' ? (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 xl:grid-cols-[360px_minmax(0,1fr)] gap-6 xl:gap-8 items-start">
             {/* Add Task Form */}
-            <div className="lg:col-span-1">
+            <div className="xl:w-[360px]">
               <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-black/5 dark:border-white/5 sticky top-8">
                 <h3 className="font-medium mb-4 flex items-center gap-2 dark:text-stone-100">
                   <Plus size={18} className="text-emerald-600" />
@@ -906,7 +906,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
             </div>
 
             {/* Task List */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="min-w-0 space-y-6">
               {DAYS.map((day) => {
                 const dayTasks = getUniqueTasksForDay(day);
                 if (dayTasks.length === 0 && day !== selectedDay) return null;
