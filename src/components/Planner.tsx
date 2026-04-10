@@ -789,20 +789,6 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
               </div>
             </div>
           </div>
-          <div className="w-full flex bg-white dark:bg-slate-900 rounded-xl p-1 shadow-sm border border-black/5 dark:border-white/5 overflow-x-auto">
-            {DAYS.map((day) => (
-              <button
-                key={day}
-                onClick={() => setSelectedDay(day)}
-                className={cn(
-                  "px-4 py-2 rounded-lg text-sm capitalize transition-all whitespace-nowrap",
-                  selectedDay === day ? "bg-emerald-600 text-white shadow-sm" : "text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800"
-                )}
-              >
-                {day.slice(0, 3)}
-              </button>
-            ))}
-          </div>
         </header>
 
         {totalCount === 0 && (parentStreak?.currentStreakWeeks ?? 0) > 0 && (

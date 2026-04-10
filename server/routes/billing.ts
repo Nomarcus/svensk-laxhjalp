@@ -10,8 +10,11 @@ const router = Router();
 let _stripe: Stripe | null = null;
 function getStripe(): Stripe {
   if (!_stripe) {
-    const key = process.env.STRIPE_SECRET_KEY;
+    const key = process.env.STRIPE_SECRET_KEY?.trim();
     if (!key) throw new Error('Stripe är inte konfigurerat ännu.');
+    if (!/^sk_(test|live)_/.test(key)) {
+      throw new Error('STRIPE_SECRET_KEY har fel format (måste börja med sk_test_ eller sk_live_).');
+    }
     _stripe = new Stripe(key);
   }
   return _stripe;
@@ -99,13 +102,13 @@ async function findStripeCustomerIdForEmail(
 function syncErrorPayload(err: unknown): { status: number; body: { error: string; detail: string } } {
   const raw = err instanceof Error ? err.message : String(err);
   const detail = raw.length > 280 ? `${raw.slice(0, 280)}…` : raw;
-  if (raw.includes('Stripe är inte konfigurerat') || raw.includes('STRIPE_SECRET_KEY')) {
+  if (raw.includes('Stripe är inte konfigurerat') || raw.includes('STRIPE_SECRET_KEY') || raw.includes('Invalid API Key')) {
     return {
       status: 503,
       body: {
         error: 'Kunde inte synka prenumeration.',
         detail:
-          'STRIPE_SECRET_KEY saknas eller är ogiltig på servern. Lägg in Stripe secret key under Cloud Run → Variables.',
+          'STRIPE_SECRET_KEY saknas/är fel på servern. Använd Stripe Secret Key (sk_live/sk_test), inte webhook secret (whsec).',
       },
     };
   }
