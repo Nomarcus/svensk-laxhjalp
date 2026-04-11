@@ -370,7 +370,12 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
       await addDoc(messagesRef, { role: 'model', content: response, timestamp: serverTimestamp() });
     } catch (err: any) {
       const msg = err.message || '';
-      if (msg.includes('Uppgradera') || msg.includes('Pro-abonnemang') || msg.includes('gratis')) {
+      if (
+        msg.includes('Uppgradera')
+        || msg.includes('abonnemang')
+        || msg.includes('Pro-abonnemang')
+        || msg.includes('gratis')
+      ) {
         setError(`${msg} 👉 ${t('chat.goToSubscription')}`);
       } else if (msg.includes('RESOURCE_EXHAUSTED')) {
         setError(t('chat.aiOverloaded'));

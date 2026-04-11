@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, Crown, Zap, Star } from 'lucide-react';
+import { Check, Star, Zap } from 'lucide-react';
 import { auth } from '../firebase';
 import { cn } from '../utils/cn';
 import { apiUrl } from '../utils/apiBase';
@@ -11,15 +11,20 @@ interface PricingCardProps {
   onUpgradeEnd?: () => void;
 }
 
+function isPaidTier(tier: SubscriptionTier): boolean {
+  return tier === 'plus' || tier === 'pro';
+}
+
 export default function PricingCard({ currentTier, onUpgradeStart, onUpgradeEnd }: PricingCardProps) {
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
-  const [loading, setLoading] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const paid = isPaidTier(currentTier);
 
-  const handleUpgrade = async (tier: 'plus' | 'pro') => {
+  const handleUpgrade = async () => {
     const user = auth.currentUser;
     if (!user) return;
 
-    setLoading(tier);
+    setLoading(true);
     onUpgradeStart?.();
 
     try {
@@ -28,10 +33,10 @@ export default function PricingCard({ currentTier, onUpgradeStart, onUpgradeEnd 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          priceId: `${tier}_${billing}`,
+          priceId: billing === 'monthly' ? 'monthly' : 'yearly',
         }),
       });
 
@@ -45,7 +50,7 @@ export default function PricingCard({ currentTier, onUpgradeStart, onUpgradeEnd 
       console.error('Upgrade error:', err);
       alert('Kunde inte starta betalningen. Försök igen.');
     } finally {
-      setLoading(null);
+      setLoading(false);
       onUpgradeEnd?.();
     }
   };
@@ -63,110 +68,86 @@ export default function PricingCard({ currentTier, onUpgradeStart, onUpgradeEnd 
       activeBorder: 'border-emerald-500',
       checkColor: 'text-emerald-500',
       features: [
-        'AI-frågor och stöd (inga dagliga gränser just nu)',
-        'Bildanalys av läxfoton',
-        'AI-illustrationer',
-        'Läxplanering & kalender',
-        'Koppling till läroplanen',
+        '5 AI-svar i chatten per dag',
+        '2 bildanalyser av läxfoton per dag',
+        'Läxplanering, kalender och bibliotek',
+        '1 premium uppläsning (TTS) per dag',
+        'Koppling till Lgr22',
       ],
     },
     {
-      id: 'plus' as const,
-      name: 'Plus',
+      id: 'paid' as const,
+      name: 'Full version',
       icon: <Star size={18} className="text-blue-500" />,
-      priceMonthly: '29 kr',
-      priceYearly: '249 kr',
+      priceMonthly: '49 kr',
+      priceYearly: 'Se årspris i kassan',
       priceLabel: 'per månad',
-      priceLabelYearly: 'per år (21 kr/mån)',
+      priceLabelYearly: 'per år',
       borderColor: 'border-blue-400',
       activeBorder: 'border-blue-500',
       checkColor: 'text-blue-500',
-      badge: 'Populär',
+      badge: 'Allt ingår',
       badgeColor: 'bg-blue-500',
       features: [
-        '15 AI-frågor per dag',
-        '5 bildanalyser per dag',
-        '2 AI-illustrationer per dag',
-        'Resursbibliotek',
-        'Facit-funktion',
-        'Allt i Gratis',
-      ],
-    },
-    {
-      id: 'pro' as const,
-      name: 'Pro',
-      icon: <Crown size={18} className="text-amber-500" />,
-      priceMonthly: '59 kr',
-      priceYearly: '499 kr',
-      priceLabel: 'per månad',
-      priceLabelYearly: 'per år (42 kr/mån)',
-      borderColor: 'border-amber-400',
-      activeBorder: 'border-amber-500',
-      checkColor: 'text-amber-500',
-      badge: 'Familjepaket',
-      badgeColor: 'bg-amber-500',
-      features: [
-        'Obegränsade AI-frågor',
-        'Obegränsade bildanalyser',
-        '5 AI-illustrationer per dag',
-        'Dela kalender med föräldrar',
-        'Prioriterad svarstid',
-        'Allt i Plus',
+        'Obegränsade AI-svar och bildanalyser',
+        'AI-illustrationer till uppgifter',
+        'Obegränsad premium uppläsning',
+        'Allt i gratisnivån',
       ],
     },
   ];
 
-  const tierOrder = { free: 0, plus: 1, pro: 2 };
-
   return (
     <div>
-      {/* Billing toggle */}
-      {currentTier === 'free' && (
+      {!paid && (
         <div className="flex items-center justify-center gap-2 mb-6">
           <button
+            type="button"
             onClick={() => setBilling('monthly')}
             className={cn(
-              "text-sm px-4 py-2 rounded-full transition-all",
+              'text-sm px-4 py-2 rounded-full transition-all',
               billing === 'monthly'
-                ? "bg-emerald-100 text-emerald-700 font-medium"
-                : "text-stone-400 hover:bg-stone-100"
+                ? 'bg-emerald-100 text-emerald-700 font-medium'
+                : 'text-stone-400 hover:bg-stone-100',
             )}
           >
             Månadsvis
           </button>
           <button
+            type="button"
             onClick={() => setBilling('yearly')}
             className={cn(
-              "text-sm px-4 py-2 rounded-full transition-all",
+              'text-sm px-4 py-2 rounded-full transition-all',
               billing === 'yearly'
-                ? "bg-emerald-100 text-emerald-700 font-medium"
-                : "text-stone-400 hover:bg-stone-100"
+                ? 'bg-emerald-100 text-emerald-700 font-medium'
+                : 'text-stone-400 hover:bg-stone-100',
             )}
           >
             Årsvis
-            <span className="ml-1 text-[10px] text-amber-600 font-bold">Spara 28%</span>
           </button>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto">
         {plans.map((plan) => {
-          const isCurrent = currentTier === plan.id;
-          const canUpgrade = tierOrder[plan.id] > tierOrder[currentTier];
+          const isCurrent = plan.id === 'free' ? currentTier === 'free' : paid;
+          const canUpgrade = plan.id === 'paid' && currentTier === 'free';
 
           return (
             <div
               key={plan.id}
               className={cn(
-                "bg-white rounded-2xl p-5 border-2 transition-all relative overflow-hidden",
-                isCurrent ? plan.activeBorder : plan.borderColor
+                'bg-white rounded-2xl p-5 border-2 transition-all relative overflow-hidden',
+                isCurrent ? plan.activeBorder : plan.borderColor,
               )}
             >
               {plan.badge && !isCurrent && (
-                <div className={cn(
-                  "absolute top-3 right-3 text-white text-[9px] font-bold px-2 py-1 rounded-full uppercase tracking-wider",
-                  plan.badgeColor
-                )}>
+                <div
+                  className={cn(
+                    'absolute top-3 right-3 text-white text-[9px] font-bold px-2 py-1 rounded-full uppercase tracking-wider',
+                    plan.badgeColor,
+                  )}
+                >
                   {plan.badge}
                 </div>
               )}
@@ -186,7 +167,7 @@ export default function PricingCard({ currentTier, onUpgradeStart, onUpgradeEnd 
               <ul className="space-y-2.5 mb-5">
                 {plan.features.map((f, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-stone-600">
-                    <Check size={15} className={cn(plan.checkColor, "shrink-0 mt-0.5")} />
+                    <Check size={15} className={cn(plan.checkColor, 'shrink-0 mt-0.5')} />
                     {f}
                   </li>
                 ))}
@@ -198,21 +179,15 @@ export default function PricingCard({ currentTier, onUpgradeStart, onUpgradeEnd 
                 </div>
               ) : canUpgrade ? (
                 <button
-                  onClick={() => handleUpgrade(plan.id as 'plus' | 'pro')}
-                  disabled={loading !== null}
-                  className={cn(
-                    "w-full py-2.5 text-white rounded-xl font-medium shadow-lg transition-all active:scale-[0.98] disabled:opacity-50",
-                    plan.id === 'pro'
-                      ? "bg-amber-500 shadow-amber-500/20 hover:bg-amber-600"
-                      : "bg-blue-500 shadow-blue-500/20 hover:bg-blue-600"
-                  )}
+                  type="button"
+                  onClick={() => void handleUpgrade()}
+                  disabled={loading}
+                  className="w-full py-2.5 text-white rounded-xl font-medium shadow-lg transition-all active:scale-[0.98] disabled:opacity-50 bg-blue-500 shadow-blue-500/20 hover:bg-blue-600"
                 >
-                  {loading === plan.id ? 'Vänta...' : `Uppgradera till ${plan.name}`}
+                  {loading ? 'Vänta…' : 'Fortsätt till betalning'}
                 </button>
               ) : (
-                <div className="py-2.5 text-center text-xs text-stone-400">
-                  Ingår i din plan
-                </div>
+                <div className="py-2.5 text-center text-xs text-stone-400">Ingår i din plan</div>
               )}
             </div>
           );

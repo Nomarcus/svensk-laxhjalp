@@ -568,9 +568,9 @@ export default function Auth({ onShowPrivacy, onShowTerms, dark, onToggleDark }:
               <div className="text-2xl font-bold text-blue-700">2</div>
               <div className="text-xs text-blue-600">{t('landing.imageAnalysesPerDay')}</div>
             </div>
-            <div className="bg-purple-50 rounded-2xl p-4">
-              <div className="text-2xl font-bold text-purple-700">2</div>
-              <div className="text-xs text-purple-600">{t('landing.illustrationsPerDay')}</div>
+            <div className="bg-purple-50 dark:bg-purple-950/40 rounded-2xl p-4">
+              <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">1</div>
+              <div className="text-xs text-purple-600 dark:text-purple-400">{t('landing.premiumTtsPerDay')}</div>
             </div>
           </div>
           <p className="text-sm text-stone-500 dark:text-stone-400">

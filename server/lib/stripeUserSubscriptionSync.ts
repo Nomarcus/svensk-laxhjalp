@@ -14,17 +14,11 @@ export type FirestoreSubscriptionPatch = {
   stripeCustomerId?: string;
 };
 
+/** En betalplan (49 kr/mån): all aktiv eller provande prenumeration blir `plus`. Äldre `pro` i Firestore behandlas fortfarande som betalande i middleware. */
 function paidTierFromSubscription(sub: Stripe.Subscription): 'free' | 'plus' | 'pro' {
   const status = sub.status;
   const paid = status === 'active' || status === 'trialing';
   if (!paid) return 'free';
-  const plusPriceId = process.env.STRIPE_PRICE_ID_PLUS?.trim();
-  const priceId = sub.items.data[0]?.price?.id;
-  if (plusPriceId) {
-    if (priceId === plusPriceId) return 'plus';
-    return 'pro';
-  }
-  // En betalningsnivå (t.ex. endast 49 kr): all aktiv prenumeration → plus
   return 'plus';
 }
 

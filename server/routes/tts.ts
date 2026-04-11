@@ -59,7 +59,7 @@ router.post('/tts', async (req: AuthenticatedRequest, res: Response) => {
       const aiTtsCount = usage.aiTtsCount || 0;
       if (aiTtsCount >= FREE_AI_TTS_PER_DAY) {
         res.status(403).json({
-          error: `Du har använt din premiumröst för idag (${FREE_AI_TTS_PER_DAY}/dag). Vi läser upp med webbläsarens röst istället, eller uppgradera till Pro för obegränsad premiumröst.`,
+          error: `Du har använt din premiumröst för idag (${FREE_AI_TTS_PER_DAY}/dag). Använd webbläsarens röst, eller abonnemanget (49 kr/mån) för obegränsat.`,
           code: 'tts_limit',
           limit: FREE_AI_TTS_PER_DAY,
           used: aiTtsCount,

@@ -205,13 +205,11 @@ export default function Layout({
             <span>{t('nav.subscription')}</span>
             <span className={cn(
               "ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider",
-              subscriptionTier === 'pro'
-                ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
-                : subscriptionTier === 'plus'
-                  ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
-                  : "bg-stone-100 dark:bg-slate-800 text-stone-500 dark:text-stone-400"
+              subscriptionTier === 'free'
+                ? "bg-stone-100 dark:bg-slate-800 text-stone-500 dark:text-stone-400"
+                : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
             )}>
-              {subscriptionTier === 'pro' ? t('subscription.pro') : subscriptionTier === 'plus' ? t('subscription.plus') : t('subscription.free')}
+              {subscriptionTier === 'free' ? t('subscription.free') : t('subscription.memberBadge')}
             </span>
           </button>
           <button
@@ -469,9 +467,11 @@ export default function Layout({
                 <span>{t('nav.subscription')}</span>
                 <span className={cn(
                   "ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
-                  "bg-stone-100 dark:bg-slate-800 text-stone-500 dark:text-stone-400"
+                  subscriptionTier === 'free'
+                    ? "bg-stone-100 dark:bg-slate-800 text-stone-500 dark:text-stone-400"
+                    : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
                 )}>
-                  {subscriptionTier === 'pro' ? t('subscription.pro') : subscriptionTier === 'plus' ? t('subscription.plus') : t('subscription.free')}
+                  {subscriptionTier === 'free' ? t('subscription.free') : t('subscription.memberBadge')}
                 </span>
               </button>
               <button

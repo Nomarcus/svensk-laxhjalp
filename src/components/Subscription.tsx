@@ -11,7 +11,6 @@ import {
   FileText,
   CreditCard,
   CheckCircle2,
-  Crown,
   RefreshCw,
   Star,
 } from 'lucide-react';
@@ -61,10 +60,8 @@ export default function Subscription({ subscription }: SubscriptionProps) {
   const periodLabel = formatPeriodEnd(subscription.currentPeriodEnd, i18n.language);
   const statusLine =
     subscription.status === 'trialing' ? t('subscription.statusTrialing') : t('subscription.statusActive');
-  const memberHeadline =
-    subscription.tier === 'plus' ? t('subscription.plusMemberTitle') : t('subscription.premiumMemberTitle');
-  const memberSubtitle =
-    subscription.tier === 'plus' ? t('subscription.plusMemberSubtitle') : t('subscription.premiumMemberSubtitle');
+  const memberHeadline = t('subscription.memberTitle');
+  const memberSubtitle = t('subscription.memberSubtitle');
 
   const subscribeUrl =
     userUid && userEmail && STRIPE_PAYMENT_LINK_SUBSCRIBE
@@ -137,7 +134,7 @@ export default function Subscription({ subscription }: SubscriptionProps) {
           <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/80 dark:from-emerald-900/30 dark:to-emerald-900/15 rounded-2xl p-6 shadow-sm border border-emerald-200/60 dark:border-emerald-800/40">
             <div className="flex items-start gap-3">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm shrink-0">
-                {subscription.tier === 'plus' ? <Star size={26} /> : <Crown size={26} />}
+                <Star size={26} />
               </div>
               <div className="min-w-0">
                 <h3 className="font-semibold text-lg text-emerald-900 dark:text-emerald-200">{memberHeadline}</h3>
@@ -241,7 +238,7 @@ export default function Subscription({ subscription }: SubscriptionProps) {
             <div className="rounded-2xl border border-stone-200 dark:border-white/10 bg-stone-50/80 dark:bg-slate-800/50 p-4 flex flex-col max-w-md mx-auto sm:mx-0">
               <div className="flex items-center gap-2 mb-2">
                 <Star size={20} className="text-blue-600 dark:text-blue-400" />
-                <h4 className="font-semibold text-stone-900 dark:text-stone-100">{t('subscription.planPlusName')}</h4>
+                <h4 className="font-semibold text-stone-900 dark:text-stone-100">{t('subscription.planMemberName')}</h4>
               </div>
               <p className="text-2xl font-bold text-stone-800 dark:text-stone-100 mb-1">{t('subscription.planPlusPrice')}</p>
               <p className="text-xs text-stone-500 dark:text-stone-400 mb-4 flex-1">{t('subscription.planPlusPerMonth')}</p>

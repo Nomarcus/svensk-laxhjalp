@@ -11,8 +11,9 @@ export interface SubscriptionRequest extends AuthenticatedRequest {
   dailyImageCount?: number;
 }
 
-const FREE_CHAT_LIMIT = 3;
-const FREE_IMAGE_LIMIT = 1;
+/** Gratisnivå: tillräckligt för att prova en läxstund, utan att ersätta abonnemanget. */
+const FREE_CHAT_LIMIT = 5;
+const FREE_IMAGE_LIMIT = 2;
 
 export async function subscriptionMiddleware(
   req: SubscriptionRequest,
@@ -92,7 +93,8 @@ export async function subscriptionMiddleware(
 
     if (req.path === '/image') {
       res.status(403).json({
-        error: 'Bildgenerering kräver Pro-abonnemang. Uppgradera för att skapa illustrationer.',
+        error:
+          'AI-illustrationer ingår i abonnemanget (49 kr/mån). Som gratis användare kan du fortfarande analysera läxfoton i chatten inom dagens kvot.',
         upgradeRequired: true,
       });
       return;
@@ -105,7 +107,7 @@ export async function subscriptionMiddleware(
     if (req.path === '/chat' && chatHasImage) {
       if (imageCount >= FREE_IMAGE_LIMIT) {
         res.status(403).json({
-          error: `Du har använt din gratis bildanalys idag (${FREE_IMAGE_LIMIT}/dag). Uppgradera till Pro för obegränsade bildanalyser.`,
+          error: `Du har använt dagens gratis bildanalyser (${FREE_IMAGE_LIMIT}/dag). Med abonnemang (49 kr/mån) får du obegränsat.`,
           upgradeRequired: true,
           limit: FREE_IMAGE_LIMIT,
           used: imageCount,
@@ -123,7 +125,7 @@ export async function subscriptionMiddleware(
     if (req.path === '/chat') {
       if (chatCount >= FREE_CHAT_LIMIT) {
         res.status(429).json({
-          error: `Du har använt dina ${FREE_CHAT_LIMIT} gratis frågor idag. Uppgradera till Pro för obegränsade frågor.`,
+          error: `Du har använt dagens ${FREE_CHAT_LIMIT} gratis AI-svar. Imorgon nollställs kvoten — eller välj abonnemang (49 kr/mån) för obegränsat.`,
           upgradeRequired: true,
           limit: FREE_CHAT_LIMIT,
           used: chatCount,
