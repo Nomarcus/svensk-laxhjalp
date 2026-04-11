@@ -75,6 +75,8 @@
     "providerNotEnabled": "Denna inloggningsmetod är inte aktiverad än. Kontrollera Firebase-inställningarna.",
     "unauthorizedDomain": "Den här domänen är inte tillåten för inloggning. Lägg till domänen i Firebase Authorized domains.",
     "accountExistsDifferentProvider": "Kontot finns redan med en annan inloggningsmetod. Logga in med rätt metod först.",
+    "networkRequestFailed": "Nätverksfel mot inloggningstjänsten. Kontrollera uppkoppling och försök igen.",
+    "internalError": "Inloggningen misslyckades (internt fel). Uppdatera sidan, prova annan webbläsare eller använd e-postinloggning.",
     "generic": "Något gick fel. Försök igen."
   },
   "landing": {

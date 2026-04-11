@@ -150,6 +150,9 @@ export default function Auth({ onShowPrivacy, onShowTerms, dark, onToggleDark }:
       'auth/operation-not-allowed': t('authErrors.providerNotEnabled'),
       'auth/unauthorized-domain': t('authErrors.unauthorizedDomain'),
       'auth/account-exists-with-different-credential': t('authErrors.accountExistsDifferentProvider'),
+      'auth/network-request-failed': t('authErrors.networkRequestFailed'),
+      'auth/internal-error': t('authErrors.internalError'),
+      'auth/cancelled-popup-request': t('authErrors.popupClosed'),
     };
     setError(map[code] || t('authErrors.generic'));
   };

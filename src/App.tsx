@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { auth, onAuthStateChanged, User, db, OperationType, handleFirestoreError } from './firebase';
+import { auth, onAuthStateChanged, getRedirectResult, User, db, OperationType, handleFirestoreError } from './firebase';
 import { doc, setDoc, serverTimestamp, collection, onSnapshot, query, orderBy, collectionGroup, where, limit } from 'firebase/firestore';
 import Auth from './components/Auth';
 import Layout from './components/Layout';
@@ -97,6 +97,10 @@ export default function App() {
     const sync = () => setRoutePath(normalizePathname(window.location.pathname));
     window.addEventListener('popstate', sync);
     return () => window.removeEventListener('popstate', sync);
+  }, []);
+
+  useEffect(() => {
+    void getRedirectResult(auth).catch(() => {});
   }, []);
 
   useEffect(() => {

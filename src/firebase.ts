@@ -1,5 +1,19 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInAnonymously, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  signOut,
+  onAuthStateChanged,
+  User,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signInAnonymously,
+  sendPasswordResetEmail,
+  updateProfile,
+} from 'firebase/auth';
 import {
   initializeFirestore,
   persistentLocalCache,
@@ -30,7 +44,27 @@ export const db = initializeFirestore(
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
-export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
+function getAuthErrorCode(err: unknown): string {
+  if (err && typeof err === 'object' && 'code' in err && typeof (err as { code: unknown }).code === 'string') {
+    return (err as { code: string }).code;
+  }
+  return '';
+}
+
+/** Popup first; redirect fallback when popup is blocked or fails (CSP, COOP, embedded WebViews, etc.). */
+export const signInWithGoogle = async () => {
+  try {
+    return await signInWithPopup(auth, googleProvider);
+  } catch (e) {
+    const code = getAuthErrorCode(e);
+    if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+      throw e;
+    }
+    await signInWithRedirect(auth, googleProvider);
+  }
+};
+
+export { getRedirectResult };
 export const logout = () => signOut(auth);
 
 export const signUpWithEmail = async (email: string, password: string, displayName?: string) => {
