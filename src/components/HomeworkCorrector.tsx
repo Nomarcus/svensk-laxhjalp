@@ -7,6 +7,8 @@ import { cn } from '../utils/cn';
 import { auth, db, OperationType, handleFirestoreError } from '../firebase';
 import { addDoc, collection, onSnapshot, orderBy, query, serverTimestamp } from 'firebase/firestore';
 import type { LibraryItem } from '../types';
+import FreeTierUsageBar from './FreeTierUsageBar';
+import { bumpUsageRefresh } from '../utils/usageRefresh';
 
 interface HomeworkCorrectorProps {
   childName: string;
@@ -79,6 +81,7 @@ export default function HomeworkCorrector({ childName, childId, ownerId, onCreat
     setCreatingTask(true);
     try {
       const parsed = await analyzeHomeworkForTask(result);
+      bumpUsageRefresh();
       onCreateTaskFromCorrection?.({
         subject: parsed.subject || t('planner.subject'),
         description: parsed.description || result.slice(0, 120),
@@ -117,6 +120,7 @@ export default function HomeworkCorrector({ childName, childId, ownerId, onCreat
       const text = await correctHomeworkFromImages(images, extraContext, i18n.language || 'sv');
       setResult(formatCorrectionText(text || t('corrector.emptyResultFallback')));
       setSavedNow(false);
+      bumpUsageRefresh();
     } catch {
       setResult(t('chat.unexpectedError'));
     } finally {
@@ -157,6 +161,10 @@ export default function HomeworkCorrector({ childName, childId, ownerId, onCreat
               <h2 className="text-xl md:text-2xl font-serif italic">{t('corrector.title')}</h2>
               <p className="text-sm text-stone-500 dark:text-stone-400">{t('corrector.subtitle', { name: childName })}</p>
             </div>
+          </div>
+
+          <div className="mb-4">
+            <FreeTierUsageBar className="w-full" />
           </div>
 
           <div className="grid sm:grid-cols-2 gap-2 mb-4">

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { requestPremiumTts } from '../services/geminiService';
+import { bumpUsageRefresh } from '../utils/usageRefresh';
 
 const LANG_MAP: Record<string, string> = {
   sv: 'sv-SE',
@@ -174,6 +175,7 @@ export function useSpeech() {
         const resp = await requestPremiumTts(text, lang);
         if (resp.ok) {
           const blob = await resp.blob();
+          bumpUsageRefresh();
           const url = URL.createObjectURL(blob);
           objectUrlRef.current = url;
           const audio = new Audio(url);

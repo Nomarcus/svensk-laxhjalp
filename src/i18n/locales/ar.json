@@ -148,7 +148,11 @@
     "imageTooLarge": "الصورة كبيرة جداً للحفظ",
     "aiOverloaded": "خدمة AI مشغولة حالياً. انتظر قليلاً وحاول مرة أخرى.",
     "unexpectedError": "حدث خطأ غير متوقع. حاول لاحقاً.",
-    "goToSubscription": "انتقل إلى الاشتراك للترقية."
+    "goToSubscription": "انتقل إلى الاشتراك للترقية.",
+    "freeQuotaTitle": "المجاني اليوم",
+    "freeQuotaChat": "{{remaining}} من {{total}} ردود ذكاء اصطناعي متبقية",
+    "freeQuotaImage": "{{remaining}} من {{total}} تحليلات صور في الدردشة متبقية",
+    "freeQuotaTts": "{{remaining}} من {{total}} استخدامات للصوت المميز متبقية"
   },
   "chatEmpty": {
     "helpWith": "ساعد {{name}} في الواجبات",

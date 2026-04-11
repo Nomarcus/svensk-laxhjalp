@@ -2,8 +2,15 @@ import { Router, Request, Response } from 'express';
 import Stripe from 'stripe';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { getServerFirestore } from '../lib/serverFirestore';
+import {
+  FREE_AI_TTS_PER_DAY,
+  FREE_CHAT_LIMIT,
+  FREE_IMAGE_LIMIT,
+  isUnmeteredSubscription,
+} from '../lib/freeTierLimits';
 import { patchFromStripeSubscription } from '../lib/stripeUserSubscriptionSync';
 import { reserveStripeWebhookEvent } from '../lib/stripeWebhookIdempotency';
+import { enforceSubscriptionLimits } from '../subscriptionEnv';
 
 const router = Router();
 
@@ -245,22 +252,45 @@ router.get('/billing/status', async (req: AuthenticatedRequest, res: Response) =
 
     const userDoc = await getServerFirestore().doc(`users/${uid}`).get();
     const data = userDoc.data() || {};
+    const tier = data.tier || 'free';
+    const subscriptionStatus = data.subscriptionStatus || 'none';
 
     // Get today's usage
     const today = new Date().toISOString().split('T')[0];
     const usageDoc = await getServerFirestore().doc(`users/${uid}/usage/${today}`).get();
     const usage = usageDoc.data() || { chatCount: 0, imageCount: 0, aiTtsCount: 0 };
+    const chatCount = usage.chatCount || 0;
+    const imageCount = usage.imageCount || 0;
+    const aiTtsCount = usage.aiTtsCount || 0;
+    const metered = enforceSubscriptionLimits() && !isUnmeteredSubscription(tier, subscriptionStatus);
+    const limits = metered
+      ? {
+          chatDaily: FREE_CHAT_LIMIT,
+          imageInChatDaily: FREE_IMAGE_LIMIT,
+          aiTtsDaily: FREE_AI_TTS_PER_DAY,
+        }
+      : null;
+    const remaining = metered
+      ? {
+          chat: Math.max(0, FREE_CHAT_LIMIT - chatCount),
+          imageInChat: Math.max(0, FREE_IMAGE_LIMIT - imageCount),
+          aiTts: Math.max(0, FREE_AI_TTS_PER_DAY - aiTtsCount),
+        }
+      : null;
 
     res.json({
-      tier: data.tier || 'free',
-      status: data.subscriptionStatus || 'none',
+      tier,
+      status: subscriptionStatus,
       currentPeriodEnd: data.currentPeriodEnd || null,
       cancelAtPeriodEnd: data.cancelAtPeriodEnd || false,
       usage: {
-        chatCount: usage.chatCount || 0,
-        imageCount: usage.imageCount || 0,
-        aiTtsCount: usage.aiTtsCount || 0,
+        chatCount,
+        imageCount,
+        aiTtsCount,
       },
+      metered,
+      limits,
+      remaining,
     });
   } catch (error: any) {
     console.error('Billing status error:', error.message);

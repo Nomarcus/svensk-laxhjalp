@@ -1,6 +1,24 @@
 import { getServerFirestore } from '../../server/lib/serverFirestore';
 import { applyApiSecurity } from '../_lib/httpSecurity';
-async function getFirebaseAdmin() { const mod = await import('firebase-admin'); const admin = mod.default; if (!admin.apps?.length) { const sa = process.env.FIREBASE_SERVICE_ACCOUNT; if (sa) admin.initializeApp({ credential: admin.credential.cert(JSON.parse(sa)) }); else admin.initializeApp(); } return admin; }
+import {
+  FREE_AI_TTS_PER_DAY,
+  FREE_CHAT_LIMIT,
+  FREE_IMAGE_LIMIT,
+  isUnmeteredSubscription,
+} from '../../server/lib/freeTierLimits';
+import { enforceSubscriptionLimits } from '../../server/subscriptionEnv';
+
+async function getFirebaseAdmin() {
+  const mod = await import('firebase-admin');
+  const admin = mod.default;
+  if (!admin.apps?.length) {
+    const sa = process.env.FIREBASE_SERVICE_ACCOUNT;
+    if (sa) admin.initializeApp({ credential: admin.credential.cert(JSON.parse(sa)) });
+    else admin.initializeApp();
+  }
+  return admin;
+}
+
 export default async function handler(req: any, res: any) {
   if (!applyApiSecurity(req, res)) return;
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
@@ -11,8 +29,45 @@ export default async function handler(req: any, res: any) {
     const decoded = await admin.auth().verifyIdToken(authHeader.split('Bearer ')[1]);
     const db = getServerFirestore();
     const data = (await db.doc('users/' + decoded.uid).get()).data() || {};
+    const tier = data.tier || 'free';
+    const subscriptionStatus = data.subscriptionStatus || 'none';
     const today = new Date().toISOString().split('T')[0];
-    const usage = (await db.doc('users/' + decoded.uid + '/usage/' + today).get()).data() || { chatCount: 0, imageCount: 0, aiTtsCount: 0 };
-    res.json({ tier: data.tier || 'free', status: data.subscriptionStatus || 'none', currentPeriodEnd: data.currentPeriodEnd || null, cancelAtPeriodEnd: data.cancelAtPeriodEnd || false, usage: { chatCount: usage.chatCount || 0, imageCount: usage.imageCount || 0, aiTtsCount: usage.aiTtsCount || 0 } });
-  } catch (error: any) { console.error('Status error:', error.message); res.status(500).json({ error: 'Status misslyckades.' }); }
+    const usage =
+      (await db.doc('users/' + decoded.uid + '/usage/' + today).get()).data() || {
+        chatCount: 0,
+        imageCount: 0,
+        aiTtsCount: 0,
+      };
+    const chatCount = usage.chatCount || 0;
+    const imageCount = usage.imageCount || 0;
+    const aiTtsCount = usage.aiTtsCount || 0;
+    const metered = enforceSubscriptionLimits() && !isUnmeteredSubscription(tier, subscriptionStatus);
+    const limits = metered
+      ? {
+          chatDaily: FREE_CHAT_LIMIT,
+          imageInChatDaily: FREE_IMAGE_LIMIT,
+          aiTtsDaily: FREE_AI_TTS_PER_DAY,
+        }
+      : null;
+    const remaining = metered
+      ? {
+          chat: Math.max(0, FREE_CHAT_LIMIT - chatCount),
+          imageInChat: Math.max(0, FREE_IMAGE_LIMIT - imageCount),
+          aiTts: Math.max(0, FREE_AI_TTS_PER_DAY - aiTtsCount),
+        }
+      : null;
+    res.json({
+      tier,
+      status: subscriptionStatus,
+      currentPeriodEnd: data.currentPeriodEnd || null,
+      cancelAtPeriodEnd: data.cancelAtPeriodEnd || false,
+      usage: { chatCount, imageCount, aiTtsCount },
+      metered,
+      limits,
+      remaining,
+    });
+  } catch (error: any) {
+    console.error('Status error:', error.message);
+    res.status(500).json({ error: 'Status misslyckades.' });
+  }
 }

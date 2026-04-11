@@ -13,6 +13,8 @@ import { generateStudyPlan, generateExamPrep } from '../services/geminiService';
 import StudyPlanModal from './StudyPlanModal';
 import ExamPrepModal from './ExamPrepModal';
 import ScheduleCalendarModal, { getDateInPlannerWeek } from './ScheduleCalendarModal';
+import FreeTierUsageBar from './FreeTierUsageBar';
+import { bumpUsageRefresh } from '../utils/usageRefresh';
 
 interface PlannerProps {
   childId: string;
@@ -251,6 +253,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
         }))
       );
       setStudyPlanContent(content);
+      bumpUsageRefresh();
     } catch (err) {
       console.error('Error generating study plan:', err);
       setStudyPlanContent('Kunde inte generera studieplan. Försök igen.');
@@ -299,6 +302,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
         getTaskImages(task)
       );
       setExamPrepContent(content);
+      bumpUsageRefresh();
       // Save to Firestore for caching
       await updateDoc(doc(db, 'users', ownerId, 'children', childId, 'tasks', task.id), {
         examPrepContent: content
@@ -712,6 +716,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
   return (
     <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 bg-[#F5F5F0] dark:bg-slate-950">
       <div className="w-full space-y-8 xl:px-2">
+        <FreeTierUsageBar className="w-full max-w-4xl" />
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div className="flex items-center justify-between w-full md:w-auto">
             <div className="flex items-center gap-4">

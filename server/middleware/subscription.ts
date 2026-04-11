@@ -4,16 +4,13 @@ import { AuthenticatedRequest } from './auth';
 import { getServerFirestore } from '../lib/serverFirestore';
 import { enforceSubscriptionLimits } from '../subscriptionEnv';
 import { getCachedUserSubscription, setCachedUserSubscription } from '../lib/subscriptionUserCache';
+import { FREE_CHAT_LIMIT, FREE_IMAGE_LIMIT, isUnmeteredSubscription } from '../lib/freeTierLimits';
 
 export interface SubscriptionRequest extends AuthenticatedRequest {
   tier?: 'free' | 'pro';
   dailyChatCount?: number;
   dailyImageCount?: number;
 }
-
-/** Gratisnivå: tillräckligt för att prova en läxstund, utan att ersätta abonnemanget. */
-const FREE_CHAT_LIMIT = 5;
-const FREE_IMAGE_LIMIT = 2;
 
 export async function subscriptionMiddleware(
   req: SubscriptionRequest,
@@ -75,10 +72,7 @@ export async function subscriptionMiddleware(
       return;
     }
 
-    if (
-      (tier === 'pro' || tier === 'plus')
-      && (subscriptionStatus === 'active' || subscriptionStatus === 'trialing' || subscriptionStatus === 'canceled')
-    ) {
+    if (isUnmeteredSubscription(tier, subscriptionStatus)) {
       next();
       return;
     }

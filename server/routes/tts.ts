@@ -5,20 +5,10 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { stripMarkdownForTts } from '../lib/stripForTts';
 import { synthesizeMp3 } from '../lib/googleCloudTts';
 import { enforceSubscriptionLimits } from '../subscriptionEnv';
+import { FREE_AI_TTS_PER_DAY, isUnmeteredSubscription } from '../lib/freeTierLimits';
 
 const router = Router();
-
-const FREE_AI_TTS_PER_DAY = 1;
 const MAX_TTS_CHARS = 4500;
-
-function isProUser(userData: { tier?: string; subscriptionStatus?: string } | undefined): boolean {
-  const tier = userData?.tier || 'free';
-  const subscriptionStatus = userData?.subscriptionStatus || 'none';
-  return (
-    (tier === 'pro' || tier === 'plus')
-    && (subscriptionStatus === 'active' || subscriptionStatus === 'trialing' || subscriptionStatus === 'canceled')
-  );
-}
 
 router.post('/tts', async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -27,32 +17,26 @@ router.post('/tts', async (req: AuthenticatedRequest, res: Response) => {
       res.status(401).json({ error: 'Inte autentiserad.' });
       return;
     }
-
     const apiKey = process.env.GOOGLE_TTS_API_KEY || '';
     if (!apiKey) {
       res.status(503).json({ error: 'Premiumröst är inte aktiverad på servern.', code: 'tts_unconfigured' });
       return;
     }
-
     const { text, lang = 'sv' } = req.body || {};
     if (!text || typeof text !== 'string') {
       res.status(400).json({ error: 'Text krävs.' });
       return;
     }
-
     const plain = stripMarkdownForTts(text).slice(0, MAX_TTS_CHARS);
     if (!plain.trim()) {
       res.status(400).json({ error: 'Ingen läsbar text efter formattering.' });
       return;
     }
-
     const userDoc = await getServerFirestore().doc(`users/${uid}`).get();
     const userData = userDoc.data();
-    const pro = isProUser(userData);
-
+    const pro = isUnmeteredSubscription(userData?.tier, userData?.subscriptionStatus);
     const today = new Date().toISOString().split('T')[0];
     const usageRef = getServerFirestore().doc(`users/${uid}/usage/${today}`);
-
     if (enforceSubscriptionLimits() && !pro) {
       const usageDoc = await usageRef.get();
       const usage = usageDoc.data() || {};
@@ -67,9 +51,7 @@ router.post('/tts', async (req: AuthenticatedRequest, res: Response) => {
         return;
       }
     }
-
     const audio = await synthesizeMp3(apiKey, plain, typeof lang === 'string' ? lang : 'sv');
-
     if (!pro) {
       await usageRef.set(
         {
@@ -79,7 +61,6 @@ router.post('/tts', async (req: AuthenticatedRequest, res: Response) => {
         { merge: true }
       );
     }
-
     res.setHeader('Content-Type', 'audio/mpeg');
     res.setHeader('Cache-Control', 'private, no-store');
     res.send(audio);

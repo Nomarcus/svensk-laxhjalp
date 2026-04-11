@@ -27,6 +27,8 @@ import ChatMessage from './chat/ChatMessage';
 import ChatInput from './chat/ChatInput';
 import ChatEmptyState from './chat/ChatEmptyState';
 import { useSpeech } from '../hooks/useSpeech';
+import FreeTierUsageBar from './FreeTierUsageBar';
+import { bumpUsageRefresh } from '../utils/usageRefresh';
 
 const CHAT_MAX_IMAGES = 5;
 
@@ -303,6 +305,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
       const imageUrl = urls?.[0];
 
       const taskData = await analyzeHomeworkForTask(aiContent);
+      bumpUsageRefresh();
       onCreateTaskFromPhoto({
         subject: taskData.subject,
         description: taskData.description,
@@ -368,6 +371,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
       );
 
       await addDoc(messagesRef, { role: 'model', content: response, timestamp: serverTimestamp() });
+      bumpUsageRefresh();
     } catch (err: any) {
       const msg = err.message || '';
       if (
@@ -462,6 +466,10 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
         simpleSwedish={simpleSwedish}
         onToggleSimpleSwedish={toggleSimpleSwedish}
       />
+
+      <div className="px-4 md:px-8 pt-2 max-w-3xl mx-auto w-full shrink-0">
+        <FreeTierUsageBar className="w-full" />
+      </div>
 
       <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
         {error && (
