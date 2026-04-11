@@ -43,7 +43,8 @@ export default function FreeTierUsageBar({ className }: Props) {
     return () => document.removeEventListener('visibilitychange', onVis);
   }, [load]);
 
-  if (!auth.currentUser || loading || !data?.metered || !data.limits || !data.remaining) {
+  const showQuota = data?.showFreeQuota ?? data?.metered;
+  if (!auth.currentUser || loading || !showQuota || !data?.limits || !data?.remaining) {
     return null;
   }
 
@@ -69,7 +70,7 @@ export default function FreeTierUsageBar({ className }: Props) {
   return (
     <div
       className={cn(
-        'text-[11px] sm:text-xs leading-snug text-stone-600 dark:text-stone-400 bg-stone-50/90 dark:bg-slate-800/60 border border-black/[0.06] dark:border-white/10 rounded-xl px-3 py-2',
+        'text-[11px] sm:text-xs leading-snug text-stone-600 dark:text-stone-300 bg-stone-50/90 dark:bg-slate-800/90 dark:ring-1 dark:ring-white/10 border border-black/[0.06] dark:border-white/15 rounded-xl px-3 py-2',
         className,
       )}
       role="status"

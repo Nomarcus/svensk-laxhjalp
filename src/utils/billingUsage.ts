@@ -8,6 +8,8 @@ export type BillingStatusResponse = {
   cancelAtPeriodEnd: boolean;
   usage: { chatCount: number; imageCount: number; aiTtsCount: number };
   metered: boolean;
+  /** När true: visa gratis-kvot i UI (oberoende av ENFORCE_SUBSCRIPTION_LIMITS). */
+  showFreeQuota?: boolean;
   limits: { chatDaily: number; imageInChatDaily: number; aiTtsDaily: number } | null;
   remaining: { chat: number; imageInChat: number; aiTts: number } | null;
 };

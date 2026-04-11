@@ -41,15 +41,17 @@ export default async function handler(req: any, res: any) {
     const chatCount = usage.chatCount || 0;
     const imageCount = usage.imageCount || 0;
     const aiTtsCount = usage.aiTtsCount || 0;
-    const metered = enforceSubscriptionLimits() && !isUnmeteredSubscription(tier, subscriptionStatus);
-    const limits = metered
+    const isUnmetered = isUnmeteredSubscription(tier, subscriptionStatus);
+    const metered = enforceSubscriptionLimits() && !isUnmetered;
+    const showFreeQuota = !isUnmetered;
+    const limits = showFreeQuota
       ? {
           chatDaily: FREE_CHAT_LIMIT,
           imageInChatDaily: FREE_IMAGE_LIMIT,
           aiTtsDaily: FREE_AI_TTS_PER_DAY,
         }
       : null;
-    const remaining = metered
+    const remaining = showFreeQuota
       ? {
           chat: Math.max(0, FREE_CHAT_LIMIT - chatCount),
           imageInChat: Math.max(0, FREE_IMAGE_LIMIT - imageCount),
@@ -63,6 +65,7 @@ export default async function handler(req: any, res: any) {
       cancelAtPeriodEnd: data.cancelAtPeriodEnd || false,
       usage: { chatCount, imageCount, aiTtsCount },
       metered,
+      showFreeQuota,
       limits,
       remaining,
     });

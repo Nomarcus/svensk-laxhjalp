@@ -262,15 +262,19 @@ router.get('/billing/status', async (req: AuthenticatedRequest, res: Response) =
     const chatCount = usage.chatCount || 0;
     const imageCount = usage.imageCount || 0;
     const aiTtsCount = usage.aiTtsCount || 0;
-    const metered = enforceSubscriptionLimits() && !isUnmeteredSubscription(tier, subscriptionStatus);
-    const limits = metered
+    const isUnmetered = isUnmeteredSubscription(tier, subscriptionStatus);
+    /** API blockerar vid tak när denna är true (kräver ENFORCE_SUBSCRIPTION_LIMITS på servern). */
+    const metered = enforceSubscriptionLimits() && !isUnmetered;
+    /** Visa kvarvarande gratis-kvot i UI även om tak tillfälligt är avstängt på servern. */
+    const showFreeQuota = !isUnmetered;
+    const limits = showFreeQuota
       ? {
           chatDaily: FREE_CHAT_LIMIT,
           imageInChatDaily: FREE_IMAGE_LIMIT,
           aiTtsDaily: FREE_AI_TTS_PER_DAY,
         }
       : null;
-    const remaining = metered
+    const remaining = showFreeQuota
       ? {
           chat: Math.max(0, FREE_CHAT_LIMIT - chatCount),
           imageInChat: Math.max(0, FREE_IMAGE_LIMIT - imageCount),
@@ -289,6 +293,7 @@ router.get('/billing/status', async (req: AuthenticatedRequest, res: Response) =
         aiTtsCount,
       },
       metered,
+      showFreeQuota,
       limits,
       remaining,
     });
