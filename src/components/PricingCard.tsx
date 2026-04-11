@@ -16,7 +16,6 @@ function isPaidTier(tier: SubscriptionTier): boolean {
 }
 
 export default function PricingCard({ currentTier, onUpgradeStart, onUpgradeEnd }: PricingCardProps) {
-  const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
   const [loading, setLoading] = useState(false);
   const paid = isPaidTier(currentTier);
 
@@ -35,9 +34,7 @@ export default function PricingCard({ currentTier, onUpgradeStart, onUpgradeEnd 
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          priceId: billing === 'monthly' ? 'monthly' : 'yearly',
-        }),
+        body: JSON.stringify({ priceId: 'monthly' }),
       });
 
       const data = await res.json();
@@ -60,10 +57,8 @@ export default function PricingCard({ currentTier, onUpgradeStart, onUpgradeEnd 
       id: 'free' as const,
       name: 'Gratis',
       icon: <Zap size={18} className="text-stone-400" />,
-      priceMonthly: '0 kr',
-      priceYearly: '0 kr',
+      price: '0 kr',
       priceLabel: 'för alltid',
-      priceLabelYearly: 'för alltid',
       borderColor: 'border-black/5',
       activeBorder: 'border-emerald-500',
       checkColor: 'text-emerald-500',
@@ -79,10 +74,8 @@ export default function PricingCard({ currentTier, onUpgradeStart, onUpgradeEnd 
       id: 'paid' as const,
       name: 'Full version',
       icon: <Star size={18} className="text-blue-500" />,
-      priceMonthly: '49 kr',
-      priceYearly: 'Se årspris i kassan',
+      price: '49 kr',
       priceLabel: 'per månad',
-      priceLabelYearly: 'per år',
       borderColor: 'border-blue-400',
       activeBorder: 'border-blue-500',
       checkColor: 'text-blue-500',
@@ -99,35 +92,6 @@ export default function PricingCard({ currentTier, onUpgradeStart, onUpgradeEnd 
 
   return (
     <div>
-      {!paid && (
-        <div className="flex items-center justify-center gap-2 mb-6">
-          <button
-            type="button"
-            onClick={() => setBilling('monthly')}
-            className={cn(
-              'text-sm px-4 py-2 rounded-full transition-all',
-              billing === 'monthly'
-                ? 'bg-emerald-100 text-emerald-700 font-medium'
-                : 'text-stone-400 hover:bg-stone-100',
-            )}
-          >
-            Månadsvis
-          </button>
-          <button
-            type="button"
-            onClick={() => setBilling('yearly')}
-            className={cn(
-              'text-sm px-4 py-2 rounded-full transition-all',
-              billing === 'yearly'
-                ? 'bg-emerald-100 text-emerald-700 font-medium'
-                : 'text-stone-400 hover:bg-stone-100',
-            )}
-          >
-            Årsvis
-          </button>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto">
         {plans.map((plan) => {
           const isCurrent = plan.id === 'free' ? currentTier === 'free' : paid;
@@ -157,12 +121,8 @@ export default function PricingCard({ currentTier, onUpgradeStart, onUpgradeEnd 
                 <h3 className="font-medium text-lg">{plan.name}</h3>
               </div>
 
-              <p className="text-3xl font-bold mb-0.5">
-                {billing === 'monthly' ? plan.priceMonthly : plan.priceYearly}
-              </p>
-              <p className="text-xs text-stone-400 mb-5">
-                {billing === 'monthly' ? plan.priceLabel : plan.priceLabelYearly}
-              </p>
+              <p className="text-3xl font-bold mb-0.5">{plan.price}</p>
+              <p className="text-xs text-stone-400 mb-5">{plan.priceLabel}</p>
 
               <ul className="space-y-2.5 mb-5">
                 {plan.features.map((f, i) => (
