@@ -1,6 +1,8 @@
 import Stripe from 'stripe';
 import { getServerFirestore } from '../../server/lib/serverFirestore';
 import { patchFromStripeSubscription } from '../../server/lib/stripeUserSubscriptionSync';
+import { reserveStripeWebhookEvent } from '../../server/lib/stripeWebhookIdempotency';
+import { applyApiSecurity } from '../_lib/httpSecurity';
 
 export const config = { api: { bodyParser: false } };
 
@@ -32,6 +34,7 @@ async function findUserByStripeCustomerId(customerId?: string | null) {
 }
 
 export default async function handler(req: any, res: any) {
+  if (!applyApiSecurity(req, res)) return;
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const sig = req.headers['stripe-signature'];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -46,6 +49,10 @@ export default async function handler(req: any, res: any) {
   await getFirebaseAdmin();
   const db = getServerFirestore();
   try {
+    const accepted = await reserveStripeWebhookEvent(event.id);
+    if (!accepted) {
+      return res.json({ received: true, duplicate: true });
+    }
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
       const firebaseUID = session.metadata?.firebaseUID || session.client_reference_id || null;

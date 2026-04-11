@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, Mail, Eye, EyeOff, ArrowLeft, MessageSquare, Camera, Calendar, Sparkles, Library, CheckCircle, ChevronLeft, ChevronRight, Shield, GraduationCap, Users, Star, FileText, Moon, Sun } from 'lucide-react';
 import { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, signInAsGuest } from '../firebase';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import LanguageSwitcher from './LanguageSwitcher';
 
 interface AuthProps {
@@ -249,7 +249,9 @@ export default function Auth({ onShowPrivacy, onShowTerms, dark, onToggleDark }:
           </div>
           {errorBox}
           {resetSent ? (
-            <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-300 text-sm rounded-xl px-4 py-3 text-center" dangerouslySetInnerHTML={{ __html: t('auth.resetSent', { email }) }} />
+            <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-300 text-sm rounded-xl px-4 py-3 text-center">
+              <Trans i18nKey="auth.resetSent" values={{ email }} components={{ strong: <strong /> }} />
+            </div>
           ) : (
             <form onSubmit={handleResetPassword} className="space-y-4">
               <input type="email" placeholder={t('auth.email')} value={email} onChange={e => setEmail(e.target.value)} required className="w-full px-4 py-3 rounded-xl border border-stone-200 dark:border-slate-600 bg-white dark:bg-slate-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 dark:focus:ring-emerald-900/40 outline-none transition-all text-stone-700 dark:text-stone-100" />

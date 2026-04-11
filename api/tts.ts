@@ -1,6 +1,7 @@
 import { enforceSubscriptionLimits } from '../server/subscriptionEnv';
 import { getServerFirestore } from '../server/lib/serverFirestore';
 import { getCachedUserSubscription, setCachedUserSubscription } from '../server/lib/subscriptionUserCache';
+import { applyApiSecurity } from './_lib/httpSecurity';
 
 async function getFirebaseAdmin() {
   const mod = await import('firebase-admin');
@@ -26,6 +27,7 @@ function isProUser(userData: { tier?: string; subscriptionStatus?: string } | un
 }
 
 export default async function handler(req: any, res: any) {
+  if (!applyApiSecurity(req, res)) return;
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

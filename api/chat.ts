@@ -4,6 +4,7 @@ import {
   normalizePrompt,
   validateInlineImages,
 } from '../server/lib/chatRequestValidation';
+import { applyApiSecurity } from './_lib/httpSecurity';
 
 const TEXT_MODEL = process.env.AI_TEXT_MODEL || 'gemini-2.5-flash-lite';
 
@@ -104,6 +105,7 @@ async function getFirebaseAdmin() {
 }
 
 export default async function handler(req: any, res: any) {
+  if (!applyApiSecurity(req, res)) return;
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

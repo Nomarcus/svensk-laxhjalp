@@ -31,6 +31,11 @@ const USAGE_DAY_PARALLEL = 2;
 export function isSoleAdminFromEnv(uid: string | undefined, email: string | undefined): boolean {
   const adminUid = process.env.ADMIN_UID?.trim();
   const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  const requireAdminUid = process.env.NODE_ENV === 'production';
+
+  if (requireAdminUid && !adminUid) {
+    return false;
+  }
 
   if (adminUid) {
     if (!uid || uid !== adminUid) return false;

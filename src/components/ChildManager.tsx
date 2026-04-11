@@ -4,6 +4,7 @@ import { db, auth, OperationType, handleFirestoreError } from '../firebase';
 import { collection, onSnapshot, addDoc, deleteDoc, doc, deleteField, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { Plus, Trash2, User as UserIcon, X, Check, Share2, Mail, Pencil } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { isWorkspaceChildId } from '../constants/workspaces';
 
 interface ChildWithSharing {
   id: string;
@@ -33,10 +34,9 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
 
     const childrenRef = collection(db, 'users', auth.currentUser.uid, 'children');
     const unsubscribe = onSnapshot(childrenRef, (snapshot) => {
-      const childrenData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as ChildWithSharing[];
+      const childrenData = snapshot.docs
+        .map((d) => ({ id: d.id, ...d.data() } as ChildWithSharing))
+        .filter((c) => !isWorkspaceChildId(c.id));
       setChildren(childrenData);
     }, (error) => {
       handleFirestoreError(error, OperationType.GET, 'children');
@@ -65,7 +65,7 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
   };
 
   const deleteChild = async (id: string) => {
-    if (!auth.currentUser) return;
+    if (!auth.currentUser || isWorkspaceChildId(id)) return;
     if (!window.confirm(t('childManager.removeConfirm'))) return;
 
     try {

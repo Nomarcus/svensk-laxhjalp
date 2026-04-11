@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import { Download, X, Share, MoreVertical, Plus, ExternalLink, Monitor, ChevronDown } from 'lucide-react';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -56,8 +56,9 @@ function InstallRichText({
   return (
     <span
       className={`[&_strong]:font-semibold [&_strong]:text-stone-900 dark:[&_strong]:text-stone-100 ${className}`}
-      dangerouslySetInnerHTML={{ __html: t(i18nKey) }}
-    />
+    >
+      <Trans i18nKey={i18nKey} t={t} components={{ strong: <strong /> }} />
+    </span>
   );
 }
 

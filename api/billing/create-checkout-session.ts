@@ -1,8 +1,22 @@
 import Stripe from 'stripe';
 import { getServerFirestore } from '../../server/lib/serverFirestore';
+import { applyApiSecurity } from '../_lib/httpSecurity';
 const CLIENT_URL = process.env.CLIENT_URL || 'https://svensk-laxhjalp.vercel.app';
 async function getFirebaseAdmin() { const mod = await import('firebase-admin'); const admin = mod.default; if (!admin.apps?.length) { const sa = process.env.FIREBASE_SERVICE_ACCOUNT; if (sa) admin.initializeApp({ credential: admin.credential.cert(JSON.parse(sa)) }); else admin.initializeApp(); } return admin; }
+
+function resolveCheckoutPriceId(priceId: unknown): string | null {
+  const value = typeof priceId === 'string' ? priceId.trim() : '';
+  if (!value) return null;
+  const monthly = process.env.STRIPE_PRICE_ID_MONTHLY?.trim();
+  const yearly = process.env.STRIPE_PRICE_ID_YEARLY?.trim();
+  const aliases: Record<string, string | undefined> = { monthly, yearly };
+  const allowlist = new Set([monthly, yearly].filter(Boolean) as string[]);
+  const resolved = aliases[value] || value;
+  return allowlist.has(resolved) ? resolved : null;
+}
+
 export default async function handler(req: any, res: any) {
+  if (!applyApiSecurity(req, res)) return;
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: 'Ingen autentisering.' });
@@ -11,8 +25,7 @@ export default async function handler(req: any, res: any) {
     const decoded = await admin.auth().verifyIdToken(authHeader.split('Bearer ')[1]);
     if (!decoded.email) return res.status(400).json({ error: 'E-post kravs.' });
     const { priceId } = req.body;
-    const priceMap: Record<string, string | undefined> = { monthly: process.env.STRIPE_PRICE_ID_MONTHLY, yearly: process.env.STRIPE_PRICE_ID_YEARLY };
-    const stripePriceId = priceMap[priceId] || priceId;
+    const stripePriceId = resolveCheckoutPriceId(priceId);
     if (!stripePriceId) return res.status(400).json({ error: 'Ogiltigt pris.' });
     const db = getServerFirestore();
     let customerId = (await db.doc('users/' + decoded.uid).get()).data()?.stripeCustomerId;

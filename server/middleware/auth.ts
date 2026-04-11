@@ -39,6 +39,10 @@ export async function authMiddleware(
   const token = authHeader.split('Bearer ')[1];
   try {
     const decoded = await admin.auth().verifyIdToken(token);
+    if (req.path.startsWith('/admin') && decoded.email_verified !== true) {
+      res.status(403).json({ error: 'Verifierad e-post krävs för admin.' });
+      return;
+    }
     req.uid = decoded.uid;
     req.email = decoded.email;
     next();

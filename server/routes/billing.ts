@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { getServerFirestore } from '../lib/serverFirestore';
 import { patchFromStripeSubscription } from '../lib/stripeUserSubscriptionSync';
+import { reserveStripeWebhookEvent } from '../lib/stripeWebhookIdempotency';
 
 const router = Router();
 
@@ -130,6 +131,20 @@ async function findUserByStripeCustomerId(customerId?: string | null) {
 
 const CLIENT_URL = process.env.CLIENT_URL || 'https://lead-agent-489101.web.app';
 
+function resolveCheckoutPriceId(priceId: unknown): string | null {
+  const value = typeof priceId === 'string' ? priceId.trim() : '';
+  if (!value) return null;
+  const monthly = process.env.STRIPE_PRICE_ID_MONTHLY?.trim();
+  const yearly = process.env.STRIPE_PRICE_ID_YEARLY?.trim();
+  const aliases: Record<string, string | undefined> = {
+    monthly,
+    yearly,
+  };
+  const directAllowlist = new Set([monthly, yearly].filter(Boolean) as string[]);
+  const resolved = aliases[value] || value;
+  return directAllowlist.has(resolved) ? resolved : null;
+}
+
 // POST /api/billing/create-checkout-session
 router.post('/billing/create-checkout-session', async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -147,13 +162,7 @@ router.post('/billing/create-checkout-session', async (req: AuthenticatedRequest
       return;
     }
 
-    // Map billing period to Stripe Price ID
-    const priceMap: Record<string, string | undefined> = {
-      monthly: process.env.STRIPE_PRICE_ID_MONTHLY,
-      yearly: process.env.STRIPE_PRICE_ID_YEARLY,
-    };
-    const stripePriceId = priceMap[priceId] || priceId;
-
+    const stripePriceId = resolveCheckoutPriceId(priceId);
     if (!stripePriceId) {
       res.status(400).json({ error: 'Ogiltigt pris-ID.' });
       return;
@@ -346,6 +355,11 @@ export async function stripeWebhookHandler(req: Request, res: Response) {
 
   try {
     console.info('[stripe webhook]', event.type);
+    const accepted = await reserveStripeWebhookEvent(event.id);
+    if (!accepted) {
+      res.json({ received: true, duplicate: true });
+      return;
+    }
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;

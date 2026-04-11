@@ -626,8 +626,16 @@
   },
   "welcome": {
     "title": "Välkommen till Föräldrahjälpen!",
-    "description": "Börja med att lägga till ett barn för att komma igång med läxhjälp och planering.",
-    "addChild": "Lägg till barn"
+    "description": "Lägg till ett barn för planering per barn, eller fortsätt utan barn för snabb chatt och rättning.",
+    "addChild": "Lägg till barn",
+    "continueWithoutChild": "Fortsätt utan barn",
+    "creatingWorkspace": "Förbereder …"
+  },
+  "workspace": {
+    "generalLabel": "Allmän läxhjälp",
+    "teacherLabel": "Lärarläge",
+    "teacherMode": "För lärare",
+    "teacherNav": "För lärare"
   },
   "language": {
     "label": "Språk",

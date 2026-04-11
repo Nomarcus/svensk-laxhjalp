@@ -1,16 +1,18 @@
 import React from 'react';
-import { LogOut, MessageSquare, Calendar, BookOpen, User as UserIcon, ChevronDown, Settings, Info, Library, Crown, Download, Users, X, Menu, Moon, Sun, Mail, Shield, FileText, Share2, BarChart3, CheckSquare } from 'lucide-react';
+import { LogOut, MessageSquare, Calendar, BookOpen, User as UserIcon, ChevronDown, Settings, Info, Library, Crown, Download, Users, X, Menu, Moon, Sun, Mail, Shield, FileText, Share2, BarChart3, CheckSquare, GraduationCap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { logout, User } from '../firebase';
 import { cn } from '../utils/cn';
-import type { Child, SubscriptionTier } from '../types';
+import type { AppTab, Child, SubscriptionTier } from '../types';
+import { WORKSPACE_TEACHER_ID, isGeneralWorkspaceId } from '../constants/workspaces';
+import { childDisplayName } from '../utils/childDisplay';
 import LanguageSwitcher from './LanguageSwitcher';
 
 interface LayoutProps {
   children: React.ReactNode;
   user: User;
-  activeTab: 'chat' | 'planner' | 'corrector' | 'info' | 'library' | 'subscription' | 'contact' | 'admin';
-  setActiveTab: (tab: 'chat' | 'planner' | 'corrector' | 'info' | 'library' | 'subscription' | 'contact' | 'admin') => void;
+  activeTab: AppTab;
+  setActiveTab: (tab: AppTab) => void;
   showAdminNav?: boolean;
   childrenList: Child[];
   selectedChildId: string | null;
@@ -45,10 +47,19 @@ export default function Layout({
   const [showChildSelect, setShowChildSelect] = React.useState(false);
   const [showMobileMenu, setShowMobileMenu] = React.useState(false);
   const selectedChild = childrenList.find(c => c.id === selectedChildId);
+  const pickerChildren = childrenList.filter((c) => c.id !== WORKSPACE_TEACHER_ID);
+  const hidePlannerNav = Boolean(selectedChildId && isGeneralWorkspaceId(selectedChildId));
   const isSharedChild = (child: Child) => child.ownerId !== user.uid;
   const hasSharing = (child: Child) => (child.sharedWith?.length || 0) > 0;
+  const headerChildTitle =
+    activeTab === 'teacher'
+      ? t('workspace.teacherMode')
+      : selectedChild
+        ? childDisplayName(selectedChild, t)
+        : t('child.select');
+  const headerChildInitial = (headerChildTitle.trim()[0] || '?').toUpperCase();
 
-  const handleTabChange = (tab: typeof activeTab) => {
+  const handleTabChange = (tab: AppTab) => {
     setActiveTab(tab);
     setShowMobileMenu(false);
   };
@@ -100,9 +111,9 @@ export default function Layout({
                   <p className="text-xs text-stone-400 font-medium uppercase tracking-wider">{t('child.label')}</p>
                   <div className="flex items-center gap-1.5">
                     <p className="text-sm font-semibold truncate">
-                      {selectedChild ? selectedChild.name : t('child.select')}
+                      {headerChildTitle}
                     </p>
-                    {selectedChild && (isSharedChild(selectedChild) || hasSharing(selectedChild)) && (
+                    {activeTab !== 'teacher' && selectedChild && (isSharedChild(selectedChild) || hasSharing(selectedChild)) && (
                       <Users size={12} className="text-blue-500 shrink-0" />
                     )}
                   </div>
@@ -113,7 +124,7 @@ export default function Layout({
 
             {showChildSelect && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-black/5 dark:border-white/10 z-20 py-2 animate-in fade-in slide-in-from-top-2">
-                {childrenList.map((child) => (
+                {pickerChildren.map((child) => (
                   <button
                     key={child.id}
                     onClick={() => {
@@ -122,16 +133,16 @@ export default function Layout({
                     }}
                     className={cn(
                       "w-full flex items-center gap-3 px-4 py-2 hover:bg-stone-50 dark:hover:bg-slate-700 transition-colors text-left",
-                      selectedChildId === child.id && "text-emerald-600 dark:text-emerald-400 font-medium"
+                      selectedChildId === child.id && activeTab !== 'teacher' && "text-emerald-600 dark:text-emerald-400 font-medium"
                     )}
                   >
                     <div className={cn(
                       "w-6 h-6 rounded-full flex items-center justify-center text-xs",
-                      selectedChildId === child.id ? "bg-emerald-100 dark:bg-emerald-900/50" : "bg-stone-100 dark:bg-slate-700"
+                      selectedChildId === child.id && activeTab !== 'teacher' ? "bg-emerald-100 dark:bg-emerald-900/50" : "bg-stone-100 dark:bg-slate-700"
                     )}>
-                      {child.name[0]}
+                      {(childDisplayName(child, t).trim()[0] || '?').toUpperCase()}
                     </div>
-                    <span className="flex-1">{child.name}</span>
+                    <span className="flex-1">{childDisplayName(child, t)}</span>
                     {isSharedChild(child) && (
                       <span className="text-[10px] bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded-full">{t('child.sharedWithYou')}</span>
                     )}
@@ -157,13 +168,16 @@ export default function Layout({
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
-          {[
-            { id: 'chat' as const, icon: <MessageSquare size={20} />, label: t('nav.aiAssistant') },
-            { id: 'planner' as const, icon: <Calendar size={20} />, label: t('nav.planner') },
-            { id: 'corrector' as const, icon: <CheckSquare size={20} />, label: t('nav.corrector') },
-            { id: 'library' as const, icon: <Library size={20} />, label: t('nav.library') },
-            { id: 'info' as const, icon: <Info size={20} />, label: t('nav.info') },
-          ].map(item => (
+          {(
+            [
+              { id: 'chat' as const, icon: <MessageSquare size={20} />, label: t('nav.aiAssistant') },
+              ...(hidePlannerNav ? [] : [{ id: 'planner' as const, icon: <Calendar size={20} />, label: t('nav.planner') }]),
+              { id: 'corrector' as const, icon: <CheckSquare size={20} />, label: t('nav.corrector') },
+              { id: 'library' as const, icon: <Library size={20} />, label: t('nav.library') },
+              { id: 'teacher' as const, icon: <GraduationCap size={20} />, label: t('workspace.teacherNav') },
+              { id: 'info' as const, icon: <Info size={20} />, label: t('nav.info') },
+            ] as const
+          ).map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
@@ -306,13 +320,13 @@ export default function Layout({
           <span className="font-serif italic text-lg">{t('app.name')}</span>
         </div>
         <div className="flex items-center gap-2">
-          {selectedChild && (
+          {(selectedChild || activeTab === 'teacher') && (
             <button
               onClick={() => setShowMobileMenu(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-50 dark:bg-slate-800 rounded-full text-sm border border-black/5 dark:border-white/5"
             >
               <UserIcon size={14} className="text-emerald-600 dark:text-emerald-400" />
-              <span className="font-medium max-w-[100px] truncate">{selectedChild.name}</span>
+              <span className="font-medium max-w-[100px] truncate">{headerChildTitle}</span>
             </button>
           )}
           <button
@@ -337,12 +351,14 @@ export default function Layout({
 
       {/* Mobile Bottom Navigation */}
       <nav className="md:hidden flex items-center bg-white dark:bg-slate-900 border-t border-black/5 dark:border-white/5 shrink-0 safe-area-bottom">
-        {[
-          { id: 'chat' as const, icon: <MessageSquare size={20} />, label: t('nav.aiHelp') },
-          { id: 'planner' as const, icon: <Calendar size={20} />, label: t('nav.plannerShort') },
-          { id: 'corrector' as const, icon: <CheckSquare size={20} />, label: t('nav.correctorShort') },
-          { id: 'library' as const, icon: <Library size={20} />, label: t('nav.libraryShort') },
-        ].map(item => (
+        {(
+          [
+            { id: 'chat' as const, icon: <MessageSquare size={20} />, label: t('nav.aiHelp') },
+            ...(hidePlannerNav ? [] : [{ id: 'planner' as const, icon: <Calendar size={20} />, label: t('nav.plannerShort') }]),
+            { id: 'corrector' as const, icon: <CheckSquare size={20} />, label: t('nav.correctorShort') },
+            { id: 'library' as const, icon: <Library size={20} />, label: t('nav.libraryShort') },
+          ] as const
+        ).map((item) => (
           <button
             key={item.id}
             onClick={() => handleTabChange(item.id)}
@@ -359,7 +375,7 @@ export default function Layout({
           onClick={() => setShowMobileMenu(true)}
           className={cn(
             "flex-1 flex flex-col items-center gap-0.5 py-2 pt-3 transition-colors",
-            (activeTab === 'info' || activeTab === 'subscription' || activeTab === 'contact') ? "text-emerald-600 dark:text-emerald-400" : "text-stone-400 dark:text-stone-500"
+            (activeTab === 'info' || activeTab === 'subscription' || activeTab === 'contact' || activeTab === 'teacher') ? "text-emerald-600 dark:text-emerald-400" : "text-stone-400 dark:text-stone-500"
           )}
         >
           <Menu size={20} />
@@ -385,24 +401,24 @@ export default function Layout({
               <div className="p-4 border-b border-black/5 dark:border-white/5">
                 <p className="text-[10px] font-medium text-stone-400 uppercase tracking-widest mb-2">{t('child.label')}</p>
                 <div className="space-y-1">
-                  {childrenList.map((child) => (
+                  {pickerChildren.map((child) => (
                     <button
                       key={child.id}
-                      onClick={() => onSelectChild(child.id)}
+                      onClick={() => { onSelectChild(child.id); setShowMobileMenu(false); }}
                       className={cn(
                         "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left",
-                        selectedChildId === child.id
+                        selectedChildId === child.id && activeTab !== 'teacher'
                           ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-medium"
                           : "text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800"
                       )}
                     >
                       <div className={cn(
                         "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium",
-                        selectedChildId === child.id ? "bg-emerald-200 dark:bg-emerald-800 text-emerald-800 dark:text-emerald-200" : "bg-stone-100 dark:bg-slate-700 text-stone-500 dark:text-stone-400"
+                        selectedChildId === child.id && activeTab !== 'teacher' ? "bg-emerald-200 dark:bg-emerald-800 text-emerald-800 dark:text-emerald-200" : "bg-stone-100 dark:bg-slate-700 text-stone-500 dark:text-stone-400"
                       )}>
-                        {child.name[0]}
+                        {(childDisplayName(child, t).trim()[0] || '?').toUpperCase()}
                       </div>
-                      <span className="flex-1 text-sm">{child.name}</span>
+                      <span className="flex-1 text-sm">{childDisplayName(child, t)}</span>
                       {isSharedChild(child) && (
                         <span className="text-[9px] bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded-full">{t('child.shared')}</span>
                       )}
@@ -422,6 +438,16 @@ export default function Layout({
               </div>
 
               <div className="p-4 space-y-1 pb-6">
+              <button
+                onClick={() => handleTabChange('teacher')}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all text-sm",
+                  activeTab === 'teacher' ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-medium" : "text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800"
+                )}
+              >
+                <GraduationCap size={18} />
+                <span>{t('workspace.teacherNav')}</span>
+              </button>
               <button
                 onClick={() => handleTabChange('info')}
                 className={cn(

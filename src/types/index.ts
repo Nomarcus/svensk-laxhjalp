@@ -6,7 +6,11 @@ export interface Child {
   grade?: string;
   ownerId: string;
   sharedWith?: string[];
+  workspaceKind?: 'general' | 'teacher';
 }
+
+export type AppMainTab = 'chat' | 'planner' | 'corrector' | 'info' | 'library' | 'teacher';
+export type AppTab = AppMainTab | 'subscription' | 'contact' | 'admin';
 
 export interface Message {
   id: string;

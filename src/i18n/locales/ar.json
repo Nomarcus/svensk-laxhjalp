@@ -426,8 +426,16 @@
   },
   "welcome": {
     "title": "مرحباً في Föräldrahjälpen!",
-    "description": "ابدأ بإضافة طفل للبدء بالمساعدة في الواجبات والتخطيط.",
-    "addChild": "إضافة طفل"
+    "description": "أضف طفلاً للتخطيط لكل طفل، أو تابع بدون طفل للدردشة السريعة وتصحيح الواجبات.",
+    "addChild": "إضافة طفل",
+    "continueWithoutChild": "المتابعة بدون طفل",
+    "creatingWorkspace": "جارٍ التحضير…"
+  },
+  "workspace": {
+    "generalLabel": "مساعدة واجبات عامة",
+    "teacherLabel": "مساحة المعلم",
+    "teacherMode": "للمعلمين",
+    "teacherNav": "للمعلمين"
   },
   "landing": {
     "heroTitle": "مساعدة ذكية في الواجبات المدرسية للآباء في السويد",

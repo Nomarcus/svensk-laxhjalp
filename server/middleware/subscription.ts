@@ -69,11 +69,7 @@ export async function subscriptionMiddleware(
     };
 
     if (!enforceSubscriptionLimits()) {
-      try {
-        await recordChatUsage();
-      } catch (e) {
-        console.error('Subscription usage log (no enforce):', e instanceof Error ? e.message : e);
-      }
+      await recordChatUsage();
       next();
       return;
     }
@@ -143,8 +139,14 @@ export async function subscriptionMiddleware(
     }
 
     next();
-  } catch (error: any) {
-    console.error('Subscription middleware error:', error.message);
-    next();
+  } catch (error: unknown) {
+    console.error(
+      'Subscription middleware error:',
+      error instanceof Error ? error.message : String(error),
+    );
+    res.status(503).json({
+      error: 'Kunde inte verifiera abonnemang just nu. Försök igen om en stund.',
+      code: 'subscription_check_failed',
+    });
   }
 }

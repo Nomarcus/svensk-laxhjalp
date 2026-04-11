@@ -17,6 +17,12 @@ import { adminRouter } from './routes/admin';
 const app = express();
 app.set('trust proxy', true);
 const PORT = process.env.PORT || 3001;
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+};
 
 // CRITICAL: Stripe webhook MUST come before express.json() — needs raw body.
 // Firebase Hosting rewrites only /api/** to Cloud Run, so the live URL must be /api/webhook/stripe
@@ -46,6 +52,13 @@ function corsAllowlist(): Set<string> {
 }
 
 const corsAllowed = corsAllowlist();
+
+app.use((_req, res, next) => {
+  for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
+    res.setHeader(key, value);
+  }
+  next();
+});
 
 app.use(
   cors({

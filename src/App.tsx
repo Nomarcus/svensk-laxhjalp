@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { auth, onAuthStateChanged, User, db, OperationType, handleFirestoreError } from './firebase';
 import { doc, setDoc, serverTimestamp, collection, onSnapshot, query, orderBy, collectionGroup, where, limit } from 'firebase/firestore';
@@ -12,7 +12,10 @@ import Library from './components/Library';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import ChildManager from './components/ChildManager';
 import { Plus } from 'lucide-react';
-import type { Child, UserSubscription, Task } from './types';
+import type { AppTab, Child, UserSubscription, Task } from './types';
+import { isGeneralWorkspaceId, isWorkspaceChildId, WORKSPACE_GENERAL_ID, WORKSPACE_TEACHER_ID } from './constants/workspaces';
+import { ensureWorkspaceChild } from './utils/ensureWorkspaceChild';
+import { childDisplayName } from './utils/childDisplay';
 import InstallPrompt, { InstallGuide } from './components/InstallPrompt';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import Subscription from './components/Subscription';
@@ -38,7 +41,8 @@ const STRIPE_SYNC_PENDING_KEY = 'foraldrahjalpen_pendingStripeSync';
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'chat' | 'planner' | 'corrector' | 'info' | 'library' | 'subscription' | 'contact' | 'admin'>('chat');
+  const [activeTab, setActiveTab] = useState<AppTab>('chat');
+  const [workspaceWelcomeBusy, setWorkspaceWelcomeBusy] = useState(false);
   const [subscription, setSubscription] = useState<UserSubscription>({ tier: 'free', status: 'none' });
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
@@ -71,6 +75,17 @@ export default function App() {
   const userDocUnsubRef = useRef<(() => void) | null>(null);
   const childOwnerByIdRef = useRef<Map<string, string>>(new Map());
   const stripeSyncInFlightRef = useRef(false);
+
+  const navigateTab = useCallback(
+    (tab: AppTab) => {
+      if (tab === 'teacher' && user) {
+        void ensureWorkspaceChild(user.uid, WORKSPACE_TEACHER_ID).then(() => setActiveTab('teacher'));
+        return;
+      }
+      setActiveTab(tab);
+    },
+    [user],
+  );
 
   const goToPath = (path: string) => {
     const next = normalizePathname(path);
@@ -241,7 +256,10 @@ export default function App() {
       setChildren(combined);
       setSelectedChildId((prev) => {
         if (combined.length === 0) return null;
-        if (!prev || !combined.find((c) => c.id === prev)) return combined[0].id;
+        if (!prev || !combined.find((c) => c.id === prev)) {
+          const firstReal = combined.find((c) => !isWorkspaceChildId(c.id));
+          return firstReal?.id ?? combined[0]!.id;
+        }
         return prev;
       });
       setChildMapVersion((v) => v + 1);
@@ -300,6 +318,32 @@ export default function App() {
     return () => unsub();
   }, [user, selectedChildId, childMapVersion]);
 
+  useEffect(() => {
+    if (selectedChildId && isGeneralWorkspaceId(selectedChildId) && activeTab === 'planner') {
+      setActiveTab('chat');
+    }
+  }, [selectedChildId, activeTab]);
+
+  const continueWithoutChild = async () => {
+    if (!user || workspaceWelcomeBusy) return;
+    setWorkspaceWelcomeBusy(true);
+    try {
+      await ensureWorkspaceChild(user.uid, WORKSPACE_GENERAL_ID);
+    } catch (e) {
+      console.warn('ensureWorkspaceChild general failed:', e);
+    } finally {
+      setWorkspaceWelcomeBusy(false);
+    }
+  };
+
+  const handleSelectChild = useCallback(
+    (id: string) => {
+      setSelectedChildId(id);
+      setActiveTab((prev) => (prev === 'teacher' ? 'corrector' : prev));
+    },
+    [],
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen app-soft-bg dark:bg-slate-950 flex items-center justify-center">
@@ -349,10 +393,10 @@ export default function App() {
       <Layout 
         user={user} 
         activeTab={activeTab} 
-        setActiveTab={setActiveTab}
+        setActiveTab={navigateTab}
         childrenList={children}
         selectedChildId={selectedChildId}
-        onSelectChild={setSelectedChildId}
+        onSelectChild={handleSelectChild}
         onManageChildren={() => setShowChildManager(true)}
         subscriptionTier={subscription.tier}
         onShowInstallGuide={() => setShowInstallGuide(true)}
@@ -379,17 +423,65 @@ export default function App() {
             <p className="text-stone-500 max-w-md mb-8">
               {t('welcome.description')}
             </p>
-            <button
-              onClick={() => setShowChildManager(true)}
-              className="px-8 py-3 bg-emerald-600 text-white rounded-2xl font-medium shadow-[0_18px_40px_-24px_rgba(5,150,105,0.65)] hover:bg-emerald-700 hover:shadow-[0_22px_48px_-24px_rgba(5,150,105,0.7)] transition-all"
-            >
-              {t('welcome.addChild')}
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md justify-center">
+              <button
+                type="button"
+                onClick={() => setShowChildManager(true)}
+                className="px-8 py-3 bg-emerald-600 text-white rounded-2xl font-medium shadow-[0_18px_40px_-24px_rgba(5,150,105,0.65)] hover:bg-emerald-700 hover:shadow-[0_22px_48px_-24px_rgba(5,150,105,0.7)] transition-all"
+              >
+                {t('welcome.addChild')}
+              </button>
+              <button
+                type="button"
+                disabled={workspaceWelcomeBusy}
+                onClick={() => void continueWithoutChild()}
+                className="px-8 py-3 rounded-2xl font-medium border-2 border-emerald-600 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-all disabled:opacity-50"
+              >
+                {workspaceWelcomeBusy ? t('welcome.creatingWorkspace') : t('welcome.continueWithoutChild')}
+              </button>
+            </div>
           </div>
         ) : (
           <>
-            {activeTab === 'chat' ? (
-              <Chat childId={selectedChildId!} childName={selectedChild?.name || ''} childGrade={selectedChild?.grade} ownerId={selectedChild?.ownerId || user.uid} tasks={allTasks} taskContext={chatFromTask} onTaskContextUsed={() => setChatFromTask(null)} onCreateTask={(subject, description) => { setPlannerPrefill({ subject, description }); setActiveTab('planner'); }} onCreateTaskFromPhoto={(data) => { setPlannerPrefill(data); setActiveTab('planner'); }} />
+            {activeTab === 'teacher' ? (
+              <HomeworkCorrector
+                childName={t('workspace.teacherLabel')}
+                childId={WORKSPACE_TEACHER_ID}
+                ownerId={user.uid}
+                onCreateTaskFromCorrection={(data) => {
+                  void ensureWorkspaceChild(user.uid, WORKSPACE_GENERAL_ID).then(() => {
+                    setSelectedChildId(WORKSPACE_GENERAL_ID);
+                    setPlannerPrefill(data);
+                    setActiveTab('planner');
+                  });
+                }}
+              />
+            ) : activeTab === 'chat' ? (
+              <Chat
+                childId={selectedChildId!}
+                childName={selectedChild ? childDisplayName(selectedChild, t) : ''}
+                childGrade={selectedChild?.grade}
+                ownerId={selectedChild?.ownerId || user.uid}
+                tasks={allTasks}
+                taskContext={chatFromTask}
+                onTaskContextUsed={() => setChatFromTask(null)}
+                onCreateTask={
+                  selectedChildId && isGeneralWorkspaceId(selectedChildId)
+                    ? undefined
+                    : (subject, description) => {
+                        setPlannerPrefill({ subject, description });
+                        setActiveTab('planner');
+                      }
+                }
+                onCreateTaskFromPhoto={
+                  selectedChildId && isGeneralWorkspaceId(selectedChildId)
+                    ? undefined
+                    : (data) => {
+                        setPlannerPrefill(data);
+                        setActiveTab('planner');
+                      }
+                }
+              />
             ) : activeTab === 'planner' ? (
               <Planner childId={selectedChildId!} ownerId={selectedChild?.ownerId || user.uid} prefill={plannerPrefill} onPrefillUsed={() => setPlannerPrefill(null)} onOpenAiForTask={(taskId, subject, description, imageUrls) => {
                 setChatFromTask({
@@ -403,13 +495,17 @@ export default function App() {
               }} />
             ) : activeTab === 'corrector' ? (
               <HomeworkCorrector
-                childName={selectedChild?.name || ''}
+                childName={selectedChild ? childDisplayName(selectedChild, t) : ''}
                 childId={selectedChildId!}
                 ownerId={selectedChild?.ownerId || user.uid}
-                onCreateTaskFromCorrection={(data) => {
-                  setPlannerPrefill(data);
-                  setActiveTab('planner');
-                }}
+                onCreateTaskFromCorrection={
+                  selectedChildId && isGeneralWorkspaceId(selectedChildId)
+                    ? undefined
+                    : (data) => {
+                        setPlannerPrefill(data);
+                        setActiveTab('planner');
+                      }
+                }
               />
             ) : activeTab === 'library' ? (
               <Library childId={selectedChildId!} ownerId={selectedChild?.ownerId || user.uid} />

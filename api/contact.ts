@@ -1,6 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { applyApiSecurity } from './_lib/httpSecurity';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (!applyApiSecurity(req, res)) return;
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

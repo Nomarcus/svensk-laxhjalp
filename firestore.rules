@@ -39,7 +39,8 @@ service cloud.firestore {
     }
 
     function isValidUser(data) {
-      return data.uid is string && data.uid.size() > 0;
+      return data.uid is string && data.uid.size() > 0 &&
+             (!('accountRole' in data) || data.accountRole in ['parent', 'teacher']);
     }
 
     function isValidChatSession(data) {
@@ -66,7 +67,8 @@ service cloud.firestore {
 
     function isValidChild(data) {
       return data.name is string && data.name.size() > 0 && data.name.size() < 50 &&
-             (!('grade' in data) || (data.grade is string && data.grade.size() < 20));
+             (!('grade' in data) || (data.grade is string && data.grade.size() < 20)) &&
+             (!('workspaceKind' in data) || data.workspaceKind in ['general', 'teacher']);
     }
 
     function isValidLibraryItem(data) {

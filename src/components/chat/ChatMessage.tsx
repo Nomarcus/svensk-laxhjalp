@@ -76,11 +76,20 @@ export default function ChatMessage({
     return text.includes('facit') || text.includes('korrekt svar') || text.includes('svar:');
   };
 
+  const escapeHtml = (text: string) =>
+    text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
   const handlePrint = (content: string) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
     const printTitle = t('chat.printTitle');
-    const printBody = content
+    const safeContent = escapeHtml(content);
+    const printBody = safeContent
       .replace(/^###\s+(.*)$/gm, '<h3>$1</h3>')
       .replace(/^##\s+(.*)$/gm, '<h2>$1</h2>')
       .replace(/^#\s+(.*)$/gm, '<h1>$1</h1>')
