@@ -18,7 +18,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "deploy:hosting": "npm run build && firebase deploy --only hosting",
+    "deploy:hosting": "npm run build && firebase deploy --only hosting,firestore:rules",
     "deploy:api": "gcloud run deploy laxhjalp-api --source . --region europe-west1 --project lead-agent-489101 --allow-unauthenticated --min-instances 0 --max-instances 2 --timeout=120",
     "deploy": "npm run deploy:hosting && npm run deploy:api",
     "migrate:firestore": "node scripts/migrate-firestore-named-to-default.mjs",
