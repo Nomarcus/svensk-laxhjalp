@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Send, Image as ImageIcon, Camera, X, Mic, MicOff } from 'lucide-react';
 import { compressImage } from '../../utils/image';
+import { isLikelyImageFile } from '../../utils/imageUpload';
 import { cn } from '../../utils/cn';
 
 interface ChatInputProps {
@@ -73,12 +74,16 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
       reader.readAsDataURL(file);
     });
 
-  const handleFiles = async (list: FileList | null) => {
-    if (!list?.length) return;
-    for (const file of Array.from(list)) {
-      if (!file.type.startsWith('image/')) continue;
-      const dataUrl = await readFileAsDataUrl(file);
-      await pushOneDataUrl(dataUrl);
+  /** Kopiera File[] och nollställ input direkt — iOS kan annars tömma filreferensen före FileReader är klar. */
+  const handlePickedFiles = async (files: File[]) => {
+    for (const file of files) {
+      if (!isLikelyImageFile(file)) continue;
+      try {
+        const dataUrl = await readFileAsDataUrl(file);
+        await pushOneDataUrl(dataUrl);
+      } catch {
+        /* t.ex. trasig HEIC-läsning */
+      }
     }
   };
 
@@ -161,7 +166,12 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
           <input
             type="file"
             ref={cameraInputRef}
-            onChange={(e) => { void handleFiles(e.target.files); e.target.value = ''; }}
+            onChange={(e) => {
+              const el = e.currentTarget;
+              const picked = el.files?.length ? Array.from(el.files) : [];
+              el.value = '';
+              void handlePickedFiles(picked);
+            }}
             accept="image/*"
             capture="environment"
             className="hidden"
@@ -169,7 +179,12 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
           <input
             type="file"
             ref={fileInputRef}
-            onChange={(e) => { void handleFiles(e.target.files); e.target.value = ''; }}
+            onChange={(e) => {
+              const el = e.currentTarget;
+              const picked = el.files?.length ? Array.from(el.files) : [];
+              el.value = '';
+              void handlePickedFiles(picked);
+            }}
             accept="image/*"
             multiple
             className="hidden"

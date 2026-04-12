@@ -97,3 +97,8 @@
   box-shadow: 0 24px 70px -34px rgba(15, 23, 42, 0.4);
   border: 1px solid rgba(15, 23, 42, 0.08);
 }
+
+/* KaTeX (markdown-matte) — läsbar i mörkt läge */
+.dark .katex {
+  color: rgb(231 229 228);
+}

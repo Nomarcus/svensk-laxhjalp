@@ -192,6 +192,7 @@
     "saveToLibrary": "Save to library",
     "illustrate": "Illustrate explanation",
     "creatingIllustration": "Creating illustration...",
+    "illustrateFailed": "The illustration could not be created right now. Please try again in a moment.",
     "curriculumLink": "Curriculum link",
     "showAnswerKey": "Show answer key",
     "showAnswerKeyShort": "Answer key - short",

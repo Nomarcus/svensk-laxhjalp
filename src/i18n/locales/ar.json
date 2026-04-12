@@ -107,6 +107,7 @@
     "saveToLibrary": "حفظ في المكتبة",
     "illustrate": "وضّح بصورة",
     "creatingIllustration": "جارٍ إنشاء الصورة...",
+    "illustrateFailed": "تعذر إنشاء الصورة الآن. حاول مرة أخرى بعد قليل.",
     "curriculumLink": "ربط بالمنهج",
     "showAnswerKey": "عرض الإجابة",
     "showAnswerKeyShort": "الإجابات - مختصر",

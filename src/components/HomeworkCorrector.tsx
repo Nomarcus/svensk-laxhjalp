@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Camera, Image as ImageIcon, Loader2, Send, X, CheckSquare, CalendarPlus, History, Save } from 'lucide-react';
 import { compressImage } from '../utils/image';
+import { isLikelyImageFile } from '../utils/imageUpload';
 import { analyzeHomeworkForTask, correctHomeworkFromImages } from '../services/geminiService';
 import { cn } from '../utils/cn';
 import { auth, db, OperationType, handleFirestoreError } from '../firebase';
@@ -104,12 +105,15 @@ export default function HomeworkCorrector({ childName, childId, ownerId, onCreat
       reader.readAsDataURL(file);
     });
 
-  const handleFiles = async (list: FileList | null) => {
-    if (!list?.length) return;
-    for (const file of Array.from(list)) {
-      if (!file.type.startsWith('image/')) continue;
-      const dataUrl = await readFileAsDataUrl(file);
-      await pushImage(dataUrl);
+  const handlePickedFiles = async (files: File[]) => {
+    for (const file of files) {
+      if (!isLikelyImageFile(file)) continue;
+      try {
+        const dataUrl = await readFileAsDataUrl(file);
+        await pushImage(dataUrl);
+      } catch {
+        /* iOS / HEIC */
+      }
     }
   };
 
@@ -203,7 +207,12 @@ export default function HomeworkCorrector({ childName, childId, ownerId, onCreat
             type="file"
             accept="image/*"
             capture="environment"
-            onChange={(e) => { void handleFiles(e.target.files); e.target.value = ''; }}
+            onChange={(e) => {
+              const el = e.currentTarget;
+              const picked = el.files?.length ? Array.from(el.files) : [];
+              el.value = '';
+              void handlePickedFiles(picked);
+            }}
             className="hidden"
           />
           <input
@@ -211,7 +220,12 @@ export default function HomeworkCorrector({ childName, childId, ownerId, onCreat
             type="file"
             accept="image/*"
             multiple
-            onChange={(e) => { void handleFiles(e.target.files); e.target.value = ''; }}
+            onChange={(e) => {
+              const el = e.currentTarget;
+              const picked = el.files?.length ? Array.from(el.files) : [];
+              el.value = '';
+              void handlePickedFiles(picked);
+            }}
             className="hidden"
           />
 

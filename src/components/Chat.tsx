@@ -20,6 +20,7 @@ import {
 } from 'firebase/firestore';
 import { generateHomeworkHelp, generateImage, analyzeHomeworkForTask } from '../services/geminiService';
 import { compressImage } from '../utils/image';
+import { isLikelyImageFile } from '../utils/imageUpload';
 import { cn } from '../utils/cn';
 import type { Message, ChatSession, Task } from '../types';
 import ChatHeader from './chat/ChatHeader';
@@ -61,6 +62,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   const [images, setImages] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [generatingImageId, setGeneratingImageId] = useState<string | null>(null);
+  const generatingImageLockRef = useRef(false);
   const [savedMessageIds, setSavedMessageIds] = useState<Set<string>>(new Set());
   const [taskPickerContent, setTaskPickerContent] = useState<string | null>(null);
   const [linkedTaskIds, setLinkedTaskIds] = useState<Set<string>>(new Set());
@@ -270,6 +272,8 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
 
   const handleGenerateImage = async (messageId: string, content: string) => {
     if (!auth.currentUser || !childId || !activeSessionId) return;
+    if (generatingImageLockRef.current) return;
+    generatingImageLockRef.current = true;
     setGeneratingImageId(messageId);
     const path = `users/${ownerId}/children/${childId}/chatSessions/${activeSessionId}/messages/${messageId}`;
     try {
@@ -287,10 +291,23 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
           subject: 'Chatt',
         });
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error generating image:', err);
+      const msg = err instanceof Error ? err.message : '';
+      if (
+        msg.includes('Uppgradera')
+        || msg.includes('abonnemang')
+        || msg.includes('Pro-abonnemang')
+        || msg.includes('gratis')
+        || msg.includes('403')
+      ) {
+        setError(`${msg} 👉 ${t('chat.goToSubscription')}`);
+      } else {
+        setError(t('chat.illustrateFailed'));
+      }
     } finally {
       setGeneratingImageId(null);
+      generatingImageLockRef.current = false;
     }
   };
 
@@ -427,7 +444,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
           const toAdd: string[] = [];
           for (let i = 0; i < files.length && toAdd.length < CHAT_MAX_IMAGES; i++) {
             const file = files[i];
-            if (!file.type.startsWith('image/')) continue;
+            if (!isLikelyImageFile(file)) continue;
             const dataUrl = await new Promise<string>((resolve, reject) => {
               const reader = new FileReader();
               reader.onloadend = () => resolve(reader.result as string);

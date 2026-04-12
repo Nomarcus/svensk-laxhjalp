@@ -7,6 +7,7 @@ import { format, startOfWeek, addDays, getWeek, getYear, addWeeks, subWeeks, isS
 import { sv } from 'date-fns/locale';
 import { cn } from '../utils/cn';
 import { compressImage } from '../utils/image';
+import { isLikelyImageFile } from '../utils/imageUpload';
 import type { Task } from '../types';
 import { computeNextStreakOnCompletion, type ParentStreakDoc } from '../utils/parentStreak';
 import { generateStudyPlan, generateExamPrep } from '../services/geminiService';
@@ -513,36 +514,43 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
     return task.dueDay === day;
   };
 
-  const processImages = async (files: FileList | null) => {
-    if (!files?.length) return [];
-    const all = Array.from(files);
+  const processImageFiles = async (files: File[]) => {
     const results: string[] = [];
-    for (const file of all) {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = () => reject(reader.error);
-        reader.readAsDataURL(file);
-      });
+    for (const file of files) {
+      if (!isLikelyImageFile(file)) continue;
       try {
-        results.push(await compressImage(dataUrl, 800, 800, 0.7));
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(file);
+        });
+        try {
+          results.push(await compressImage(dataUrl, 800, 800, 0.7));
+        } catch {
+          results.push(dataUrl);
+        }
       } catch {
-        results.push(dataUrl);
+        /* läsning misslyckades */
       }
     }
     return results;
   };
 
   const handlePlannerCamera = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const images = await processImages(e.target.files);
+    const el = e.currentTarget;
+    const picked = el.files?.length ? Array.from(el.files) : [];
+    el.value = '';
+    const images = await processImageFiles(picked);
     if (images.length) setTaskImages(prev => [...prev, ...images]);
-    e.target.value = '';
   };
 
   const handleEditTaskImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const images = await processImages(e.target.files);
+    const el = e.currentTarget;
+    const picked = el.files?.length ? Array.from(el.files) : [];
+    el.value = '';
+    const images = await processImageFiles(picked);
     if (images.length) setEditImages(prev => [...prev, ...images]);
-    e.target.value = '';
   };
 
   const renderFormFields = (inModal = false) => (

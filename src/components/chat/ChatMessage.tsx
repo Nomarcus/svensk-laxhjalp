@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { User, Bot, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine, X, Volume2, Square, Pause, Play, SkipForward, Calculator } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 import { cn } from '../../utils/cn';
 import type { Message } from '../../types';
 
@@ -151,12 +153,18 @@ export default function ChatMessage({
               : 'bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 shadow-sm rounded-tl-none'
           )}
         >
-          <div className="markdown-body prose prose-stone prose-sm max-w-none">
-            <ReactMarkdown>{msg.content}</ReactMarkdown>
+          <div className="markdown-body prose prose-stone prose-sm max-w-none [&_.katex-display]:overflow-x-auto">
+            <ReactMarkdown
+              remarkPlugins={[remarkMath]}
+              rehypePlugins={[[rehypeKatex, { strict: false, throwOnError: false }]]}
+            >
+              {msg.content}
+            </ReactMarkdown>
           </div>
           {msg.role === 'model' && (
             <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity">
               <button
+                type="button"
                 onClick={() => onShare(msg)}
                 className="p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm text-stone-400 hover:text-emerald-600 transition-all border border-black/5"
                 title={t('chat.share')}
@@ -164,6 +172,7 @@ export default function ChatMessage({
                 <Share2 size={14} />
               </button>
               <button
+                type="button"
                 onClick={() => onSaveToLibrary(msg)}
                 disabled={savedMessageIds.has(msg.id)}
                 className={cn(
@@ -191,6 +200,7 @@ export default function ChatMessage({
             onClick={() => setZoomedImage(null)}
           >
             <button
+              type="button"
               onClick={() => setZoomedImage(null)}
               className="absolute top-4 right-4 p-2 bg-white/20 rounded-full text-white hover:bg-white/40 transition-colors z-10"
             >
@@ -216,6 +226,7 @@ export default function ChatMessage({
               (speechState.isSpeaking || speechState.isPaused) ? (
                 <div className="flex items-center gap-1 bg-emerald-50 dark:bg-emerald-900/30 rounded-md px-1">
                   <button
+                    type="button"
                     onClick={speechState.isSpeaking ? speechState.onPause : speechState.onResume}
                     className="flex items-center gap-1 text-[10px] text-emerald-600 px-1.5 py-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
                   >
@@ -224,6 +235,7 @@ export default function ChatMessage({
                   </button>
                   {speechState.totalChunks > 1 && (
                     <button
+                      type="button"
                       onClick={speechState.onNext}
                       className="flex items-center gap-1 text-[10px] text-emerald-600 px-1.5 py-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
                     >
@@ -232,6 +244,7 @@ export default function ChatMessage({
                     </button>
                   )}
                   <button
+                    type="button"
                     onClick={speechState.onStop}
                     className="flex items-center gap-1 text-[10px] text-red-500 px-1.5 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
                   >
@@ -257,9 +270,10 @@ export default function ChatMessage({
             )}
             {!msg.generatedImage && (
               <button
+                type="button"
                 onClick={() => onGenerateImage(msg.id, msg.content)}
                 disabled={generatingImageId === msg.id}
-                className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-emerald-600 transition-colors px-2 py-1 rounded-md hover:bg-emerald-50 disabled:opacity-50"
+                className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-emerald-600 transition-colors px-2 py-1 rounded-md hover:bg-emerald-50 disabled:opacity-50 disabled:pointer-events-none"
               >
                 {generatingImageId === msg.id ? (
                   <Loader2 size={12} className="animate-spin" />
@@ -271,6 +285,7 @@ export default function ChatMessage({
             )}
             {onAskCurriculum && (
               <button
+                type="button"
                 onClick={() => onAskCurriculum(msg.content)}
                 className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-blue-600 transition-colors px-2 py-1 rounded-md hover:bg-blue-50"
               >
@@ -280,6 +295,7 @@ export default function ChatMessage({
             )}
             {onAskFacitShort && (
               <button
+                type="button"
                 onClick={() => onAskFacitShort(msg.content)}
                 className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-red-600 transition-colors px-2 py-1 rounded-md hover:bg-red-50"
               >
@@ -289,6 +305,7 @@ export default function ChatMessage({
             )}
             {onAskFacitSteps && (
               <button
+                type="button"
                 onClick={() => onAskFacitSteps(msg.content)}
                 className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-red-600 transition-colors px-2 py-1 rounded-md hover:bg-red-50"
               >
@@ -298,6 +315,7 @@ export default function ChatMessage({
             )}
             {onAskFacitParent && (
               <button
+                type="button"
                 onClick={() => onAskFacitParent(msg.content)}
                 className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-red-600 transition-colors px-2 py-1 rounded-md hover:bg-red-50"
               >
@@ -307,6 +325,7 @@ export default function ChatMessage({
             )}
             {isFacitMessage(msg.content) && onAddToPlanner && (
               <button
+                type="button"
                 onClick={() => onAddToPlanner(msg.content)}
                 className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-amber-600 transition-colors px-2 py-1 rounded-md hover:bg-amber-50"
               >
@@ -316,6 +335,7 @@ export default function ChatMessage({
             )}
             {onAskFordjupning && (
               <button
+                type="button"
                 onClick={() => onAskFordjupning(msg.content)}
                 className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-yellow-600 transition-colors px-2 py-1 rounded-md hover:bg-yellow-50"
               >
@@ -325,6 +345,7 @@ export default function ChatMessage({
             )}
             {hasImage && onAutoCreateTask && (
               <button
+                type="button"
                 onClick={() => onAutoCreateTask(msg.id, msg.content)}
                 disabled={creatingAutoTask}
                 className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-teal-600 transition-colors px-2 py-1 rounded-md hover:bg-teal-50 disabled:opacity-50"
@@ -334,6 +355,7 @@ export default function ChatMessage({
               </button>
             )}
             <button
+              type="button"
               onClick={() => handlePrint(msg.content)}
               className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-purple-600 transition-colors px-2 py-1 rounded-md hover:bg-purple-50"
             >
@@ -342,6 +364,7 @@ export default function ChatMessage({
             </button>
             {onAddToPlanner && !isFacitMessage(msg.content) && (
               <button
+                type="button"
                 onClick={() => onAddToPlanner(msg.content)}
                 className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-amber-600 transition-colors px-2 py-1 rounded-md hover:bg-amber-50"
               >
@@ -351,6 +374,7 @@ export default function ChatMessage({
             )}
             {onCreateTask && (
               <button
+                type="button"
                 onClick={() => onCreateTask(msg.content)}
                 className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-emerald-600 transition-colors px-2 py-1 rounded-md hover:bg-emerald-50"
               >

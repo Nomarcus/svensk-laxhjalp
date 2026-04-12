@@ -67,9 +67,26 @@ export async function generateHomeworkHelp(
   return data.text;
 }
 
+function isImageRequestNonRetryable(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /403|401|Uppgradera|abonnemang|upgrade|subscription/i.test(msg);
+}
+
 export async function generateImage(prompt: string, childGrade?: string): Promise<string | null> {
-  const data = await apiRequest('image', { prompt, childGrade });
-  return data.imageData;
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const data = await apiRequest('image', { prompt, childGrade });
+      return data.imageData as string | null;
+    } catch (e) {
+      lastErr = e;
+      if (isImageRequestNonRetryable(e)) throw e;
+      if (attempt < 2) {
+        await new Promise((r) => setTimeout(r, 350 * (attempt + 1)));
+      }
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 
 export async function analyzeHomeworkImage(
