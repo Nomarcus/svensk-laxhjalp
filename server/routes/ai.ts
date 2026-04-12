@@ -7,6 +7,7 @@ import {
   normalizePrompt,
   validateInlineImages,
 } from '../lib/chatRequestValidation';
+import { MULTI_EXERCISE_IMAGE_INSTRUCTION } from '../lib/homeworkImageChatHints';
 
 const router = Router();
 
@@ -96,6 +97,7 @@ router.post('/chat', async (req: AuthenticatedRequest, res: Response) => {
     }
 
     const audienceGuidance = buildAudienceGuidance(childGrade);
+    const imageMultiHint = images.parts.length > 0 ? MULTI_EXERCISE_IMAGE_INSTRUCTION : '';
     const response = await ai.models.generateContent({
       model: images.parts.length > 0 ? 'gemini-2.5-flash' : TEXT_MODEL,
       contents: [
@@ -113,6 +115,7 @@ router.post('/chat', async (req: AuthenticatedRequest, res: Response) => {
       ],
       config: {
         systemInstruction: `${SYSTEM_INSTRUCTION}
+${imageMultiHint}
 
 Anpassning för detta barn:
 - ${audienceGuidance}

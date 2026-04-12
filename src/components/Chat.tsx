@@ -63,6 +63,8 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   const [isDragging, setIsDragging] = useState(false);
   const [generatingImageId, setGeneratingImageId] = useState<string | null>(null);
   const generatingImageLockRef = useRef(false);
+  /** Senast lyckade bildanalys: samma bilder skickas igen vid "nästa uppgift". */
+  const [stickyImageContext, setStickyImageContext] = useState<{ payload: string[]; dataUrls: string[] } | null>(null);
   const [savedMessageIds, setSavedMessageIds] = useState<Set<string>>(new Set());
   const [taskPickerContent, setTaskPickerContent] = useState<string | null>(null);
   const [linkedTaskIds, setLinkedTaskIds] = useState<Set<string>>(new Set());
@@ -94,11 +96,16 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
         title: `Chatt ${new Date().toLocaleDateString()}`,
         createdAt: serverTimestamp(),
       });
+      setStickyImageContext(null);
       setActiveSessionId(docRef.id);
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, 'chatSessions');
     }
   }, [childId, ownerId]);
+
+  useEffect(() => {
+    setStickyImageContext(null);
+  }, [activeSessionId]);
 
   useEffect(() => {
     if (!auth.currentUser || !childId) return;
@@ -200,6 +207,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
     if (!window.confirm(t('chat.clearChatConfirm'))) return;
     try {
       await deleteDoc(doc(db, 'users', ownerId, 'children', childId, 'chatSessions', activeSessionId));
+      setStickyImageContext(null);
       setActiveSessionId(null);
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, `chatSessions/${activeSessionId}`);
@@ -338,20 +346,32 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
     }
   };
 
-  const sendMessage = async (e: React.FormEvent | string, displayText?: string) => {
+  type ImageOverride = { payload: string[]; dataUrls: string[] };
+
+  const sendMessage = async (
+    e: React.FormEvent | string,
+    displayText?: string,
+    opts?: { imageOverride?: ImageOverride },
+  ) => {
     if (typeof e !== 'string') e.preventDefault();
     const messageText = typeof e === 'string' ? e : input.trim();
-    if ((!messageText && images.length === 0) || loading || !auth.currentUser || !childId || !activeSessionId) return;
+    const override = opts?.imageOverride;
+    const usingOverride = Boolean(override?.payload?.length);
+    const trayImages = [...images];
+    const currentDataUrls = usingOverride ? override!.dataUrls : trayImages;
+    const imagePayload = usingOverride
+      ? [...override!.payload]
+      : trayImages.map((img) => (img.includes(',') ? img.split(',')[1] : img));
 
-    const currentImages = [...images];
+    if ((!messageText.trim() && !imagePayload.length) || loading || !auth.currentUser || !childId || !activeSessionId) return;
+
     if (typeof e !== 'string') setInput('');
-    setImages([]);
+    if (!usingOverride) setImages([]);
+
     setLoading(true);
     setError(null);
 
-    // Use displayText for the visible user message if provided (e.g. "Visa facit" instead of the full prompt)
     const visibleText = displayText || messageText || t('chat.analyzeImage');
-    const imagePayload = currentImages.map((img) => (img.includes(',') ? img.split(',')[1] : img));
 
     try {
       const messagesRef = collection(db, 'users', ownerId, 'children', childId, 'chatSessions', activeSessionId, 'messages');
@@ -361,7 +381,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
           role: 'user',
           content: visibleText,
           timestamp: serverTimestamp(),
-          attachments: currentImages,
+          attachments: currentDataUrls,
         });
       } catch (err: any) {
         if (err.message?.includes('exceeds the maximum allowed size')) {
@@ -388,6 +408,9 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
       );
 
       await addDoc(messagesRef, { role: 'model', content: response, timestamp: serverTimestamp() });
+      if (imagePayload.length) {
+        setStickyImageContext({ payload: [...imagePayload], dataUrls: [...currentDataUrls] });
+      }
       bumpUsageRefresh();
     } catch (err: any) {
       const msg = err.message || '';
@@ -529,9 +552,13 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
           <ChatEmptyState childName={childName} onSendStarter={sendMessage} />
         ) : (
           displayMessages.map((msg, idx) => {
+            const lastMessageIndex = displayMessages.length - 1;
             // Check if the user message before this AI response had an image
             const prevMsg = idx > 0 ? displayMessages[idx - 1] : null;
             const hasImage = msg.role === 'model' && prevMsg?.role === 'user' && (prevMsg.attachments?.length ?? 0) > 0;
+            const isLatestModel = msg.role === 'model' && idx === lastMessageIndex;
+            const canContinueNextExercise =
+              Boolean(isLatestModel && stickyImageContext?.payload.length && !loading);
 
             return (
               <ChatMessage
@@ -557,6 +584,16 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
                 onAskFordjupning={(content) => {
                   sendMessage(`Baserat på din förklaring, ge förslag på relaterade ämnen och kopplingar som kan fördjupa mitt barns förståelse. Ge 2-3 konkreta förslag på vad vi kan utforska vidare, med en kort förklaring av hur det kopplar till det vi just pratat om. Skriv det så att jag som förälder kan ta upp det med mitt barn.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.deepDive'));
                 }}
+                onContinueNextExercise={
+                  canContinueNextExercise && stickyImageContext
+                    ? () =>
+                        void sendMessage(
+                          t('chat.nextExercisePrompt'),
+                          t('chat.nextExerciseDisplay'),
+                          { imageOverride: stickyImageContext },
+                        )
+                    : undefined
+                }
                 speechState={speakingMessageId === msg.id ? {
                   isSpeaking: speech.isSpeaking,
                   isPaused: speech.isPaused,

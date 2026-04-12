@@ -1,11 +1,16 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Bot, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine, X, Volume2, Square, Pause, Play, SkipForward, Calculator } from 'lucide-react';
+import { User, Bot, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine, X, Volume2, Square, Pause, Play, SkipForward, Calculator, ListOrdered } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { cn } from '../../utils/cn';
 import type { Message } from '../../types';
+
+/** Tydlig ram så knapparna under AI-svar känns klickbara */
+const ACTION_BTN =
+  'inline-flex items-center gap-1.5 text-[10px] px-2.5 py-1.5 rounded-lg border-2 font-medium shadow-sm transition-colors active:scale-[0.98] disabled:opacity-45 disabled:pointer-events-none';
+const ACTION_FRAME = 'border-stone-400 bg-white text-stone-800 hover:bg-stone-50 dark:border-stone-500 dark:bg-slate-800 dark:text-stone-100 dark:hover:bg-slate-700/90';
 
 interface ChatMessageProps {
   msg: Message;
@@ -19,6 +24,7 @@ interface ChatMessageProps {
   onAskFacitSteps?: (content: string) => void;
   onAskFacitParent?: (content: string) => void;
   onAskFordjupning?: (content: string) => void;
+  onContinueNextExercise?: () => void;
   onAutoCreateTask?: (messageId: string, content: string) => void;
   onAddToPlanner?: (content: string) => void;
   onCreateTask?: (content: string) => void;
@@ -50,6 +56,7 @@ export default function ChatMessage({
   onAskFacitSteps,
   onAskFacitParent,
   onAskFordjupning,
+  onContinueNextExercise,
   onAutoCreateTask,
   onAddToPlanner,
   onCreateTask,
@@ -224,11 +231,11 @@ export default function ChatMessage({
             )}
             {speechSupported && speechState && (
               (speechState.isSpeaking || speechState.isPaused) ? (
-                <div className="flex items-center gap-1 bg-emerald-50 dark:bg-emerald-900/30 rounded-md px-1">
+                <div className="flex flex-wrap items-center gap-1 rounded-lg border-2 border-stone-400 dark:border-stone-500 bg-stone-50/80 dark:bg-slate-800/80 px-1 py-1">
                   <button
                     type="button"
                     onClick={speechState.isSpeaking ? speechState.onPause : speechState.onResume}
-                    className="flex items-center gap-1 text-[10px] text-emerald-600 px-1.5 py-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
+                    className={cn(ACTION_BTN, 'border-stone-300 dark:border-stone-600 bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 hover:border-emerald-500')}
                   >
                     {speechState.isSpeaking ? <Pause size={12} /> : <Play size={12} />}
                     {speechState.isSpeaking ? t('chat.pause') : t('chat.resume')}
@@ -237,7 +244,7 @@ export default function ChatMessage({
                     <button
                       type="button"
                       onClick={speechState.onNext}
-                      className="flex items-center gap-1 text-[10px] text-emerald-600 px-1.5 py-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
+                      className={cn(ACTION_BTN, 'border-stone-300 dark:border-stone-600 bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 hover:border-emerald-500')}
                     >
                       <SkipForward size={12} />
                       {t('chat.nextChunk')}
@@ -246,12 +253,12 @@ export default function ChatMessage({
                   <button
                     type="button"
                     onClick={speechState.onStop}
-                    className="flex items-center gap-1 text-[10px] text-red-500 px-1.5 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                    className={cn(ACTION_BTN, 'border-red-300 dark:border-red-800 bg-white dark:bg-slate-800 text-red-600 hover:border-red-500')}
                   >
                     <Square size={10} />
                   </button>
                   {speechState.totalChunks > 1 && (
-                    <span className="text-[9px] text-emerald-600/70 px-1">
+                    <span className="text-[9px] text-emerald-600/80 dark:text-emerald-400/80 px-1">
                       {t('chat.chunkProgress', { current: speechState.currentChunk + 1, total: speechState.totalChunks })}
                     </span>
                   )}
@@ -261,7 +268,7 @@ export default function ChatMessage({
                   type="button"
                   onClick={speechState.onSpeak}
                   title={t('chat.listenHint')}
-                  className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors px-2 py-1 rounded-md"
+                  className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-emerald-600 dark:hover:border-emerald-400')}
                 >
                   <Volume2 size={12} />
                   {t('chat.listen')}
@@ -273,7 +280,7 @@ export default function ChatMessage({
                 type="button"
                 onClick={() => onGenerateImage(msg.id, msg.content)}
                 disabled={generatingImageId === msg.id}
-                className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-emerald-600 transition-colors px-2 py-1 rounded-md hover:bg-emerald-50 disabled:opacity-50 disabled:pointer-events-none"
+                className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-emerald-600 dark:hover:border-emerald-400')}
               >
                 {generatingImageId === msg.id ? (
                   <Loader2 size={12} className="animate-spin" />
@@ -283,11 +290,34 @@ export default function ChatMessage({
                 {generatingImageId === msg.id ? t('chat.creatingIllustration') : t('chat.illustrate')}
               </button>
             )}
+            {onContinueNextExercise && (
+              <button
+                type="button"
+                onClick={onContinueNextExercise}
+                className={cn(
+                  ACTION_BTN,
+                  'border-blue-600 bg-blue-50 text-blue-900 hover:bg-blue-100 dark:border-blue-400 dark:bg-blue-950/50 dark:text-blue-100 dark:hover:bg-blue-900/40',
+                )}
+              >
+                <ListOrdered size={12} />
+                {t('chat.nextExerciseButton')}
+              </button>
+            )}
+            {onAskFordjupning && (
+              <button
+                type="button"
+                onClick={() => onAskFordjupning(msg.content)}
+                className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-amber-500 dark:hover:border-amber-400 hover:bg-amber-50/90 dark:hover:bg-amber-950/30')}
+              >
+                <Lightbulb size={12} />
+                {t('chat.deepDive')}
+              </button>
+            )}
             {onAskCurriculum && (
               <button
                 type="button"
                 onClick={() => onAskCurriculum(msg.content)}
-                className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-blue-600 transition-colors px-2 py-1 rounded-md hover:bg-blue-50"
+                className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-blue-600 dark:hover:border-blue-400 hover:bg-blue-50/90 dark:hover:bg-blue-950/30')}
               >
                 <GraduationCap size={12} />
                 {t('chat.curriculumLink')}
@@ -297,7 +327,7 @@ export default function ChatMessage({
               <button
                 type="button"
                 onClick={() => onAskFacitShort(msg.content)}
-                className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-red-600 transition-colors px-2 py-1 rounded-md hover:bg-red-50"
+                className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50/90 dark:hover:bg-red-950/25')}
               >
                 <ClipboardList size={12} />
                 {t('chat.showAnswerKeyShort')}
@@ -307,7 +337,7 @@ export default function ChatMessage({
               <button
                 type="button"
                 onClick={() => onAskFacitSteps(msg.content)}
-                className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-red-600 transition-colors px-2 py-1 rounded-md hover:bg-red-50"
+                className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50/90 dark:hover:bg-red-950/25')}
               >
                 <ClipboardList size={12} />
                 {t('chat.showAnswerKeySteps')}
@@ -317,7 +347,7 @@ export default function ChatMessage({
               <button
                 type="button"
                 onClick={() => onAskFacitParent(msg.content)}
-                className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-red-600 transition-colors px-2 py-1 rounded-md hover:bg-red-50"
+                className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50/90 dark:hover:bg-red-950/25')}
               >
                 <ClipboardList size={12} />
                 {t('chat.showAnswerKeyParent')}
@@ -327,20 +357,10 @@ export default function ChatMessage({
               <button
                 type="button"
                 onClick={() => onAddToPlanner(msg.content)}
-                className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-amber-600 transition-colors px-2 py-1 rounded-md hover:bg-amber-50"
+                className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-amber-600 dark:hover:border-amber-400 hover:bg-amber-50/90 dark:hover:bg-amber-950/25')}
               >
                 <CalendarPlus size={12} />
                 {t('chat.saveAnswerKeyToPlanner')}
-              </button>
-            )}
-            {onAskFordjupning && (
-              <button
-                type="button"
-                onClick={() => onAskFordjupning(msg.content)}
-                className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-yellow-600 transition-colors px-2 py-1 rounded-md hover:bg-yellow-50"
-              >
-                <Lightbulb size={12} />
-                {t('chat.deepDive')}
               </button>
             )}
             {hasImage && onAutoCreateTask && (
@@ -348,7 +368,7 @@ export default function ChatMessage({
                 type="button"
                 onClick={() => onAutoCreateTask(msg.id, msg.content)}
                 disabled={creatingAutoTask}
-                className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-teal-600 transition-colors px-2 py-1 rounded-md hover:bg-teal-50 disabled:opacity-50"
+                className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-teal-600 dark:hover:border-teal-400 hover:bg-teal-50/90 dark:hover:bg-teal-950/25')}
               >
                 {creatingAutoTask ? <Loader2 size={12} className="animate-spin" /> : <ScanLine size={12} />}
                 {creatingAutoTask ? t('chat.creatingTask') : t('chat.createTaskAi')}
@@ -357,7 +377,7 @@ export default function ChatMessage({
             <button
               type="button"
               onClick={() => handlePrint(msg.content)}
-              className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-purple-600 transition-colors px-2 py-1 rounded-md hover:bg-purple-50"
+              className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-violet-500 dark:hover:border-violet-400 hover:bg-violet-50/90 dark:hover:bg-violet-950/25')}
             >
               <Printer size={12} />
               {t('chat.printAnswer')}
@@ -366,7 +386,7 @@ export default function ChatMessage({
               <button
                 type="button"
                 onClick={() => onAddToPlanner(msg.content)}
-                className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-amber-600 transition-colors px-2 py-1 rounded-md hover:bg-amber-50"
+                className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-amber-600 dark:hover:border-amber-400 hover:bg-amber-50/90 dark:hover:bg-amber-950/25')}
               >
                 <CalendarPlus size={12} />
                 {t('chat.addToPlanner')}
@@ -376,7 +396,7 @@ export default function ChatMessage({
               <button
                 type="button"
                 onClick={() => onCreateTask(msg.content)}
-                className="flex items-center gap-1.5 text-[10px] text-stone-400 hover:text-emerald-600 transition-colors px-2 py-1 rounded-md hover:bg-emerald-50"
+                className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-emerald-600 dark:hover:border-emerald-400')}
               >
                 <PlusCircle size={12} />
                 {t('chat.createTask')}

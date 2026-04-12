@@ -4,6 +4,10 @@ import {
   normalizePrompt,
   validateInlineImages,
 } from '../server/lib/chatRequestValidation';
+import {
+  MULTI_EXERCISE_IMAGE_INSTRUCTION,
+  MULTI_EXERCISE_IMAGE_INSTRUCTION_SIMPLE,
+} from '../server/lib/homeworkImageChatHints';
 import { applyApiSecurity } from './_lib/httpSecurity';
 
 const TEXT_MODEL = process.env.AI_TEXT_MODEL || 'gemini-2.5-flash-lite';
@@ -150,6 +154,9 @@ export default async function handler(req: any, res: any) {
     };
     if (language && language !== 'sv' && LANGUAGE_NAMES[language]) {
       systemInstruction += `\n\nIMPORTANT: The user's interface language is ${LANGUAGE_NAMES[language]}. You MUST respond in ${LANGUAGE_NAMES[language]}. Keep Swedish school terms (like "Lgr22", subject names) in Swedish but write all explanations, instructions and text in ${LANGUAGE_NAMES[language]}.`;
+    }
+    if (images.parts.length > 0) {
+      systemInstruction += simpleSwedish ? MULTI_EXERCISE_IMAGE_INSTRUCTION_SIMPLE : MULTI_EXERCISE_IMAGE_INSTRUCTION;
     }
     const userText = simpleSwedish ? SIMPLE_USER_PREFIX + p.text : p.text;
 
