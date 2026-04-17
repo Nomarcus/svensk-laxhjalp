@@ -118,7 +118,7 @@ Svara BARA med JSON, inget annat. Ingen markdown, inga kodfält.
 
 AI-analys av läxan: ${aiExplanation.slice(0, 800)}`;
 
-  const text = await generateHomeworkHelp(prompt);
+  const text = await generateHomeworkHelp(prompt, []);
   try {
     const cleaned = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
     return JSON.parse(cleaned);
@@ -153,6 +153,7 @@ Skriv på svenska. Anpassa till grundskolenivå. Använd tydliga rubriker och nu
 
   const data = await apiRequest('chat', {
     prompt,
+    history: [],
     imageBase64s: imageBase64s.length > 0 ? imageBase64s : undefined,
   });
   return data.text;
@@ -178,7 +179,7 @@ Ge:
 Tänk på: svårighetsgrad, deadlines, omväxling mellan ämnen, och att inte överbelasta någon dag.
 Skriv på svenska, kortfattat och handlingsbart.`;
 
-  return generateHomeworkHelp(prompt);
+  return generateHomeworkHelp(prompt, []);
 }
 
 export async function correctHomeworkFromImages(
