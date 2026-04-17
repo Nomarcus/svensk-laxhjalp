@@ -922,7 +922,10 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                           <p className="text-sm text-stone-400 dark:text-stone-500 italic">Inga läxor inlagda för {day}.</p>
                         </div>
                       ) : (
-                        dayTasks.map((task) => (
+                        dayTasks.map((task) => {
+                          const isDeadline = isDueOnDay(task, day);
+                          const isWorkday = Boolean(task.workDays?.includes(day));
+                          return (
                           <div
                             key={task.id}
                             onClick={() => openTaskDetail(task)}
@@ -959,12 +962,21 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
 
                               <div>
                                 <span className={cn(
-                                  "inline-flex px-2 py-0.5 text-[10px] font-bold rounded-full uppercase",
-                                  task.taskType === 'exam'
-                                    ? "bg-purple-100 text-purple-700"
-                                    : "bg-emerald-100 text-emerald-700"
+                                  "inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full uppercase",
+                                  isDeadline
+                                    ? "bg-red-100 text-red-700"
+                                    : isWorkday
+                                      ? "bg-blue-100 text-blue-700"
+                                      : task.taskType === 'exam'
+                                        ? "bg-purple-100 text-purple-700"
+                                        : "bg-emerald-100 text-emerald-700"
                                 )}>
-                                  {task.taskType === 'exam' ? t('planner.typeTest') : t('planner.typeHomework')}
+                                  {isDeadline ? <CalendarCheck size={10} /> : isWorkday ? <Clock size={10} /> : <GraduationCap size={10} />}
+                                  {isDeadline
+                                    ? t('planner.submissionDay')
+                                    : isWorkday
+                                      ? t('planner.workDay')
+                                      : (task.taskType === 'exam' ? t('planner.typeTest') : t('planner.typeHomework'))}
                                 </span>
                               </div>
 
@@ -995,7 +1007,8 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                               </div>
                             </div>
                           </div>
-                        ))
+                        );
+                        })
                       )}
                     </div>
                   </section>
