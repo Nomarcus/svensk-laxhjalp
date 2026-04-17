@@ -65,6 +65,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   const [generatingImageId, setGeneratingImageId] = useState<string | null>(null);
   const generatingImageLockRef = useRef(false);
   const [streamingModelText, setStreamingModelText] = useState('');
+  const [librarySaveError, setLibrarySaveError] = useState<string | null>(null);
   /** Senast lyckade bildanalys: samma bilder skickas igen vid "nästa uppgift". */
   const [stickyImageContext, setStickyImageContext] = useState<{ payload: string[]; dataUrls: string[] } | null>(null);
   const [savedMessageIds, setSavedMessageIds] = useState<Set<string>>(new Set());
@@ -245,6 +246,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
 
   const saveToLibrary = async (message: Message) => {
     if (!auth.currentUser || !childId) return;
+    setLibrarySaveError(null);
     try {
       const libraryRef = collection(db, 'users', ownerId, 'children', childId, 'library');
       await addDoc(libraryRef, {
@@ -257,7 +259,8 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
       });
       setSavedMessageIds(prev => new Set(prev).add(message.id));
     } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, 'library');
+      setLibrarySaveError(t('chat.unexpectedError'));
+      console.error('Failed to save library item', err);
     }
   };
 
@@ -562,6 +565,14 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
               className="p-1 shrink-0 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg"
               aria-label={t('chat.dismissVoiceNotice')}
             >
+              <X size={16} />
+            </button>
+          </div>
+        )}
+        {librarySaveError && (
+          <div className="max-w-3xl mx-auto mb-4 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/50 rounded-2xl text-amber-900 dark:text-amber-100 text-sm flex items-center justify-between gap-3">
+            <span>{librarySaveError}</span>
+            <button type="button" onClick={() => setLibrarySaveError(null)} className="p-1 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg">
               <X size={16} />
             </button>
           </div>
