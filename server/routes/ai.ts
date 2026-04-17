@@ -15,6 +15,10 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 const TEXT_MODEL = process.env.AI_TEXT_MODEL || 'gemini-2.5-flash-lite';
 const IMAGE_MODEL = process.env.AI_IMAGE_MODEL || 'gemini-2.5-flash-image';
+const PROMPT_CACHE_TTL_MS = 60 * 60 * 1000;
+
+type PromptCacheEntry = { cachedContentName: string; expiresAtMs: number };
+const promptCacheByBucket = new Map<string, PromptCacheEntry>();
 
 function parseGradeLevel(raw?: unknown): number | null {
   if (typeof raw !== 'string') return null;
@@ -41,6 +45,47 @@ function buildAudienceGuidance(rawGrade?: unknown): string {
     return 'Högstadium: mer mogen ton, rak och respektfull, ämneskorrekt terminologi.';
   }
   return 'Gymnasienivå: vuxnare ton, precision och struktur, undvik barnsliga metaforer.';
+}
+
+function gradeBucket(rawGrade?: unknown): string {
+  const grade = parseGradeLevel(rawGrade);
+  if (grade === null) return 'neutral';
+  if (grade <= 3) return 'low';
+  if (grade <= 6) return 'mid';
+  if (grade <= 9) return 'high';
+  return 'gymnasium';
+}
+
+async function getOrCreatePromptCache(
+  model: string,
+  bucket: string,
+  systemInstruction: string,
+): Promise<string | null> {
+  const key = `${model}|${bucket}`;
+  const now = Date.now();
+  const hit = promptCacheByBucket.get(key);
+  if (hit && hit.expiresAtMs > now) return hit.cachedContentName;
+
+  try {
+    const api = ai as unknown as {
+      caches?: { create: (args: Record<string, unknown>) => Promise<{ name?: string }> };
+    };
+    if (!api.caches?.create) return null;
+
+    const cache = await api.caches.create({
+      model,
+      config: {
+        systemInstruction,
+        ttl: '3600s',
+      },
+    });
+    const name = cache?.name;
+    if (!name) return null;
+    promptCacheByBucket.set(key, { cachedContentName: name, expiresAtMs: now + PROMPT_CACHE_TTL_MS });
+    return name;
+  } catch {
+    return null;
+  }
 }
 
 const SYSTEM_INSTRUCTION = `
@@ -85,8 +130,21 @@ router.post('/chat', async (req: AuthenticatedRequest, res: Response) => {
 
     const audienceGuidance = buildAudienceGuidance(safeChildGrade);
     const imageMultiHint = images.parts.length > 0 ? MULTI_EXERCISE_IMAGE_INSTRUCTION : '';
+    const effectiveModel = images.parts.length > 0 ? 'gemini-2.5-flash' : TEXT_MODEL;
+    const bucket = `${gradeBucket(safeChildGrade)}|${images.parts.length > 0 ? 'image' : 'text'}`;
+    const effectiveSystemInstruction = `${SYSTEM_INSTRUCTION}
+${imageMultiHint}
+
+Anpassning för detta barn:
+- ${audienceGuidance}
+`;
+    const cachedContent = await getOrCreatePromptCache(
+      effectiveModel,
+      bucket,
+      effectiveSystemInstruction,
+    );
     const response = await ai.models.generateContent({
-      model: images.parts.length > 0 ? 'gemini-2.5-flash' : TEXT_MODEL,
+      model: effectiveModel,
       contents: [
         ...hist.history.map((h) => ({
           role: h.role,
@@ -100,14 +158,9 @@ router.post('/chat', async (req: AuthenticatedRequest, res: Response) => {
           ],
         },
       ],
-      config: {
-        systemInstruction: `${SYSTEM_INSTRUCTION}
-${imageMultiHint}
-
-Anpassning för detta barn:
-- ${audienceGuidance}
-`,
-      },
+      config: cachedContent
+        ? { cachedContent }
+        : { systemInstruction: effectiveSystemInstruction },
     });
 
     const text = response.text;
