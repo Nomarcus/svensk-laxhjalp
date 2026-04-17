@@ -22,6 +22,7 @@ const SECURITY_HEADERS = {
   'X-Frame-Options': 'DENY',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+  'Content-Security-Policy': "default-src 'self'; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' https://js.stripe.com https://apis.google.com; font-src 'self' data: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.run.app https://api.stripe.com https://lead-agent-489101.web.app https://foraldrahjalpen.se https://www.foraldrahjalpen.se; frame-src https://js.stripe.com https://hooks.stripe.com;",
 };
 
 // CRITICAL: Stripe webhook MUST come before express.json() — needs raw body.
@@ -92,8 +93,25 @@ const limiter = rateLimit({
   },
 });
 
+const uidLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const uid = (req as { uid?: string }).uid;
+    return uid || req.ip || 'unknown';
+  },
+  message: { error: 'For manga AI-anrop for detta konto. Forsok igen om en minut.' },
+  skip: (req) => {
+    const u = req.originalUrl || req.url || '';
+    return u.includes('/admin/') || u.includes('/webhook/');
+  },
+});
+
 app.use('/api', limiter);
 app.use('/api', authMiddleware);
+app.use('/api', uidLimiter);
 app.use('/api', billingRouter);           // After auth, before subscription check
 app.use('/api', adminRouter);             // Sole-owner analytics (requires ADMIN_UID)
 app.use('/api', subscriptionMiddleware);  // After billing, before AI routes
