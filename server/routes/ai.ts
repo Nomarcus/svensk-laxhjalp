@@ -63,6 +63,7 @@ Vid bildanalys: identifiera ämne + uppgift, förklara stegvis, avsluta med **S�
 router.post('/chat', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { prompt, history, imageBase64, imageBase64s, childGrade } = req.body;
+    const safeChildGrade = typeof childGrade === 'string' ? childGrade.slice(0, 32) : undefined;
 
     const images = validateInlineImages(imageBase64, imageBase64s);
     if (images.ok === false) {
@@ -82,7 +83,7 @@ router.post('/chat', async (req: AuthenticatedRequest, res: Response) => {
       return;
     }
 
-    const audienceGuidance = buildAudienceGuidance(childGrade);
+    const audienceGuidance = buildAudienceGuidance(safeChildGrade);
     const imageMultiHint = images.parts.length > 0 ? MULTI_EXERCISE_IMAGE_INSTRUCTION : '';
     const response = await ai.models.generateContent({
       model: images.parts.length > 0 ? 'gemini-2.5-flash' : TEXT_MODEL,
