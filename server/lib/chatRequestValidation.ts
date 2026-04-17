@@ -4,7 +4,7 @@
  */
 
 export const MAX_CHAT_CONTENT_CHARS = 9999;
-export const MAX_HISTORY_PAIRS = 10;
+export const MAX_HISTORY_TOKEN_BUDGET = 4000;
 export const MAX_INLINE_IMAGES = 5;
 /** Approximate decoded image size per image (base64 payload). */
 export const MAX_IMAGE_DECODED_BYTES = 2 * 1024 * 1024;
@@ -120,9 +120,18 @@ export function normalizeAndTrimHistory(raw: unknown):
       out.push({ role, content: trimmed });
     }
   }
-  const maxMessages = MAX_HISTORY_PAIRS * 2;
-  const sliced = out.length > maxMessages ? out.slice(-maxMessages) : out;
-  return { ok: true, history: sliced };
+  const budgeted: ChatHistoryItem[] = [];
+  let usedTokens = 0;
+  // Keep latest messages; trim oldest first.
+  for (let i = out.length - 1; i >= 0; i--) {
+    const msg = out[i]!;
+    const approxTokens = Math.max(1, Math.ceil(msg.content.length / 4));
+    if (usedTokens + approxTokens > MAX_HISTORY_TOKEN_BUDGET) continue;
+    usedTokens += approxTokens;
+    budgeted.push(msg);
+  }
+  budgeted.reverse();
+  return { ok: true, history: budgeted };
 }
 
 export function normalizePrompt(prompt: unknown, hasImages: boolean):
