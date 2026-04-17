@@ -434,7 +434,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   useEffect(() => {
     if (taskContext && activeSessionId && !loading && !taskContextProcessed.current) {
       taskContextProcessed.current = true;
-      const prompt = `Jag behöver hjälp med denna läxa:\n\nÄmne: ${taskContext.subject}\n${taskContext.description ? `Beskrivning: ${taskContext.description}\n` : ''}Förklara vad uppgiften handlar om och ge tips på hur jag som förälder kan hjälpa mitt barn.`;
+      const prompt = `Jag behöver hjälp med denna läxa:\n\n<uppgift-kontext>\nÄmne: ${taskContext.subject}\n${taskContext.description ? `Beskrivning: ${taskContext.description}\n` : ''}</uppgift-kontext>\n\nFörklara vad uppgiften handlar om och ge tips på hur jag som förälder kan hjälpa mitt barn.`;
 
       const fromTask = taskContext.imageUrls?.length
         ? taskContext.imageUrls.slice(0, CHAT_MAX_IMAGES)
