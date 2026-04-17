@@ -111,27 +111,46 @@ export interface FirestoreErrorInfo {
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const isDev = Boolean(import.meta.env.DEV);
+  const errorCode = typeof error === 'object' && error !== null && 'code' in error
+    ? String((error as { code?: unknown }).code ?? 'unknown')
+    : 'unknown';
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo:
-        auth.currentUser?.providerData.map((provider) => ({
-          providerId: provider.providerId,
-          displayName: provider.displayName,
-          email: provider.email,
-          photoUrl: provider.photoURL,
-        })) || [],
-    },
+    authInfo: isDev
+      ? {
+          userId: auth.currentUser?.uid,
+          email: auth.currentUser?.email,
+          emailVerified: auth.currentUser?.emailVerified,
+          isAnonymous: auth.currentUser?.isAnonymous,
+          tenantId: auth.currentUser?.tenantId,
+          providerInfo:
+            auth.currentUser?.providerData.map((provider) => ({
+              providerId: provider.providerId,
+              displayName: provider.displayName,
+              email: provider.email,
+              photoUrl: provider.photoURL,
+            })) || [],
+        }
+      : {
+          userId: undefined,
+          email: undefined,
+          emailVerified: undefined,
+          isAnonymous: undefined,
+          tenantId: undefined,
+          providerInfo: [],
+        },
     operationType,
     path,
   };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  if (isDev) {
+    console.error('Firestore Error: ', JSON.stringify(errInfo));
+    throw new Error(JSON.stringify(errInfo));
+  }
+
+  const minimal = { code: errorCode, operationType, path };
+  console.error('Firestore Error:', JSON.stringify(minimal));
+  throw new Error(JSON.stringify(minimal));
 }
 
 export {
