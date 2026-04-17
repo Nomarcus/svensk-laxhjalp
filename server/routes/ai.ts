@@ -119,7 +119,6 @@ ${imageMultiHint}
 
 Anpassning för detta barn:
 - ${audienceGuidance}
-- För äldre elever: håll tonen mogen och undvik barnsliga formuleringar.
 `,
       },
     });
