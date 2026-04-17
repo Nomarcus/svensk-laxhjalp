@@ -230,7 +230,8 @@
     "resume": "Continue",
     "nextChunk": "Next",
     "chunkProgress": "Part {{current}} of {{total}}",
-    "listenHint": "Uses Google neural voice when available, otherwise your browser speech.",
+    "listenHint": "Plays a short intro (premium Google voice) to get you started — not the full answer. On failure, browser speech is used.",
+    "listenNothingToRead": "There is nothing to read aloud in this reply.",
     "aiVoiceDailyUsed": "Using the browser voice instead.",
     "noSpeechInBrowser": "This browser has no speech synthesis here, and today’s AI voice quota is used up.",
     "dismissVoiceNotice": "Dismiss"

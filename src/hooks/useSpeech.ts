@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { requestPremiumTts } from '../services/geminiService';
+import { listeningPreview, stripMarkdownForListen } from '../utils/listeningPreview';
 import { bumpUsageRefresh } from '../utils/usageRefresh';
 
 const LANG_MAP: Record<string, string> = {
@@ -9,26 +10,8 @@ const LANG_MAP: Record<string, string> = {
   en: 'en-US',
 };
 
-function stripMarkdown(text: string): string {
-  return text
-    .replace(/#{1,6}\s+/g, '')
-    .replace(/\*\*(.+?)\*\*/g, '$1')
-    .replace(/\*(.+?)\*/g, '$1')
-    .replace(/_(.+?)_/g, '$1')
-    .replace(/`(.+?)`/g, '$1')
-    .replace(/^\s*[-*+]\s+/gm, '')
-    .replace(/^\s*\d+\.\s+/gm, '')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
-    .replace(/>\s+/g, '')
-    .replace(/---+/g, '')
-    .replace(/📘.*$/gm, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
-
 function splitIntoChunks(text: string): string[] {
-  const plain = stripMarkdown(text);
+  const plain = stripMarkdownForListen(text);
   return plain
     .split(/\n\n+/)
     .map(chunk => chunk.trim())
@@ -168,11 +151,20 @@ export function useSpeech() {
       chunksRef.current = [];
       playbackKindRef.current = null;
 
-      const chunks = splitIntoChunks(text);
-      if (chunks.length === 0) return;
+      const preview = listeningPreview(text);
+      if (!preview.trim()) {
+        setTtsNotice(t('chat.listenNothingToRead'));
+        return;
+      }
+
+      const chunks = splitIntoChunks(preview);
+      if (chunks.length === 0) {
+        setTtsNotice(t('chat.listenNothingToRead'));
+        return;
+      }
 
       try {
-        const resp = await requestPremiumTts(text, lang);
+        const resp = await requestPremiumTts(preview, lang);
         if (resp.ok) {
           const blob = await resp.blob();
           bumpUsageRefresh();
@@ -206,7 +198,7 @@ export function useSpeech() {
           };
           audio.onerror = () => {
             cleanupAi();
-            speakBrowser(text, lang);
+            speakBrowser(preview, lang);
           };
 
           await audio.play();
@@ -215,13 +207,13 @@ export function useSpeech() {
 
         if (resp.status === 403) {
           setTtsNotice(t('chat.aiVoiceDailyUsed'));
-          speakBrowser(text, lang);
+          speakBrowser(preview, lang);
           return;
         }
 
-        speakBrowser(text, lang);
+        speakBrowser(preview, lang);
       } catch {
-        speakBrowser(text, lang);
+        speakBrowser(preview, lang);
       }
     },
     [cleanupAi, clearTtsNotice, speakBrowser, t]

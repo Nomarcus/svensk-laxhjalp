@@ -230,7 +230,8 @@
     "resume": "Fortsätt",
     "nextChunk": "Nästa",
     "chunkProgress": "Stycke {{current}} av {{total}}",
-    "listenHint": "Använder Google-neural röst när den är tillgänglig, annars webbläsarens uppläsning.",
+    "listenHint": "Läser upp en kort inledning (premium Google-röst) så ni kommer igång — inte hela svaret. Vid fel används webbläsarens röst.",
+    "listenNothingToRead": "Inget att läsa upp i det här svaret.",
     "aiVoiceDailyUsed": "Vi använder webbläsarens röst istället.",
     "noSpeechInBrowser": "Webbläsaren har ingen inbyggd uppläsning här, och AI-rösten för idag är förbrukad.",
     "dismissVoiceNotice": "Stäng"
