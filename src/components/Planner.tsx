@@ -325,26 +325,66 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
     }
   };
 
-  const moveTask = async (taskId: string, newDay: string) => {
+  type DragMeta = {
+    taskId: string;
+    sourceDay: string;
+    sourceIsDeadline: boolean;
+  };
+
+  const moveTask = async (meta: DragMeta, targetDay: string) => {
     if (!auth.currentUser || !childId) return;
+    if (meta.sourceDay === targetDay) return;
+    const task = tasks.find((t) => t.id === meta.taskId);
+    if (!task) return;
+
+    const workDays = Array.isArray(task.workDays) ? [...task.workDays] : [];
+    const sourceWorkIdx = workDays.indexOf(meta.sourceDay);
+    const targetWorkIdx = workDays.indexOf(targetDay);
+    const updates: Record<string, unknown> = {};
+
+    if (meta.sourceIsDeadline) {
+      updates.dueDay = targetDay;
+      if (!workDays.length || task.day === task.dueDay) {
+        updates.day = targetDay;
+      }
+    } else if (sourceWorkIdx >= 0) {
+      if (targetWorkIdx === -1) {
+        workDays[sourceWorkIdx] = targetDay;
+      } else {
+        workDays.splice(sourceWorkIdx, 1);
+      }
+      updates.workDays = [...new Set(workDays)];
+      updates.day = updates.workDays[0] || targetDay;
+    } else {
+      // Legacy / single-day tasks: flytta arbets-/startdag men behåll inlämningsdag.
+      updates.day = targetDay;
+      if (task.dateType === 'work') {
+        updates.workDays = targetWorkIdx === -1 ? [targetDay] : [...new Set(workDays)];
+      }
+    }
+
     try {
-      await updateDoc(doc(db, 'users', ownerId, 'children', childId, 'tasks', taskId), {
-        day: newDay
-      });
+      await updateDoc(doc(db, 'users', ownerId, 'children', childId, 'tasks', meta.taskId), updates);
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `users/${ownerId}/children/${childId}/tasks/${taskId}`);
+      handleFirestoreError(error, OperationType.UPDATE, `users/${ownerId}/children/${childId}/tasks/${meta.taskId}`);
     }
   };
 
-  const handleDragStart = (e: React.DragEvent, taskId: string) => {
-    e.dataTransfer.setData('taskId', taskId);
+  const handleDragStart = (e: React.DragEvent, taskId: string, sourceDay: string, sourceIsDeadline: boolean) => {
+    e.dataTransfer.setData('text/task-id', taskId);
+    e.dataTransfer.setData('text/source-day', sourceDay);
+    e.dataTransfer.setData('text/source-deadline', sourceIsDeadline ? '1' : '0');
     e.dataTransfer.effectAllowed = 'move';
   };
 
   const handleDrop = (e: React.DragEvent, day: string) => {
     e.preventDefault();
-    const taskId = e.dataTransfer.getData('taskId');
-    if (taskId) moveTask(taskId, day);
+    const taskId = e.dataTransfer.getData('text/task-id');
+    const sourceDay = e.dataTransfer.getData('text/source-day');
+    const sourceIsDeadline = e.dataTransfer.getData('text/source-deadline') === '1';
+    if (taskId && sourceDay) {
+      void moveTask({ taskId, sourceDay, sourceIsDeadline }, day);
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -934,7 +974,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                               isDayCompleted(task, day) && "opacity-60"
                             )}
                           >
-                            <div className="grid grid-cols-[auto_minmax(140px,1.2fr)_80px_minmax(120px,1fr)_auto] gap-2 items-center w-full">
+                            <div className="grid grid-cols-[auto_minmax(160px,1.4fr)_100px_auto] gap-2 items-center w-full">
                               <button
                                 onClick={(e) => { e.stopPropagation(); toggleTask(task, day); }}
                                 className={cn(
@@ -978,14 +1018,6 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                                       ? t('planner.workDay')
                                       : (task.taskType === 'exam' ? t('planner.typeTest') : t('planner.typeHomework'))}
                                 </span>
-                              </div>
-
-                              <div className="min-w-0">
-                                {task.description ? (
-                                  <span className="text-stone-400 text-sm truncate block">{task.description}</span>
-                                ) : (
-                                  <span className="text-stone-300 text-xs">-</span>
-                                )}
                               </div>
 
                               <div className="flex items-center gap-1.5 ml-auto shrink-0">
@@ -1042,7 +1074,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
                           <div
                             key={task.id}
                             draggable
-                            onDragStart={(e) => handleDragStart(e, task.id)}
+                            onDragStart={(e) => handleDragStart(e, task.id, day, isDeadline)}
                             onClick={() => openTaskDetail(task)}
                             className={cn(
                               "p-3 rounded-xl text-xs shadow-sm border transition-all cursor-pointer hover:shadow-md",
