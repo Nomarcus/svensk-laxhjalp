@@ -32,6 +32,7 @@ import FreeTierUsageBar from './FreeTierUsageBar';
 import { bumpUsageRefresh } from '../utils/usageRefresh';
 
 const CHAT_MAX_IMAGES = 5;
+const FIRESTORE_IMAGE_SOFT_LIMIT_BYTES = 1024 * 1024;
 
 interface ChatProps {
   childId: string;
@@ -72,6 +73,33 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   const [creatingAutoTask, setCreatingAutoTask] = useState(false);
   const [simpleSwedish, setSimpleSwedish] = useState(() => localStorage.getItem('simple-swedish') === 'true');
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const dataUrlSizeBytes = (dataUrl: string): number => {
+    const i = dataUrl.indexOf(',');
+    const b64 = i >= 0 ? dataUrl.slice(i + 1) : dataUrl;
+    const len = b64.length;
+    const padding = b64.endsWith('==') ? 2 : b64.endsWith('=') ? 1 : 0;
+    return Math.floor((len * 3) / 4) - padding;
+  };
+
+  /** Höj OCR-kvalitet men håll oss under Firestore-gränsen via iterativ nedskalning. */
+  const compressForChatUpload = async (dataUrl: string): Promise<string> => {
+    let maxW = 1280;
+    let maxH = 1280;
+    let quality = 0.75;
+    let out = await compressImage(dataUrl, maxW, maxH, quality);
+
+    while (dataUrlSizeBytes(out) > FIRESTORE_IMAGE_SOFT_LIMIT_BYTES && quality > 0.45) {
+      quality = Math.max(0.45, quality - 0.06);
+      out = await compressImage(dataUrl, maxW, maxH, quality);
+    }
+    while (dataUrlSizeBytes(out) > FIRESTORE_IMAGE_SOFT_LIMIT_BYTES && maxW > 720) {
+      maxW = Math.max(720, Math.round(maxW * 0.88));
+      maxH = Math.max(720, Math.round(maxH * 0.88));
+      out = await compressImage(dataUrl, maxW, maxH, quality);
+    }
+    return out;
+  };
 
   const toggleSimpleSwedish = () => {
     setSimpleSwedish(prev => {
@@ -288,7 +316,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
     try {
       const imageUrl = await generateImage(content, childGrade);
       if (imageUrl) {
-        const compressed = await compressImage(imageUrl, 800, 800, 0.6);
+        const compressed = await compressForChatUpload(imageUrl);
         await updateDoc(doc(db, path), { generatedImage: compressed });
         const libraryRef = collection(db, 'users', ownerId, 'children', childId, 'library');
         await addDoc(libraryRef, {
@@ -479,7 +507,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
               reader.readAsDataURL(file);
             });
             try {
-              toAdd.push(await compressImage(dataUrl));
+              toAdd.push(await compressForChatUpload(dataUrl));
             } catch {
               toAdd.push(dataUrl);
             }
