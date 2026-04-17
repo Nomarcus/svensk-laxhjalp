@@ -52,7 +52,8 @@ export async function generateHomeworkHelp(
   simpleSwedish?: boolean,
   language?: string,
   imageBase64s?: string[],
-  childGrade?: string
+  childGrade?: string,
+  onDelta?: (delta: string, fullText: string) => void,
 ): Promise<string> {
   const manyRaw = imageBase64s?.filter((x) => typeof x === 'string' && x.length > 0) ?? [];
   const many = manyRaw.map(stripDataUrl);
@@ -63,8 +64,64 @@ export async function generateHomeworkHelp(
   } else if (single) {
     body.imageBase64 = single;
   }
-  const data = await apiRequest('chat', body);
-  return data.text;
+  const token = await getAuthToken();
+  const response = await fetch(apiUrl('/api/chat'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Nätverksfel' }));
+    throw new Error(error.error || `HTTP ${response.status}`);
+  }
+
+  const ctype = response.headers.get('content-type') || '';
+  if (!ctype.includes('application/x-ndjson') || !response.body) {
+    const data = await response.json();
+    return data.text;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let pending = '';
+  let full = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    pending += decoder.decode(value, { stream: true });
+    const lines = pending.split('\n');
+    pending = lines.pop() || '';
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      try {
+        const obj = JSON.parse(trimmed) as { delta?: string; done?: boolean; text?: string };
+        if (typeof obj.delta === 'string' && obj.delta.length > 0) {
+          full += obj.delta;
+          onDelta?.(obj.delta, full);
+        } else if (obj.done && typeof obj.text === 'string') {
+          full = obj.text;
+        }
+      } catch {
+        // ignore malformed chunk
+      }
+    }
+  }
+
+  if (pending.trim()) {
+    try {
+      const obj = JSON.parse(pending.trim()) as { text?: string };
+      if (typeof obj.text === 'string') full = obj.text;
+    } catch {
+      // ignore
+    }
+  }
+  return full;
 }
 
 function isImageRequestNonRetryable(err: unknown): boolean {

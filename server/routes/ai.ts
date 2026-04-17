@@ -143,7 +143,7 @@ Anpassning för detta barn:
       bucket,
       effectiveSystemInstruction,
     );
-    const response = await ai.models.generateContent({
+    const requestPayload = {
       model: effectiveModel,
       contents: [
         ...hist.history.map((h) => ({
@@ -161,19 +161,53 @@ Anpassning för detta barn:
       config: cachedContent
         ? { cachedContent }
         : { systemInstruction: effectiveSystemInstruction },
-    });
+    };
 
-    const text = response.text;
-    const usage = response.usageMetadata;
+    const streamApi = ai.models as unknown as {
+      generateContentStream?: (payload: unknown) => Promise<AsyncIterable<{ text?: string; usageMetadata?: unknown }>>;
+    };
 
-    if (usage) {
-      console.log(`[usage] uid=${req.uid} prompt=${usage.promptTokenCount} response=${usage.candidatesTokenCount} total=${usage.totalTokenCount}`);
+    if (!streamApi.generateContentStream) {
+      const fallback = await ai.models.generateContent(requestPayload);
+      const usage = fallback.usageMetadata;
+      if (usage) {
+        const u = usage as { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number; cachedContentTokenCount?: number };
+        console.log(`[usage] uid=${req.uid} prompt=${u.promptTokenCount} response=${u.candidatesTokenCount} total=${u.totalTokenCount} cached=${u.cachedContentTokenCount ?? 0}`);
+      }
+      res.json({ text: fallback.text, usage });
+      return;
     }
 
-    res.json({ text, usage });
+    const stream = await streamApi.generateContentStream(requestPayload);
+    res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('X-Accel-Buffering', 'no');
+
+    let fullText = '';
+    let usage: unknown = null;
+    for await (const chunk of stream) {
+      if (chunk.usageMetadata) usage = chunk.usageMetadata;
+      const delta = typeof chunk.text === 'string' ? chunk.text : '';
+      if (!delta) continue;
+      fullText += delta;
+      res.write(`${JSON.stringify({ delta })}\n`);
+    }
+
+    if (usage) {
+      const u = usage as { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number; cachedContentTokenCount?: number };
+      console.log(`[usage] uid=${req.uid} prompt=${u.promptTokenCount} response=${u.candidatesTokenCount} total=${u.totalTokenCount} cached=${u.cachedContentTokenCount ?? 0}`);
+    }
+    res.write(`${JSON.stringify({ done: true, text: fullText, usage })}\n`);
+    res.end();
   } catch (error: any) {
     console.error('Chat error:', error.message);
-    if (error.message?.includes('RESOURCE_EXHAUSTED') || error.status === 'RESOURCE_EXHAUSTED') {
+    if (res.headersSent) {
+      const msg = error.message?.includes('RESOURCE_EXHAUSTED') || error.status === 'RESOURCE_EXHAUSTED'
+        ? 'AI-tjänsten är tillfälligt överbelastad. Försök igen om en stund.'
+        : 'Ett fel uppstod vid AI-generering.';
+      res.write(`${JSON.stringify({ error: msg })}\n`);
+      res.end();
+    } else if (error.message?.includes('RESOURCE_EXHAUSTED') || error.status === 'RESOURCE_EXHAUSTED') {
       res.status(429).json({ error: 'AI-tjänsten är tillfälligt överbelastad. Försök igen om en stund.' });
     } else {
       res.status(500).json({ error: 'Ett fel uppstod vid AI-generering.' });

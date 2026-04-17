@@ -63,6 +63,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   const [isDragging, setIsDragging] = useState(false);
   const [generatingImageId, setGeneratingImageId] = useState<string | null>(null);
   const generatingImageLockRef = useRef(false);
+  const [streamingModelText, setStreamingModelText] = useState('');
   /** Senast lyckade bildanalys: samma bilder skickas igen vid "nästa uppgift". */
   const [stickyImageContext, setStickyImageContext] = useState<{ payload: string[]; dataUrls: string[] } | null>(null);
   const [savedMessageIds, setSavedMessageIds] = useState<Set<string>>(new Set());
@@ -370,6 +371,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
 
     setLoading(true);
     setError(null);
+    setStreamingModelText('');
 
     const visibleText = displayText || messageText || t('chat.analyzeImage');
 
@@ -404,7 +406,8 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
         simpleSwedish,
         i18n.language,
         imagePayload.length ? imagePayload : undefined,
-        childGrade
+        childGrade,
+        (_delta, fullText) => setStreamingModelText(fullText),
       );
 
       await addDoc(messagesRef, { role: 'model', content: response, timestamp: serverTimestamp() });
@@ -427,6 +430,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
         setError(msg || t('chat.unexpectedError'));
       }
     } finally {
+      setStreamingModelText('');
       setLoading(false);
     }
   };
@@ -649,10 +653,18 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
             <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white">
               <Bot size={16} />
             </div>
-            <div className="bg-white dark:bg-slate-900 border border-black/5 dark:border-white/5 shadow-sm rounded-2xl rounded-tl-none px-4 py-3 flex items-center gap-2">
-              <Loader2 size={16} className="animate-spin text-emerald-600" />
-              <span className="text-sm text-stone-500 italic">{t('chat.thinking')}</span>
-            </div>
+            {streamingModelText ? (
+              <div className="bg-white dark:bg-slate-900 border border-black/5 dark:border-white/5 shadow-sm rounded-2xl rounded-tl-none px-4 py-3 max-w-3xl">
+                <div className="markdown-body prose prose-stone prose-sm max-w-none">
+                  {streamingModelText}
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-slate-900 border border-black/5 dark:border-white/5 shadow-sm rounded-2xl rounded-tl-none px-4 py-3 flex items-center gap-2">
+                <Loader2 size={16} className="animate-spin text-emerald-600" />
+                <span className="text-sm text-stone-500 italic">{t('chat.thinking')}</span>
+              </div>
+            )}
           </div>
         )}
         <div ref={scrollRef} />
