@@ -14,7 +14,7 @@ import {
   RefreshCw,
   Star,
 } from 'lucide-react';
-import { auth } from '../firebase';
+import { auth, linkGuestWithGoogle } from '../firebase';
 import type { UserSubscription } from '../types';
 import { hasPaidPlanAccess } from '../utils/subscriptionAccess';
 import { apiUrl } from '../utils/apiBase';
@@ -51,6 +51,8 @@ export default function Subscription({ subscription }: SubscriptionProps) {
   const { t, i18n } = useTranslation();
   const [syncLoading, setSyncLoading] = React.useState(false);
   const [syncFeedback, setSyncFeedback] = React.useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+  const [linkingGuest, setLinkingGuest] = React.useState(false);
+  const [linkGuestError, setLinkGuestError] = React.useState<string | null>(null);
   const user = auth.currentUser;
   const isAnonymous = Boolean(user?.isAnonymous);
   const userUid = user?.uid || '';
@@ -119,6 +121,18 @@ export default function Subscription({ subscription }: SubscriptionProps) {
       setSyncFeedback({ kind: 'err', text: t('subscription.syncError') });
     } finally {
       setSyncLoading(false);
+    }
+  }, [t]);
+
+  const linkGuestAccount = React.useCallback(async () => {
+    setLinkGuestError(null);
+    setLinkingGuest(true);
+    try {
+      await linkGuestWithGoogle();
+    } catch {
+      setLinkGuestError(t('authErrors.generic'));
+    } finally {
+      setLinkingGuest(false);
     }
   }, [t]);
 
@@ -217,6 +231,17 @@ export default function Subscription({ subscription }: SubscriptionProps) {
           {isAnonymous ? (
             <div className="rounded-xl border border-rose-200 bg-rose-50 dark:bg-rose-900/20 dark:border-rose-800/30 p-3 text-sm text-rose-800 dark:text-rose-300">
               {t('subscription.stripeAnonymous')}
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={linkGuestAccount}
+                  disabled={linkingGuest}
+                  className="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 disabled:opacity-60"
+                >
+                  {linkingGuest ? t('auth.waiting') : `${t('auth.createAccount')} (${t('auth.loginGoogle')})`}
+                </button>
+              </div>
+              {linkGuestError && <p className="mt-2 text-xs">{linkGuestError}</p>}
             </div>
           ) : !userUid || !userEmail ? (
             <div className="rounded-xl border border-rose-200 bg-rose-50 dark:bg-rose-900/20 dark:border-rose-800/30 p-3 text-sm text-rose-800 dark:text-rose-300">

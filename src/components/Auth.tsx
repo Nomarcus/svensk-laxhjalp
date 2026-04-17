@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, Mail, Eye, EyeOff, ArrowLeft, MessageSquare, Camera, Calendar, Sparkles, Library, CheckCircle, ChevronLeft, ChevronRight, Shield, GraduationCap, Users, Star, FileText, Moon, Sun } from 'lucide-react';
-import { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, signInAsGuest } from '../firebase';
+import { auth, signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, signInAsGuest, linkGuestWithGoogle, linkGuestWithEmail } from '../firebase';
 import { Trans, useTranslation } from 'react-i18next';
 import LanguageSwitcher from './LanguageSwitcher';
 
@@ -179,7 +179,11 @@ export default function Auth({ onShowPrivacy, onShowTerms, dark, onToggleDark }:
     }
     setLoading(true);
     try {
-      await signUpWithEmail(email, password, displayName || undefined);
+      if (auth.currentUser?.isAnonymous) {
+        await linkGuestWithEmail(email, password, displayName || undefined);
+      } else {
+        await signUpWithEmail(email, password, displayName || undefined);
+      }
     } catch (err) {
       handleError(err);
     } finally {
@@ -205,7 +209,11 @@ export default function Auth({ onShowPrivacy, onShowTerms, dark, onToggleDark }:
     setError('');
     setLoading(true);
     try {
-      await signInWithGoogle();
+      if (auth.currentUser?.isAnonymous) {
+        await linkGuestWithGoogle();
+      } else {
+        await signInWithGoogle();
+      }
     } catch (err) {
       handleError(err);
     } finally {

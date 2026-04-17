@@ -4,6 +4,9 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signInWithRedirect,
+  linkWithPopup,
+  linkWithCredential,
+  EmailAuthProvider,
   getRedirectResult,
   signOut,
   onAuthStateChanged,
@@ -79,6 +82,27 @@ export const signInWithEmail = (email: string, password: string) =>
   signInWithEmailAndPassword(auth, email, password);
 
 export const signInAsGuest = () => signInAnonymously(auth);
+
+export const linkGuestWithGoogle = async () => {
+  const user = auth.currentUser;
+  if (!user || !user.isAnonymous) {
+    return signInWithGoogle();
+  }
+  return linkWithPopup(user, googleProvider);
+};
+
+export const linkGuestWithEmail = async (email: string, password: string, displayName?: string) => {
+  const user = auth.currentUser;
+  if (!user || !user.isAnonymous) {
+    return signUpWithEmail(email, password, displayName);
+  }
+  const credential = EmailAuthProvider.credential(email, password);
+  const result = await linkWithCredential(user, credential);
+  if (displayName && result.user) {
+    await updateProfile(result.user, { displayName });
+  }
+  return result;
+};
 
 export const resetPassword = (email: string) => sendPasswordResetEmail(auth, email);
 
