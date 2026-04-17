@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Bot, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine, X, Volume2, Square, Pause, Play, SkipForward, Calculator, ListOrdered, Flag } from 'lucide-react';
+import { User, Bot, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine, X, Volume2, Square, Pause, Play, SkipForward, Calculator, ListOrdered, Flag, Trash2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -19,6 +19,7 @@ interface ChatMessageProps {
   onShare: (msg: Message) => void;
   onSaveToLibrary: (msg: Message) => void;
   onGenerateImage: (messageId: string, content: string) => void;
+  onDeleteOwnMessage?: (messageId: string) => void;
   onAskCurriculum?: (content: string) => void;
   onAskFacitShort?: (content: string) => void;
   onAskFacitSteps?: (content: string) => void;
@@ -52,6 +53,7 @@ export default function ChatMessage({
   onShare,
   onSaveToLibrary,
   onGenerateImage,
+  onDeleteOwnMessage,
   onAskCurriculum,
   onAskFacitShort,
   onAskFacitSteps,
@@ -147,7 +149,7 @@ export default function ChatMessage({
               <img
                 key={i}
                 src={att}
-                alt=""
+                alt="Bilaga i chatten"
                 className="max-w-[7.5rem] h-24 w-auto object-cover rounded-xl border border-black/5 shadow-sm cursor-zoom-in active:scale-[0.98] transition-transform"
                 onClick={() => setZoomedImage(att)}
               />
@@ -177,6 +179,7 @@ export default function ChatMessage({
                 onClick={() => onShare(msg)}
                 className="p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm text-stone-400 hover:text-emerald-600 transition-all border border-black/5"
                 title={t('chat.share')}
+                aria-label={t('chat.share')}
               >
                 <Share2 size={14} />
               </button>
@@ -189,8 +192,22 @@ export default function ChatMessage({
                   savedMessageIds.has(msg.id) ? 'text-emerald-600' : 'text-stone-400 hover:text-emerald-600'
                 )}
                 title={t('chat.saveToLibrary')}
+                aria-label={t('chat.saveToLibrary')}
               >
                 {savedMessageIds.has(msg.id) ? <Check size={14} /> : <BookmarkPlus size={14} />}
+              </button>
+            </div>
+          )}
+          {msg.role === 'user' && onDeleteOwnMessage && (
+            <div className="absolute top-2 left-2 opacity-0 group-hover/msg:opacity-100 transition-opacity">
+              <button
+                type="button"
+                onClick={() => onDeleteOwnMessage(msg.id)}
+                className="p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm text-stone-400 hover:text-red-600 transition-all border border-black/5"
+                aria-label="Radera meddelande"
+                title="Radera meddelande"
+              >
+                <Trash2 size={14} />
               </button>
             </div>
           )}
@@ -212,6 +229,7 @@ export default function ChatMessage({
               type="button"
               onClick={() => setZoomedImage(null)}
               className="absolute top-4 right-4 p-2 bg-white/20 rounded-full text-white hover:bg-white/40 transition-colors z-10"
+              aria-label="Stang bild"
             >
               <X size={24} />
             </button>

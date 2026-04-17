@@ -264,6 +264,18 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
     }
   };
 
+  const deleteOwnMessage = async (messageId: string) => {
+    if (!auth.currentUser || !childId || !activeSessionId) return;
+    try {
+      await deleteDoc(
+        doc(db, 'users', ownerId, 'children', childId, 'chatSessions', activeSessionId, 'messages', messageId),
+      );
+    } catch (err) {
+      setError(t('chat.unexpectedError'));
+      console.error('Failed to delete own message', err);
+    }
+  };
+
   const getSubjectIcon = (subject: string) => {
     const s = subject.toLowerCase();
     if (s.includes('matte') || s.includes('math')) return <Calculator size={14} />;
@@ -611,6 +623,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
                 savedMessageIds={savedMessageIds}
                 onShare={handleShare}
                 onSaveToLibrary={saveToLibrary}
+                onDeleteOwnMessage={deleteOwnMessage}
                 onGenerateImage={handleGenerateImage}
                 onAskCurriculum={(content) => {
                   sendMessage(`Förklara hur det du just berättade om kopplas till den svenska läroplanen (Lgr22). Vilka centrala innehåll och kunskapskrav berörs? Ge konkreta kopplingar så jag som förälder förstår varför mitt barn lär sig detta.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.curriculumLink'));

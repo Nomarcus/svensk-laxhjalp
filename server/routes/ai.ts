@@ -1,4 +1,5 @@
 import { Router, Response } from 'express';
+import { createHash } from 'crypto';
 import { GoogleGenAI } from '@google/genai';
 import { AuthenticatedRequest } from '../middleware/auth';
 import {
@@ -16,9 +17,11 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 const TEXT_MODEL = process.env.AI_TEXT_MODEL || 'gemini-2.5-flash-lite';
 const IMAGE_MODEL = process.env.AI_IMAGE_MODEL || 'gemini-2.5-flash-image';
 const PROMPT_CACHE_TTL_MS = 60 * 60 * 1000;
+const IMAGE_ANALYSIS_CACHE_TTL_MS = 10 * 60 * 1000;
 
 type PromptCacheEntry = { cachedContentName: string; expiresAtMs: number };
 const promptCacheByBucket = new Map<string, PromptCacheEntry>();
+const imageAnalysisCache = new Map<string, { text: string; usage: unknown; expiresAtMs: number }>();
 
 function parseGradeLevel(raw?: unknown): number | null {
   if (typeof raw !== 'string') return null;
@@ -143,6 +146,22 @@ Anpassning för detta barn:
       bucket,
       effectiveSystemInstruction,
     );
+    const cacheKey = images.parts.length > 0
+      ? createHash('sha1')
+          .update(req.uid || 'anon')
+          .update('|')
+          .update(p.text)
+          .update('|')
+          .update(images.parts.map((p2) => p2.inlineData.data.slice(0, 64)).join('|'))
+          .digest('hex')
+      : null;
+    if (cacheKey) {
+      const hit = imageAnalysisCache.get(cacheKey);
+      if (hit && hit.expiresAtMs > Date.now()) {
+        res.json({ text: hit.text, usage: hit.usage, cache: 'hit' });
+        return;
+      }
+    }
     const requestPayload = {
       model: effectiveModel,
       contents: [
@@ -174,6 +193,9 @@ Anpassning för detta barn:
         const u = usage as { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number; cachedContentTokenCount?: number };
         console.log(`[usage] uid=${req.uid} prompt=${u.promptTokenCount} response=${u.candidatesTokenCount} total=${u.totalTokenCount} cached=${u.cachedContentTokenCount ?? 0}`);
       }
+      if (cacheKey) {
+        imageAnalysisCache.set(cacheKey, { text: fallback.text, usage, expiresAtMs: Date.now() + IMAGE_ANALYSIS_CACHE_TTL_MS });
+      }
       res.json({ text: fallback.text, usage });
       return;
     }
@@ -196,6 +218,9 @@ Anpassning för detta barn:
     if (usage) {
       const u = usage as { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number; cachedContentTokenCount?: number };
       console.log(`[usage] uid=${req.uid} prompt=${u.promptTokenCount} response=${u.candidatesTokenCount} total=${u.totalTokenCount} cached=${u.cachedContentTokenCount ?? 0}`);
+    }
+    if (cacheKey) {
+      imageAnalysisCache.set(cacheKey, { text: fullText, usage, expiresAtMs: Date.now() + IMAGE_ANALYSIS_CACHE_TTL_MS });
     }
     res.write(`${JSON.stringify({ done: true, text: fullText, usage })}\n`);
     res.end();
