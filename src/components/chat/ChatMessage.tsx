@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Bot, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine, X, Volume2, Square, Pause, Play, SkipForward, Calculator, ListOrdered } from 'lucide-react';
+import { User, Bot, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine, X, Volume2, Square, Pause, Play, SkipForward, Calculator, ListOrdered, Flag } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -24,6 +24,7 @@ interface ChatMessageProps {
   onAskFacitSteps?: (content: string) => void;
   onAskFacitParent?: (content: string) => void;
   onAskFordjupning?: (content: string) => void;
+  onStartFirstExercise?: () => void;
   onContinueNextExercise?: () => void;
   onAutoCreateTask?: (messageId: string, content: string) => void;
   onAddToPlanner?: (content: string) => void;
@@ -56,6 +57,7 @@ export default function ChatMessage({
   onAskFacitSteps,
   onAskFacitParent,
   onAskFordjupning,
+  onStartFirstExercise,
   onContinueNextExercise,
   onAutoCreateTask,
   onAddToPlanner,
@@ -301,6 +303,19 @@ export default function ChatMessage({
               >
                 <ListOrdered size={12} />
                 {t('chat.nextExerciseButton')}
+              </button>
+            )}
+            {onStartFirstExercise && (
+              <button
+                type="button"
+                onClick={onStartFirstExercise}
+                className={cn(
+                  ACTION_BTN,
+                  'border-emerald-600 bg-emerald-50 text-emerald-900 hover:bg-emerald-100 dark:border-emerald-400 dark:bg-emerald-950/50 dark:text-emerald-100 dark:hover:bg-emerald-900/40',
+                )}
+              >
+                <Flag size={12} />
+                {t('chat.firstExerciseButton')}
               </button>
             )}
             {onAskFordjupning && (

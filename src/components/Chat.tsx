@@ -584,6 +584,16 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
                 onAskFordjupning={(content) => {
                   sendMessage(`Baserat på din förklaring, ge förslag på relaterade ämnen och kopplingar som kan fördjupa mitt barns förståelse. Ge 2-3 konkreta förslag på vad vi kan utforska vidare, med en kort förklaring av hur det kopplar till det vi just pratat om. Skriv det så att jag som förälder kan ta upp det med mitt barn.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.deepDive'));
                 }}
+                onStartFirstExercise={
+                  canContinueNextExercise && stickyImageContext
+                    ? () =>
+                        void sendMessage(
+                          t('chat.firstExercisePrompt'),
+                          t('chat.firstExerciseDisplay'),
+                          { imageOverride: stickyImageContext },
+                        )
+                    : undefined
+                }
                 onContinueNextExercise={
                   canContinueNextExercise && stickyImageContext
                     ? () =>
