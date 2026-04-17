@@ -100,6 +100,10 @@ app.use('/api', subscriptionMiddleware);  // After billing, before AI routes
 app.use('/api', ttsRouter);
 app.use('/api', aiRouter);
 
+if (process.env.NODE_ENV === 'production' && !process.env.ADMIN_UID?.trim()) {
+  throw new Error('ADMIN_UID required in production');
+}
+
 app.listen(PORT, () => {
   console.log(`API server running on port ${PORT}`);
 });
