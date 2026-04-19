@@ -73,6 +73,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   const [linkedTaskIds, setLinkedTaskIds] = useState<Set<string>>(new Set());
   const [creatingAutoTask, setCreatingAutoTask] = useState(false);
   const [simpleSwedish, setSimpleSwedish] = useState(() => localStorage.getItem('simple-swedish') === 'true');
+  const [coachMode, setCoachMode] = useState(() => localStorage.getItem('coach-mode') === 'true');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const dataUrlSizeBytes = (dataUrl: string): number => {
@@ -106,6 +107,14 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
     setSimpleSwedish(prev => {
       const next = !prev;
       localStorage.setItem('simple-swedish', String(next));
+      return next;
+    });
+  };
+
+  const toggleCoachMode = () => {
+    setCoachMode(prev => {
+      const next = !prev;
+      localStorage.setItem('coach-mode', String(next));
       return next;
     });
   };
@@ -451,6 +460,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
         imagePayload.length ? imagePayload : undefined,
         childGrade,
         (_delta, fullText) => setStreamingModelText(fullText),
+        coachMode,
       );
 
       await addDoc(messagesRef, { role: 'model', content: response, timestamp: serverTimestamp() });
@@ -552,6 +562,8 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
         onClearChat={clearChat}
         simpleSwedish={simpleSwedish}
         onToggleSimpleSwedish={toggleSimpleSwedish}
+        coachMode={coachMode}
+        onToggleCoachMode={toggleCoachMode}
       />
 
       <div className="px-4 md:px-8 pt-2 max-w-3xl mx-auto w-full shrink-0">
@@ -730,6 +742,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
         maxImages={CHAT_MAX_IMAGES}
         loading={loading}
         onSubmit={sendMessage}
+        coachMode={coachMode}
       />
 
       {/* Task Picker Modal */}

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { MessageSquare, Plus, Trash2, Languages } from 'lucide-react';
+import { MessageSquare, Plus, Trash2, Languages, Lightbulb } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import type { ChatSession } from '../../types';
 
@@ -12,6 +12,8 @@ interface ChatHeaderProps {
   onClearChat: () => void;
   simpleSwedish: boolean;
   onToggleSimpleSwedish: () => void;
+  coachMode: boolean;
+  onToggleCoachMode: () => void;
 }
 
 export default function ChatHeader({
@@ -23,6 +25,8 @@ export default function ChatHeader({
   onClearChat,
   simpleSwedish,
   onToggleSimpleSwedish,
+  coachMode,
+  onToggleCoachMode,
 }: ChatHeaderProps) {
   const { t } = useTranslation();
   return (
@@ -52,9 +56,25 @@ export default function ChatHeader({
         </div>
       </div>
       <div className="flex items-center gap-2">
+        {/* Coach-läge toggle */}
+        <button
+          onClick={onToggleCoachMode}
+          aria-pressed={coachMode}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all",
+            coachMode
+              ? "bg-amber-100 text-amber-800 ring-1 ring-amber-300 shadow-sm"
+              : "bg-stone-50 text-stone-400 hover:bg-amber-50 hover:text-amber-700"
+          )}
+          title={t('chat.coachModeTooltip')}
+        >
+          <Lightbulb size={14} className={coachMode ? 'fill-amber-400' : ''} />
+          <span>{t('chat.coachMode')}</span>
+        </button>
         {/* Enkel svenska toggle */}
         <button
           onClick={onToggleSimpleSwedish}
+          aria-pressed={simpleSwedish}
           className={cn(
             "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all",
             simpleSwedish

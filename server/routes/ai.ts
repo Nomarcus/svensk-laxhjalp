@@ -108,10 +108,41 @@ Om användaren ber om facit:
 Vid bildanalys: identifiera ämne + uppgift, förklara stegvis, avsluta med **Så kan du förklara för ditt barn:**.
 `;
 
+const COACH_SYSTEM_INSTRUCTION = `
+Du är en pedagogisk coach för en svensk förälder vid köksbordet. Ditt uppdrag: ge föräldern frågor och guidning så att BARNET själv kommer fram till svaret. Avslöja aldrig det färdiga svaret i löptext — det kommer bara på den sista "Facit (för dig)"-raden.
+
+Svara ALLTID i EXAKT detta markdown-format:
+
+**🎯 Fråga barnet:**
+- 1-2 motfrågor som bygger på något barnet troligen redan kan.
+
+**🪜 Om barnet fastnar:**
+- En enklare följdfråga eller konkret liknelse.
+
+**✅ När barnet är nära rätt:**
+- En sista fråga som leder hem svaret — utan att säga det rakt ut.
+
+**🔁 Förankra:**
+- Be barnet förklara tillbaka med egna ord.
+
+**🚫 Undvik:**
+- Ett vanligt misstag föräldern lätt gör (t.ex. ge svaret för snabbt).
+
+**Facit (för dig, inte för barnet):** <kort slutsvar på en rad>
+
+Regler:
+- Ton: varm, kort, lekfull men respektfull. Max 1-2 meningar per punkt.
+- Inga färdiga förklaringar, uträkningar eller mellanled i löptext — bara frågor, guidning och slutraden.
+- Avsluta ALDRIG med "Så kan du förklara för ditt barn:" i coach-läget.
+- Om bilden visar flera uppgifter: ta bara EN uppgift i taget och skriv tydligt vilket nummer du guidar.
+- Om uppgiften är för öppen för ett kort facit (t.ex. skrivuppgift): skriv "Facit (för dig): Inget enskilt rätt svar — bedöm utifrån ..." och ange 1-2 bedömningskriterier.
+`;
+
 router.post('/chat', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { prompt, history, imageBase64, imageBase64s, childGrade } = req.body;
+    const { prompt, history, imageBase64, imageBase64s, childGrade, coachMode } = req.body;
     const safeChildGrade = typeof childGrade === 'string' ? childGrade.slice(0, 32) : undefined;
+    const isCoach = coachMode === true;
 
     const images = validateInlineImages(imageBase64, imageBase64s);
     if (images.ok === false) {
@@ -134,8 +165,9 @@ router.post('/chat', async (req: AuthenticatedRequest, res: Response) => {
     const audienceGuidance = buildAudienceGuidance(safeChildGrade);
     const imageMultiHint = images.parts.length > 0 ? MULTI_EXERCISE_IMAGE_INSTRUCTION : '';
     const effectiveModel = images.parts.length > 0 ? 'gemini-2.5-flash' : TEXT_MODEL;
-    const bucket = `${gradeBucket(safeChildGrade)}|${images.parts.length > 0 ? 'image' : 'text'}`;
-    const effectiveSystemInstruction = `${SYSTEM_INSTRUCTION}
+    const bucket = `${gradeBucket(safeChildGrade)}|${images.parts.length > 0 ? 'image' : 'text'}|${isCoach ? 'coach' : 'teach'}`;
+    const baseInstruction = isCoach ? COACH_SYSTEM_INSTRUCTION : SYSTEM_INSTRUCTION;
+    const effectiveSystemInstruction = `${baseInstruction}
 ${imageMultiHint}
 
 Anpassning för detta barn:

@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Send, Image as ImageIcon, Camera, X, Mic, MicOff } from 'lucide-react';
+import { Send, Image as ImageIcon, Camera, X, Mic, MicOff, Lightbulb } from 'lucide-react';
 import { compressImage } from '../../utils/image';
 import { isLikelyImageFile } from '../../utils/imageUpload';
 import { cn } from '../../utils/cn';
@@ -13,13 +13,14 @@ interface ChatInputProps {
   maxImages?: number;
   loading: boolean;
   onSubmit: (e: React.FormEvent) => void;
+  coachMode?: boolean;
 }
 
 const SpeechRecognitionAPI = typeof window !== 'undefined'
   ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
   : null;
 
-export default function ChatInput({ input, setInput, images, setImages, maxImages = 5, loading, onSubmit }: ChatInputProps) {
+export default function ChatInput({ input, setInput, images, setImages, maxImages = 5, loading, onSubmit, coachMode = false }: ChatInputProps) {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -104,6 +105,12 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
   return (
     <div className="p-4 md:p-8 bg-white dark:bg-slate-950 md:bg-transparent md:dark:bg-transparent border-t md:border-t-0 dark:border-white/5">
       <form onSubmit={onSubmit} className="max-w-3xl mx-auto relative">
+        {coachMode && (
+          <div className="mb-3 flex items-start gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/40 rounded-xl text-amber-900 dark:text-amber-100 text-xs">
+            <Lightbulb size={14} className="shrink-0 mt-0.5 fill-amber-400 text-amber-600" />
+            <span>{t('chat.coachModeActive')}</span>
+          </div>
+        )}
         {images.length > 0 && (
           <div className="absolute bottom-full left-0 mb-4 p-2 bg-white dark:bg-slate-800 rounded-xl border border-black/5 dark:border-white/5 shadow-lg flex flex-wrap gap-2 max-w-full">
             {images.map((img, idx) => (
@@ -193,7 +200,7 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onPaste={handlePaste}
-            placeholder={t('chat.inputPlaceholder')}
+            placeholder={coachMode ? t('chat.coachPlaceholder') : t('chat.inputPlaceholder')}
             className="flex-1 bg-transparent border-none focus:ring-0 py-2 px-2 resize-none max-h-32 min-h-[40px] text-[15px] text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500"
             rows={1}
             onKeyDown={(e) => {

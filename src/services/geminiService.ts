@@ -54,11 +54,12 @@ export async function generateHomeworkHelp(
   imageBase64s?: string[],
   childGrade?: string,
   onDelta?: (delta: string, fullText: string) => void,
+  coachMode?: boolean,
 ): Promise<string> {
   const manyRaw = imageBase64s?.filter((x) => typeof x === 'string' && x.length > 0) ?? [];
   const many = manyRaw.map(stripDataUrl);
   const single = imageBase64 ? stripDataUrl(imageBase64) : '';
-  const body: Record<string, unknown> = { prompt, history, simpleSwedish, language, childGrade };
+  const body: Record<string, unknown> = { prompt, history, simpleSwedish, language, childGrade, coachMode };
   if (many.length > 0) {
     body.imageBase64s = many;
   } else if (single) {
