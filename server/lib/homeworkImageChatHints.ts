@@ -11,6 +11,14 @@ FLERA UPPGIFTER PÅ SAMMA BILD / SAMMA SIDA:
 - Om bilden bara innehåller en tydlig uppgift: säg det kort i en mening, men inkludera ändå **Vad vill du göra nu?** med betoning på fördjupning eller att användaren kan ladda upp fler bilder om det behövs.
 `;
 
+export const MULTI_EXERCISE_IMAGE_INSTRUCTION_COACH = `
+
+FLERA UPPGIFTER PÅ SAMMA BILD (COACH-LÄGE):
+- Guida BARA EN uppgift per svar. Nämn numret i "🎯 Fråga barnet"-punkten (t.ex. "Vi tar uppgift 2 — ...").
+- Följ coach-formatet strikt. Inga förklaringar, uträkningar eller svar i löptext.
+- Om alla synliga uppgifter redan är guidade: säg det kort i "🎯 Fråga barnet"-punkten och föreslå nästa sida.
+`;
+
 export const MULTI_EXERCISE_IMAGE_INSTRUCTION_SIMPLE = `
 
 📸 FLERA UPPGIFTER PÅ BILD:

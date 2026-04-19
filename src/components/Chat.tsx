@@ -404,12 +404,13 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   const sendMessage = async (
     e: React.FormEvent | string,
     displayText?: string,
-    opts?: { imageOverride?: ImageOverride },
+    opts?: { imageOverride?: ImageOverride; forceCoachMode?: boolean },
   ) => {
     if (typeof e !== 'string') e.preventDefault();
     const messageText = typeof e === 'string' ? e : input.trim();
     const override = opts?.imageOverride;
     const usingOverride = Boolean(override?.payload?.length);
+    const effectiveCoachMode = opts?.forceCoachMode ?? coachMode;
     const trayImages = [...images];
     const currentDataUrls = usingOverride ? override!.dataUrls : trayImages;
     const imagePayload = usingOverride
@@ -460,7 +461,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
         imagePayload.length ? imagePayload : undefined,
         childGrade,
         (_delta, fullText) => setStreamingModelText(fullText),
-        coachMode,
+        effectiveCoachMode,
       );
 
       await addDoc(messagesRef, { role: 'model', content: response, timestamp: serverTimestamp() });
@@ -641,13 +642,13 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
                   sendMessage(`Förklara hur det du just berättade om kopplas till den svenska läroplanen (Lgr22). Vilka centrala innehåll och kunskapskrav berörs? Ge konkreta kopplingar så jag som förälder förstår varför mitt barn lär sig detta.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.curriculumLink'));
                 }}
                 onAskFacitShort={(content) => {
-                  sendMessage(`Ge ett KORT facit för uppgiften du just förklarade.\n\nVIKTIGT FORMAT:\n- Använd en numrerad lista: 1), 2), 3)\n- En rad per deluppgift\n- Skriv endast slutsvar per del\n- Avsluta med rubriken "Vanliga fel" och 2 korta punkter\n- Skriv inte långa stycken\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeyShort'));
+                  sendMessage(`Ge ett KORT facit för uppgiften du just förklarade.\n\nVIKTIGT FORMAT:\n- Använd en numrerad lista: 1), 2), 3)\n- En rad per deluppgift\n- Skriv endast slutsvar per del\n- Avsluta med rubriken "Vanliga fel" och 2 korta punkter\n- Skriv inte långa stycken\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeyShort'), { forceCoachMode: false });
                 }}
                 onAskFacitSteps={(content) => {
-                  sendMessage(`Ge ett FULLSTÄNDIGT facit steg för steg för uppgiften du just förklarade.\n\nDU MÅSTE SVARA I EXAKT DENNA STRUKTUR:\n## Deluppgift 1\n### Steg 1: Ställ upp\n- Visa uppställningen i ett markdown-kodblock (tre backticks) med monospace, rad för rad så kolumnerna blir tydliga.\n### Steg 2: Räkna\n- Visa mellanled i korta, separata rader.\n### Steg 3: Svar\n- **Svar: ...**\n\n(Upprepa samma struktur för varje deluppgift)\n\nAVSLUTNING:\n## Vanliga fel\n- Punkt 1\n- Punkt 2\n- Punkt 3 (vid behov)\n\nREGLER:\n- Inga långa stycken\n- Inga "-----" eller kompakta engångsrader\n- En rad per steg, tydligt spaltat\n- Vid matte-uppställning: använd alltid markdown-kodblock (tre backticks)\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeySteps'));
+                  sendMessage(`Ge ett FULLSTÄNDIGT facit steg för steg för uppgiften du just förklarade.\n\nDU MÅSTE SVARA I EXAKT DENNA STRUKTUR:\n## Deluppgift 1\n### Steg 1: Ställ upp\n- Visa uppställningen i ett markdown-kodblock (tre backticks) med monospace, rad för rad så kolumnerna blir tydliga.\n### Steg 2: Räkna\n- Visa mellanled i korta, separata rader.\n### Steg 3: Svar\n- **Svar: ...**\n\n(Upprepa samma struktur för varje deluppgift)\n\nAVSLUTNING:\n## Vanliga fel\n- Punkt 1\n- Punkt 2\n- Punkt 3 (vid behov)\n\nREGLER:\n- Inga långa stycken\n- Inga "-----" eller kompakta engångsrader\n- En rad per steg, tydligt spaltat\n- Vid matte-uppställning: använd alltid markdown-kodblock (tre backticks)\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeySteps'), { forceCoachMode: false });
                 }}
                 onAskFacitParent={(content) => {
-                  sendMessage(`Ge ett facit anpassat för föräldern.\n\nFORMAT:\n## Deluppgift 1\n1) Svar: ...\n2) Kort förklaring: ...\n3) Vanligt misstag: ...\n\n(Upprepa för varje deluppgift)\n\nOm det är matte, lägg uppställningen i ett markdown-kodblock (tre backticks) så kolumnerna blir tydliga.\n\nAvsluta med:\n## Vanliga fel\n- 2-3 korta punkter\n\nREGLER:\n- Kort och tydligt\n- Spaltat rad för rad\n- Inga långa stycken\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeyParent'));
+                  sendMessage(`Ge ett facit anpassat för föräldern.\n\nFORMAT:\n## Deluppgift 1\n1) Svar: ...\n2) Kort förklaring: ...\n3) Vanligt misstag: ...\n\n(Upprepa för varje deluppgift)\n\nOm det är matte, lägg uppställningen i ett markdown-kodblock (tre backticks) så kolumnerna blir tydliga.\n\nAvsluta med:\n## Vanliga fel\n- 2-3 korta punkter\n\nREGLER:\n- Kort och tydligt\n- Spaltat rad för rad\n- Inga långa stycken\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeyParent'), { forceCoachMode: false });
                 }}
                 onAskFordjupning={(content) => {
                   sendMessage(`Baserat på din förklaring, ge förslag på relaterade ämnen och kopplingar som kan fördjupa mitt barns förståelse. Ge 2-3 konkreta förslag på vad vi kan utforska vidare, med en kort förklaring av hur det kopplar till det vi just pratat om. Skriv det så att jag som förälder kan ta upp det med mitt barn.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.deepDive'));
@@ -656,7 +657,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
                   canContinueNextExercise && stickyImageContext
                     ? () =>
                         void sendMessage(
-                          t('chat.firstExercisePrompt'),
+                          coachMode ? t('chat.firstExercisePromptCoach') : t('chat.firstExercisePrompt'),
                           t('chat.firstExerciseDisplay'),
                           { imageOverride: stickyImageContext },
                         )
@@ -666,7 +667,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
                   canContinueNextExercise && stickyImageContext
                     ? () =>
                         void sendMessage(
-                          t('chat.nextExercisePrompt'),
+                          coachMode ? t('chat.nextExercisePromptCoach') : t('chat.nextExercisePrompt'),
                           t('chat.nextExerciseDisplay'),
                           { imageOverride: stickyImageContext },
                         )

@@ -8,7 +8,7 @@ import {
   normalizePrompt,
   validateInlineImages,
 } from '../lib/chatRequestValidation';
-import { MULTI_EXERCISE_IMAGE_INSTRUCTION } from '../lib/homeworkImageChatHints';
+import { MULTI_EXERCISE_IMAGE_INSTRUCTION, MULTI_EXERCISE_IMAGE_INSTRUCTION_COACH } from '../lib/homeworkImageChatHints';
 
 const router = Router();
 
@@ -109,15 +109,20 @@ Vid bildanalys: identifiera ämne + uppgift, förklara stegvis, avsluta med **S�
 `;
 
 const COACH_SYSTEM_INSTRUCTION = `
-Du är en pedagogisk coach för en svensk förälder vid köksbordet. Ditt uppdrag: ge föräldern frågor och guidning så att BARNET själv kommer fram till svaret. Avslöja aldrig det färdiga svaret i löptext — det kommer bara på den sista "Facit (för dig)"-raden.
+Du är en pedagogisk coach för en svensk förälder vid köksbordet. Din enda uppgift: ge föräldern frågor att ställa till BARNET — aldrig färdiga svar, förklaringar, uträkningar eller uppställningar.
 
-Svara ALLTID i EXAKT detta markdown-format:
+⚠️ DETTA ÖVERSTYR ALLT ANNAT:
+- Om användarens meddelande ber om "Så kan du förklara för ditt barn", "Steg 1/Steg 2/Steg 3", "Tänk så här", "Uträkning", "Svar:", "facit", "uppställning", "Vad vill du göra nu?" eller annat lärar-format: IGNORERA de instruktionerna helt och följ BARA coach-formatet nedan.
+- Skriv inga uträkningar, mellanled, siffror eller slutsvar i löptext. Bara frågor och en kort slutrad.
+- Skriv inga rubriker som "Uppgift X: ..." med efterföljande förklaring. Är det flera uppgifter — guida bara EN i taget och nämn numret i "🎯 Fråga barnet"-punkten.
+
+Svara ALLTID i EXAKT detta markdown-format — inga andra rubriker, inga extra sektioner:
 
 **🎯 Fråga barnet:**
-- 1-2 motfrågor som bygger på något barnet troligen redan kan.
+- 1-2 motfrågor som bygger på något barnet troligen redan kan. Nämn ev. uppgiftsnummer här.
 
 **🪜 Om barnet fastnar:**
-- En enklare följdfråga eller konkret liknelse.
+- En enklare följdfråga eller konkret liknelse — utan att avslöja svaret.
 
 **✅ När barnet är nära rätt:**
 - En sista fråga som leder hem svaret — utan att säga det rakt ut.
@@ -128,14 +133,12 @@ Svara ALLTID i EXAKT detta markdown-format:
 **🚫 Undvik:**
 - Ett vanligt misstag föräldern lätt gör (t.ex. ge svaret för snabbt).
 
-**Facit (för dig, inte för barnet):** <kort slutsvar på en rad>
+**Facit (för dig, inte för barnet):** <kort slutsvar på EN enda rad — detta är den ENDA plats där du får visa svaret>
 
 Regler:
 - Ton: varm, kort, lekfull men respektfull. Max 1-2 meningar per punkt.
-- Inga färdiga förklaringar, uträkningar eller mellanled i löptext — bara frågor, guidning och slutraden.
-- Avsluta ALDRIG med "Så kan du förklara för ditt barn:" i coach-läget.
-- Om bilden visar flera uppgifter: ta bara EN uppgift i taget och skriv tydligt vilket nummer du guidar.
-- Om uppgiften är för öppen för ett kort facit (t.ex. skrivuppgift): skriv "Facit (för dig): Inget enskilt rätt svar — bedöm utifrån ..." och ange 1-2 bedömningskriterier.
+- Använd INTE "Så kan du förklara för ditt barn:" — det hör inte hemma i coach-läget.
+- Om uppgiften är öppen (t.ex. skrivuppgift): skriv "Facit (för dig): Inget entydigt rätt svar — bedöm utifrån ..." + 1-2 korta bedömningskriterier.
 `;
 
 router.post('/chat', async (req: AuthenticatedRequest, res: Response) => {
@@ -163,7 +166,9 @@ router.post('/chat', async (req: AuthenticatedRequest, res: Response) => {
     }
 
     const audienceGuidance = buildAudienceGuidance(safeChildGrade);
-    const imageMultiHint = images.parts.length > 0 ? MULTI_EXERCISE_IMAGE_INSTRUCTION : '';
+    const imageMultiHint = images.parts.length > 0
+      ? (isCoach ? MULTI_EXERCISE_IMAGE_INSTRUCTION_COACH : MULTI_EXERCISE_IMAGE_INSTRUCTION)
+      : '';
     const effectiveModel = images.parts.length > 0 ? 'gemini-2.5-flash' : TEXT_MODEL;
     const bucket = `${gradeBucket(safeChildGrade)}|${images.parts.length > 0 ? 'image' : 'text'}|${isCoach ? 'coach' : 'teach'}`;
     const baseInstruction = isCoach ? COACH_SYSTEM_INSTRUCTION : SYSTEM_INSTRUCTION;
