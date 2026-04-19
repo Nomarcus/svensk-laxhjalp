@@ -14,10 +14,21 @@ function resolveLang(lang: string | undefined): TtsLangKey {
   return 'sv';
 }
 
+/**
+ * Ordningen vi försöker röster. Standard-rösterna är 4× billigare än Neural2
+ * ($4/M tecken vs $16/M) och har större gratis-kvot från Google (4 M/mån vs 1 M/mån).
+ * Sätt GOOGLE_TTS_USE_NEURAL=true om du vill försöka Neural2 först (t.ex. för Pro-användare).
+ */
+function voiceOrder(pref: { neural?: string; standard?: string }): string[] {
+  const preferNeural = process.env.GOOGLE_TTS_USE_NEURAL === 'true';
+  const order = preferNeural ? [pref.neural, pref.standard] : [pref.standard, pref.neural];
+  return order.filter(Boolean) as string[];
+}
+
 export async function synthesizeMp3(apiKey: string, text: string, lang?: string): Promise<Buffer> {
   const key = resolveLang(lang);
   const pref = VOICE_PREF[key];
-  const tryNames = [pref.neural, pref.standard].filter(Boolean) as string[];
+  const tryNames = voiceOrder(pref);
 
   let lastErr = '';
   for (const name of tryNames) {

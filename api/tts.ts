@@ -14,7 +14,7 @@ async function getFirebaseAdmin() {
   return admin;
 }
 
-const FREE_AI_TTS_PER_DAY = 1;
+const FREE_AI_TTS_PER_DAY = 20;
 const MAX_TTS_CHARS = 4500;
 
 function isProUser(userData: { tier?: string; subscriptionStatus?: string } | undefined): boolean {

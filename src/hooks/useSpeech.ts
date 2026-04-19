@@ -18,7 +18,25 @@ function splitIntoChunks(text: string): string[] {
     .filter(chunk => chunk.length > 0);
 }
 
+/**
+ * Välj bästa röst för målspråket. getVoices() kan returnera [] innan voiceschanged hunnit
+ * fyra upp listan — då får vi `undefined` här och speechSynthesis väljer systemets default.
+ * Prioritet: exakt lang-matchning → prefix-matchning → default-voice med rätt språk → ingen.
+ */
+function pickVoice(voices: SpeechSynthesisVoice[], targetLang: string): SpeechSynthesisVoice | undefined {
+  if (voices.length === 0) return undefined;
+  const exact = voices.find(v => v.lang === targetLang);
+  if (exact) return exact;
+  const prefix = targetLang.split('-')[0];
+  const matches = voices.filter(v => v.lang.toLowerCase().startsWith(prefix.toLowerCase()));
+  const preferred = matches.find(v => v.default) || matches.find(v => v.localService) || matches[0];
+  return preferred;
+}
+
 type PlaybackKind = 'browser' | 'ai' | null;
+
+/** Session-cache: om servern svarat 503 (ej konfigurerad) — hoppa framtida premium-anrop direkt. */
+let premiumUnavailableForSession = false;
 
 export function useSpeech() {
   const { t } = useTranslation();
@@ -33,10 +51,31 @@ export function useSpeech() {
   const playbackKindRef = useRef<PlaybackKind>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const objectUrlRef = useRef<string | null>(null);
+  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
 
   const isSupported =
     typeof window !== 'undefined' &&
     (('speechSynthesis' in window && window.speechSynthesis != null) || typeof Audio !== 'undefined');
+
+  // Warm voices: Chrome/iOS returnerar [] första gången getVoices() anropas. Lyssna på
+  // voiceschanged så listan är färdigladdad redan när användaren trycker "Lyssna".
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window) || !window.speechSynthesis) return;
+    const refresh = () => {
+      try { voicesRef.current = window.speechSynthesis.getVoices() || []; } catch { /* noop */ }
+    };
+    refresh();
+    const synth = window.speechSynthesis;
+    synth.addEventListener?.('voiceschanged', refresh);
+    // Extra försök några tillfällen — vissa webbläsare fyller listan ~500 ms efter load.
+    const t1 = window.setTimeout(refresh, 300);
+    const t2 = window.setTimeout(refresh, 1500);
+    return () => {
+      synth.removeEventListener?.('voiceschanged', refresh);
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, []);
 
   const clearTtsNotice = useCallback(() => setTtsNotice(null), []);
 
@@ -81,8 +120,11 @@ export function useSpeech() {
     utterance.lang = targetLang;
     utterance.rate = 0.9;
 
-    const voices = window.speechSynthesis.getVoices();
-    const voice = voices.find(v => v.lang.startsWith(targetLang.split('-')[0]));
+    // Använd cache-ad lista (uppdaterad via voiceschanged), annars fråga live som sista utväg.
+    const voices = voicesRef.current.length > 0
+      ? voicesRef.current
+      : (window.speechSynthesis.getVoices() || []);
+    const voice = pickVoice(voices, targetLang);
     if (voice) utterance.voice = voice;
 
     utterance.onstart = () => {
@@ -163,6 +205,12 @@ export function useSpeech() {
         return;
       }
 
+      // Om servern redan sagt "inte konfigurerad" i denna session — hoppa över onödig round-trip.
+      if (premiumUnavailableForSession) {
+        speakBrowser(preview, lang);
+        return;
+      }
+
       try {
         const resp = await requestPremiumTts(preview, lang);
         if (resp.ok) {
@@ -209,6 +257,11 @@ export function useSpeech() {
           setTtsNotice(t('chat.aiVoiceDailyUsed'));
           speakBrowser(preview, lang);
           return;
+        }
+
+        if (resp.status === 503) {
+          // Premium-rösten är inte konfigurerad på servern — cacha i sessionen så vi slipper round-trip nästa gång.
+          premiumUnavailableForSession = true;
         }
 
         speakBrowser(preview, lang);
