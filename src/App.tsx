@@ -26,8 +26,9 @@ import CookieConsent from './components/CookieConsent';
 import Terms from './components/Terms';
 import { useTheme } from './hooks/useTheme';
 import LaxhjalpForaldrarLanding from './components/LaxhjalpForaldrarLanding';
-import { LAXHJALP_FORALDRAR_PATH, normalizePathname } from './routes';
-import { applyHomeSeo, applyParentLandingSeo } from './utils/seoMeta';
+import LaxhjalpLarareLanding from './components/LaxhjalpLarareLanding';
+import { LAXHJALP_FORALDRAR_PATH, LAXHJALP_LARARE_PATH, normalizePathname } from './routes';
+import { applyHomeSeo, applyParentLandingSeo, applyTeacherLandingSeo } from './utils/seoMeta';
 import { apiUrl } from './utils/apiBase';
 
 const isFirestorePermissionError = (error: unknown) => {
@@ -104,7 +105,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (user && routePath === LAXHJALP_FORALDRAR_PATH) {
+    if (user && (routePath === LAXHJALP_FORALDRAR_PATH || routePath === LAXHJALP_LARARE_PATH)) {
       window.history.replaceState({}, '', '/');
       setRoutePath('/');
     }
@@ -113,6 +114,8 @@ export default function App() {
   useEffect(() => {
     if (!user && routePath === LAXHJALP_FORALDRAR_PATH) {
       applyParentLandingSeo();
+    } else if (!user && routePath === LAXHJALP_LARARE_PATH) {
+      applyTeacherLandingSeo();
     } else {
       applyHomeSeo();
     }
@@ -367,6 +370,18 @@ export default function App() {
   if (!user && routePath === LAXHJALP_FORALDRAR_PATH) {
     return (
       <LaxhjalpForaldrarLanding
+        onGetStarted={() => goToPath('/')}
+        onShowPrivacy={() => setShowPrivacy(true)}
+        onShowTerms={() => setShowTerms(true)}
+        dark={dark}
+        onToggleDark={toggleDark}
+      />
+    );
+  }
+
+  if (!user && routePath === LAXHJALP_LARARE_PATH) {
+    return (
+      <LaxhjalpLarareLanding
         onGetStarted={() => goToPath('/')}
         onShowPrivacy={() => setShowPrivacy(true)}
         onShowTerms={() => setShowTerms(true)}

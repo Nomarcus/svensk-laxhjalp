@@ -39,3 +39,11 @@ export function applyParentLandingSeo() {
   setMetaDescription(LANDING_DESCRIPTION);
   setCanonical(`${SITE}/laxhjalp-foraldrar`);
 }
+
+export function applyTeacherLandingSeo() {
+  document.title = 'AI-stöd för lärare — rätta, planera och förklara snabbare | Föräldrahjälpen';
+  setMetaDescription(
+    'AI-verktyg för lärare i grundskolan: rätta inlämningar, ge återkoppling kopplad till Lgr22 och skapa studieplaner snabbare. Prova gratis på foraldrahjalpen.se.',
+  );
+  setCanonical(`${SITE}/laxhjalp-larare`);
+}
