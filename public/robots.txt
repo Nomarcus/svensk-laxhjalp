@@ -1,3 +1,21 @@
 User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /*?admin=
+Disallow: /admin
+
+# Sökoptimering: tillåt Google och Bing att indexera bilder och CSS/JS
+User-agent: Googlebot
+Allow: /*.css$
+Allow: /*.js$
+Allow: /*.svg$
+Allow: /*.png$
+
+User-agent: Bingbot
+Allow: /*.css$
+Allow: /*.js$
+Allow: /*.svg$
+Allow: /*.png$
+
 Sitemap: https://foraldrahjalpen.se/sitemap.xml
+Host: https://foraldrahjalpen.se

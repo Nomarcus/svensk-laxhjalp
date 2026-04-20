@@ -1,7 +1,27 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BookOpen, CheckCircle, GraduationCap, Moon, Sun } from 'lucide-react';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
+import { injectJsonLd } from '../utils/seoMeta';
+
+const PARENT_FAQ = [
+  {
+    q: 'Är det här en läxhjälp-tjänst som skriver åt barnet?',
+    a: 'Nej. Syftet är att du som vuxen ska förstå och kunna vägleda. Det är en annan roll än att leverera färdiga elev-svar — och den rollen är det många föräldrar saknar tid och självförtroende för utan stöd.',
+  },
+  {
+    q: 'Passar det om vi redan har en privatlärare?',
+    a: 'Ja, ofta kompletterande: läraren fokuserar på eleven; Föräldrahjälpen kan ge dig snabba förklaringar och överblick mellan tillfällena.',
+  },
+  {
+    q: 'Vilka årskurser stöds?',
+    a: 'Hela grundskolan, åk 1 till 9. AI:n anpassar språk, svårighetsgrad och läroplanskoppling efter barnets årskurs.',
+  },
+  {
+    q: 'Kan två föräldrar dela kalender?',
+    a: 'Ja, läxplaneringen kan delas mellan två föräldrar. Perfekt för växelvis boende — båda ser inlämningsdagar och arbetsdagar i realtid.',
+  },
+];
 
 interface LaxhjalpForaldrarLandingProps {
   onGetStarted: () => void;
@@ -19,6 +39,47 @@ export default function LaxhjalpForaldrarLanding({
   onToggleDark,
 }: LaxhjalpForaldrarLandingProps) {
   const { t, i18n } = useTranslation();
+
+  useEffect(() => {
+    const cleanupFaq = injectJsonLd('jsonld-parent-faq', {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: PARENT_FAQ.map((item) => ({
+        '@type': 'Question',
+        name: item.q,
+        acceptedAnswer: { '@type': 'Answer', text: item.a },
+      })),
+    });
+    const cleanupBreadcrumb = injectJsonLd('jsonld-parent-breadcrumb', {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Föräldrahjälpen', item: 'https://foraldrahjalpen.se/' },
+        { '@type': 'ListItem', position: 2, name: 'Läxhjälp för föräldrar', item: 'https://foraldrahjalpen.se/laxhjalp-foraldrar' },
+      ],
+    });
+    const cleanupArticle = injectJsonLd('jsonld-parent-article', {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: 'Läxhjälp för föräldrar — vägledning, planering & Lgr22',
+      description: 'Läxhjälp för föräldrar med barn i grundskolan: förstå läxan, planera veckan och koppla till Lgr22.',
+      inLanguage: 'sv-SE',
+      author: { '@type': 'Organization', name: 'Föräldrahjälpen' },
+      publisher: {
+        '@type': 'Organization',
+        name: 'Föräldrahjälpen',
+        logo: { '@type': 'ImageObject', url: 'https://foraldrahjalpen.se/icon.svg' },
+      },
+      datePublished: '2026-02-01',
+      dateModified: '2026-04-20',
+      mainEntityOfPage: 'https://foraldrahjalpen.se/laxhjalp-foraldrar',
+    });
+    return () => {
+      cleanupFaq();
+      cleanupBreadcrumb();
+      cleanupArticle();
+    };
+  }, []);
 
   return (
     <div className="min-h-screen app-soft-bg font-sans relative overflow-hidden text-stone-900 dark:text-stone-100">
@@ -173,6 +234,26 @@ export default function LaxhjalpForaldrarLanding({
             </dl>
           </section>
         </div>
+
+        <section aria-labelledby="sec-mer" className="mt-12">
+          <h2 id="sec-mer" className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 mb-3">
+            Mer om läxhjälp
+          </h2>
+          <ul className="list-disc pl-5 space-y-2 marker:text-emerald-600 text-stone-700 dark:text-stone-300">
+            <li>
+              <a href="/ai-laxhjalp" className="text-emerald-700 dark:text-emerald-400 underline underline-offset-2">AI-läxhjälp</a> — hur AI:n fungerar i botten.
+            </li>
+            <li>
+              <a href="/laxhjalp-matte" className="text-emerald-700 dark:text-emerald-400 underline underline-offset-2">Läxhjälp matte</a> — mattehjälp för åk 1–9.
+            </li>
+            <li>
+              <a href="/laxhjalp-online" className="text-emerald-700 dark:text-emerald-400 underline underline-offset-2">Läxhjälp online</a> — direkt i mobil, surfplatta eller dator.
+            </li>
+            <li>
+              <a href="/laxhjalp-larare" className="text-emerald-700 dark:text-emerald-400 underline underline-offset-2">AI-stöd för lärare</a> — rätta inlämningar, skapa studieplaner.
+            </li>
+          </ul>
+        </section>
 
         <div className="mt-14 rounded-3xl border border-emerald-200/80 dark:border-emerald-800/50 bg-emerald-50/60 dark:bg-emerald-950/35 p-8 text-center shadow-[0_18px_40px_-24px_rgba(5,150,105,0.45)]">
           <p className="text-stone-800 dark:text-stone-100 font-medium mb-4">Redo att prova läxhjälp utifrån föräldraperspektiv?</p>

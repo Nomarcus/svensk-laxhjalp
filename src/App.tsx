@@ -27,8 +27,26 @@ import Terms from './components/Terms';
 import { useTheme } from './hooks/useTheme';
 import LaxhjalpForaldrarLanding from './components/LaxhjalpForaldrarLanding';
 import LaxhjalpLarareLanding from './components/LaxhjalpLarareLanding';
-import { LAXHJALP_FORALDRAR_PATH, LAXHJALP_LARARE_PATH, normalizePathname } from './routes';
-import { applyHomeSeo, applyParentLandingSeo, applyTeacherLandingSeo } from './utils/seoMeta';
+import AiLaxhjalpLanding from './components/AiLaxhjalpLanding';
+import MatteLanding from './components/MatteLanding';
+import OnlineLanding from './components/OnlineLanding';
+import {
+  AI_LAXHJALP_PATH,
+  LANDING_PATHS,
+  LAXHJALP_FORALDRAR_PATH,
+  LAXHJALP_LARARE_PATH,
+  LAXHJALP_MATTE_PATH,
+  LAXHJALP_ONLINE_PATH,
+  normalizePathname,
+} from './routes';
+import {
+  applyAiLaxhjalpSeo,
+  applyHomeSeo,
+  applyMatteSeo,
+  applyOnlineSeo,
+  applyParentLandingSeo,
+  applyTeacherLandingSeo,
+} from './utils/seoMeta';
 import { apiUrl } from './utils/apiBase';
 
 const isFirestorePermissionError = (error: unknown) => {
@@ -105,19 +123,35 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (user && (routePath === LAXHJALP_FORALDRAR_PATH || routePath === LAXHJALP_LARARE_PATH)) {
+    if (user && LANDING_PATHS.includes(routePath)) {
       window.history.replaceState({}, '', '/');
       setRoutePath('/');
     }
   }, [user, routePath]);
 
   useEffect(() => {
-    if (!user && routePath === LAXHJALP_FORALDRAR_PATH) {
-      applyParentLandingSeo();
-    } else if (!user && routePath === LAXHJALP_LARARE_PATH) {
-      applyTeacherLandingSeo();
-    } else {
+    if (user) {
       applyHomeSeo();
+      return;
+    }
+    switch (routePath) {
+      case LAXHJALP_FORALDRAR_PATH:
+        applyParentLandingSeo();
+        break;
+      case LAXHJALP_LARARE_PATH:
+        applyTeacherLandingSeo();
+        break;
+      case AI_LAXHJALP_PATH:
+        applyAiLaxhjalpSeo();
+        break;
+      case LAXHJALP_MATTE_PATH:
+        applyMatteSeo();
+        break;
+      case LAXHJALP_ONLINE_PATH:
+        applyOnlineSeo();
+        break;
+      default:
+        applyHomeSeo();
     }
   }, [user, routePath]);
 
@@ -382,6 +416,42 @@ export default function App() {
   if (!user && routePath === LAXHJALP_LARARE_PATH) {
     return (
       <LaxhjalpLarareLanding
+        onGetStarted={() => goToPath('/')}
+        onShowPrivacy={() => setShowPrivacy(true)}
+        onShowTerms={() => setShowTerms(true)}
+        dark={dark}
+        onToggleDark={toggleDark}
+      />
+    );
+  }
+
+  if (!user && routePath === AI_LAXHJALP_PATH) {
+    return (
+      <AiLaxhjalpLanding
+        onGetStarted={() => goToPath('/')}
+        onShowPrivacy={() => setShowPrivacy(true)}
+        onShowTerms={() => setShowTerms(true)}
+        dark={dark}
+        onToggleDark={toggleDark}
+      />
+    );
+  }
+
+  if (!user && routePath === LAXHJALP_MATTE_PATH) {
+    return (
+      <MatteLanding
+        onGetStarted={() => goToPath('/')}
+        onShowPrivacy={() => setShowPrivacy(true)}
+        onShowTerms={() => setShowTerms(true)}
+        dark={dark}
+        onToggleDark={toggleDark}
+      />
+    );
+  }
+
+  if (!user && routePath === LAXHJALP_ONLINE_PATH) {
+    return (
+      <OnlineLanding
         onGetStarted={() => goToPath('/')}
         onShowPrivacy={() => setShowPrivacy(true)}
         onShowTerms={() => setShowTerms(true)}

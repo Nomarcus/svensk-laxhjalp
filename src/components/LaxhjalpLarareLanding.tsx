@@ -1,7 +1,23 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BookOpen, CheckCircle, GraduationCap, Moon, Sun } from 'lucide-react';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
+import { injectJsonLd } from '../utils/seoMeta';
+
+const TEACHER_FAQ = [
+  {
+    q: 'Är det här ett officiellt skolverktyg?',
+    a: 'Nej. Föräldrahjälpen är ett fristående verktyg byggt av en enskild utvecklare. Det är inte godkänt av Skolverket eller kommunen — du använder det som ett personligt arbetshjälpmedel, precis som du kan använda Google Docs eller liknande.',
+  },
+  {
+    q: 'Kan elevdata hanteras säkert?',
+    a: 'Ange aldrig personuppgifter om elever i verktyget. Anonymisera alltid elevtexter innan du klistrar in dem — det är ditt ansvar som personuppgiftsansvarig. Verktyget lagrar inte det du skriver i längre tid än nödvändigt för att generera svaret.',
+  },
+  {
+    q: 'Kostar det något?',
+    a: 'Du kan prova gratis. Är du nöjd och vill stödja vidare utveckling finns ett frivilligt abonnemang på 49 kr/mån — ingen bindningstid.',
+  },
+];
 
 interface LaxhjalpLarareLandingProps {
   onGetStarted: () => void;
@@ -19,6 +35,47 @@ export default function LaxhjalpLarareLanding({
   onToggleDark,
 }: LaxhjalpLarareLandingProps) {
   const { t } = useTranslation();
+
+  useEffect(() => {
+    const cleanupFaq = injectJsonLd('jsonld-teacher-faq', {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: TEACHER_FAQ.map((item) => ({
+        '@type': 'Question',
+        name: item.q,
+        acceptedAnswer: { '@type': 'Answer', text: item.a },
+      })),
+    });
+    const cleanupBreadcrumb = injectJsonLd('jsonld-teacher-breadcrumb', {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Föräldrahjälpen', item: 'https://foraldrahjalpen.se/' },
+        { '@type': 'ListItem', position: 2, name: 'AI-stöd för lärare', item: 'https://foraldrahjalpen.se/laxhjalp-larare' },
+      ],
+    });
+    const cleanupArticle = injectJsonLd('jsonld-teacher-article', {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: 'AI-stöd för lärare — rätta, planera och förklara snabbare',
+      description: 'AI-verktyg för lärare i grundskolan: rätta inlämningar, ge återkoppling kopplad till Lgr22 och skapa studieplaner snabbare.',
+      inLanguage: 'sv-SE',
+      author: { '@type': 'Organization', name: 'Föräldrahjälpen' },
+      publisher: {
+        '@type': 'Organization',
+        name: 'Föräldrahjälpen',
+        logo: { '@type': 'ImageObject', url: 'https://foraldrahjalpen.se/icon.svg' },
+      },
+      datePublished: '2026-02-01',
+      dateModified: '2026-04-20',
+      mainEntityOfPage: 'https://foraldrahjalpen.se/laxhjalp-larare',
+    });
+    return () => {
+      cleanupFaq();
+      cleanupBreadcrumb();
+      cleanupArticle();
+    };
+  }, []);
 
   return (
     <div className="min-h-screen app-soft-bg font-sans relative overflow-hidden text-stone-900 dark:text-stone-100">
@@ -158,6 +215,26 @@ export default function LaxhjalpLarareLanding({
             </dl>
           </section>
         </div>
+
+        <section aria-labelledby="sec-mer" className="mt-12">
+          <h2 id="sec-mer" className="text-2xl font-serif italic text-stone-900 dark:text-stone-100 mb-3">
+            Mer om verktyget
+          </h2>
+          <ul className="list-disc pl-5 space-y-2 marker:text-blue-600 text-stone-700 dark:text-stone-300">
+            <li>
+              <a href="/ai-laxhjalp" className="text-blue-700 dark:text-blue-400 underline underline-offset-2">AI-läxhjälp</a> — hur AI:n fungerar och vad som skiljer den från ChatGPT.
+            </li>
+            <li>
+              <a href="/laxhjalp-foraldrar" className="text-blue-700 dark:text-blue-400 underline underline-offset-2">Läxhjälp för föräldrar</a> — föräldraperspektivet.
+            </li>
+            <li>
+              <a href="/laxhjalp-matte" className="text-blue-700 dark:text-blue-400 underline underline-offset-2">Läxhjälp matte</a> — matte åk 1–9.
+            </li>
+            <li>
+              <a href="/laxhjalp-online" className="text-blue-700 dark:text-blue-400 underline underline-offset-2">Läxhjälp online</a> — direkt i webbläsaren.
+            </li>
+          </ul>
+        </section>
 
         <div className="mt-14 rounded-3xl border border-blue-200/80 dark:border-blue-800/50 bg-blue-50/60 dark:bg-blue-950/35 p-8 text-center shadow-[0_18px_40px_-24px_rgba(37,99,235,0.35)]">
           <p className="text-stone-800 dark:text-stone-100 font-medium mb-4">Prova lärarläget — det tar en minut att komma igång</p>
