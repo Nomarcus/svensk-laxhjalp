@@ -249,9 +249,9 @@ export default function LaxhjalpForaldrarLanding({
             <li>
               <a href="/laxhjalp-online" className="text-emerald-700 dark:text-emerald-400 underline underline-offset-2">Läxhjälp online</a> — direkt i mobil, surfplatta eller dator.
             </li>
-            <li>
+            {/* <li>
               <a href="/laxhjalp-larare" className="text-emerald-700 dark:text-emerald-400 underline underline-offset-2">AI-stöd för lärare</a> — rätta inlämningar, skapa studieplaner.
-            </li>
+            </li> */}
           </ul>
         </section>
 

@@ -245,12 +245,12 @@ export default function AiLaxhjalpLanding({
             <p>
               <a href="/laxhjalp-foraldrar" className="text-indigo-700 dark:text-indigo-400 underline underline-offset-2">
                 Läs mer om läxhjälp för föräldrar
-              </a>{' '}
-              eller{' '}
-              <a href="/laxhjalp-larare" className="text-indigo-700 dark:text-indigo-400 underline underline-offset-2">
-                AI-stöd för lärare
               </a>
               .
+              {/* eller{' '}
+              <a href="/laxhjalp-larare" className="text-indigo-700 dark:text-indigo-400 underline underline-offset-2">
+                AI-stöd för lärare
+              </a> */}
             </p>
           </section>
 
