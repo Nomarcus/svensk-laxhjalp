@@ -55,13 +55,13 @@ export default function ChatHeader({
           <p className="text-[10px] text-stone-500 uppercase tracking-wider">{t('chat.activeSession')}</p>
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        {/* Coach-läge toggle */}
+      <div className="flex items-center gap-2 flex-wrap justify-end">
+        {/* Coach-läge toggle - hidden on mobile */}
         <button
           onClick={onToggleCoachMode}
           aria-pressed={coachMode}
           className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all",
+            "hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all",
             coachMode
               ? "bg-amber-100 text-amber-800 ring-1 ring-amber-300 shadow-sm"
               : "bg-stone-50 text-stone-400 hover:bg-amber-50 hover:text-amber-700"
@@ -71,12 +71,25 @@ export default function ChatHeader({
           <Lightbulb size={14} className={coachMode ? 'fill-amber-400' : ''} />
           <span>{t('chat.coachMode')}</span>
         </button>
-        {/* Enkel svenska toggle */}
+        {/* Enkel svenska toggle - show icon only on mobile */}
         <button
           onClick={onToggleSimpleSwedish}
           aria-pressed={simpleSwedish}
           className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all",
+            "flex sm:hidden items-center justify-center p-1.5 rounded-xl text-xs font-medium transition-all",
+            simpleSwedish
+              ? "bg-blue-100 text-blue-700"
+              : "bg-stone-50 text-stone-400 hover:bg-stone-100 hover:text-stone-600"
+          )}
+          title={t('chat.simpleSwedishTooltip')}
+        >
+          <Languages size={14} />
+        </button>
+        <button
+          onClick={onToggleSimpleSwedish}
+          aria-pressed={simpleSwedish}
+          className={cn(
+            "hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all",
             simpleSwedish
               ? "bg-blue-100 text-blue-700"
               : "bg-stone-50 text-stone-400 hover:bg-stone-100 hover:text-stone-600"
@@ -86,9 +99,17 @@ export default function ChatHeader({
           <Languages size={14} />
           <span>{t('chat.simpleSwedish')}</span>
         </button>
+        {/* New Chat button - show icon only on mobile */}
         <button
           onClick={onNewSession}
-          className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-medium hover:bg-emerald-100 transition-all"
+          className="flex sm:hidden items-center justify-center p-1.5 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-medium hover:bg-emerald-100 transition-all"
+          title={t('chat.newChat')}
+        >
+          <Plus size={14} />
+        </button>
+        <button
+          onClick={onNewSession}
+          className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-medium hover:bg-emerald-100 transition-all"
         >
           <Plus size={14} />
           <span>{t('chat.newChat')}</span>
