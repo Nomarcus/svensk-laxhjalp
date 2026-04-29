@@ -22,6 +22,7 @@ import { generateHomeworkHelp, generateImage, analyzeHomeworkForTask } from '../
 import { compressImage } from '../utils/image';
 import { isLikelyImageFile } from '../utils/imageUpload';
 import { cn } from '../utils/cn';
+import { isRequirementsList } from '../utils/detectRequirementsList';
 import type { Message, ChatSession, Task } from '../types';
 import ChatHeader from './chat/ChatHeader';
 import ChatMessage from './chat/ChatMessage';
@@ -293,6 +294,49 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
     if (s.includes('no') || s.includes('fysik') || s.includes('kemi') || s.includes('biologi')) return <Beaker size={14} />;
     if (s.includes('so') || s.includes('historia') || s.includes('geografi')) return <Globe size={14} />;
     return <Book size={14} />;
+  };
+
+  const handleCreateStudyMaterial = (requirementsText: string) => {
+    const prompt = `Du har fått en lista med krav och kriterier från en lärare. Skapa ett KOMPLETT LÄXUNDERLAG som barnet kan använda för att plugga inför provet — perfekt om man glömt boken hemma.
+
+LÄXUNDERLAGET SKA INNEHÅLLA (med tydliga rubriker och stycken):
+
+## 📖 Översikt
+Kort introduktion till området och varför det är viktigt.
+
+## 🎯 Grundläggande begrepp (för betyget E)
+Förklara varje krav på betyget E utförligt med:
+- Definition
+- Konkreta vardagsexempel
+- Förtydligande illustration i ord
+
+## 🔬 Fördjupning (för betygen A-C)
+Förklara de djupare kraven utförligt med:
+- Förklaring av "varför" och "hur"
+- Kemiska formler där det är relevant
+- Exempel på beräkningar
+
+## 📝 Övningsfrågor
+5-10 övningsfrågor som täcker alla krav, gradvis svårare.
+
+## ✅ Facit
+Korrekta svar med korta motiveringar.
+
+## 💡 Sammanfattning & minnestips
+Kortfattad sammanfattning av det viktigaste + tips för att komma ihåg.
+
+REGLER:
+- Använd tydliga rubriker (## och ###)
+- Använd korta stycken, inte långa textmassor
+- Använd punktlistor där det passar
+- Anpassa språket till barnets årskurs
+- Inkludera ALLA krav från läraren
+- Gör det pedagogiskt och motiverande
+
+Krav från läraren:
+${requirementsText}`;
+
+    sendMessage(prompt, 'Skapar komplett läxunderlag...', { forceCoachMode: false });
   };
 
   const saveNoteToTask = async (taskId: string, content: string) => {
@@ -638,6 +682,8 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
                 onSaveToLibrary={saveToLibrary}
                 onDeleteOwnMessage={deleteOwnMessage}
                 onGenerateImage={handleGenerateImage}
+                isRequirementsList={isRequirementsList(msg.content)}
+                onCreateStudyMaterial={handleCreateStudyMaterial}
                 onAskCurriculum={(content) => {
                   sendMessage(`Förklara hur det du just berättade om kopplas till den svenska läroplanen (Lgr22). Vilka centrala innehåll och kunskapskrav berörs? Ge konkreta kopplingar så jag som förälder förstår varför mitt barn lär sig detta.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.curriculumLink'));
                 }}
