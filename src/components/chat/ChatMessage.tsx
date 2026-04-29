@@ -216,16 +216,6 @@ export default function ChatMessage({
             </div>
           )}
         </div>
-        {isRequirementsList && onCreateStudyMaterial && (
-          <button
-            type="button"
-            onClick={() => onCreateStudyMaterial(msg.content)}
-            className={cn(ACTION_BTN, 'border-emerald-700 bg-emerald-50 text-emerald-900 hover:bg-emerald-100 dark:border-emerald-400 dark:bg-emerald-950/50 dark:text-emerald-100 dark:hover:bg-emerald-900/40 font-semibold')}
-          >
-            <GraduationCap size={12} />
-            Skapa komplett läxunderlag
-          </button>
-        )}
         {msg.generatedImage && (
           <img
             src={msg.generatedImage}
@@ -447,6 +437,16 @@ export default function ChatMessage({
               >
                 <PlusCircle size={12} />
                 {t('chat.createTask')}
+              </button>
+            )}
+            {isRequirementsList && onCreateStudyMaterial && (
+              <button
+                type="button"
+                onClick={() => onCreateStudyMaterial(msg.content)}
+                className={cn(ACTION_BTN, 'border-emerald-700 bg-emerald-50 text-emerald-900 hover:bg-emerald-100 dark:border-emerald-400 dark:bg-emerald-950/50 dark:text-emerald-100 dark:hover:bg-emerald-900/40 font-semibold')}
+              >
+                <GraduationCap size={12} />
+                Skapa komplett läxunderlag
               </button>
             )}
           </div>

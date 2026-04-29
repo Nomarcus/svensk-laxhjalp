@@ -671,6 +671,11 @@ ${requirementsText}`;
             const isLatestModel = msg.role === 'model' && idx === lastMessageIndex;
             const canContinueNextExercise =
               Boolean(isLatestModel && stickyImageContext?.payload.length && !loading);
+            const showStudyMaterialButton =
+              msg.role === 'model' &&
+              (isRequirementsList(msg.content) || (prevMsg?.role === 'user' && isRequirementsList(prevMsg.content)));
+            const studyMaterialSource =
+              prevMsg?.role === 'user' && isRequirementsList(prevMsg.content) ? prevMsg.content : msg.content;
 
             return (
               <ChatMessage
@@ -682,8 +687,8 @@ ${requirementsText}`;
                 onSaveToLibrary={saveToLibrary}
                 onDeleteOwnMessage={deleteOwnMessage}
                 onGenerateImage={handleGenerateImage}
-                isRequirementsList={isRequirementsList(msg.content)}
-                onCreateStudyMaterial={handleCreateStudyMaterial}
+                isRequirementsList={showStudyMaterialButton}
+                onCreateStudyMaterial={() => handleCreateStudyMaterial(studyMaterialSource)}
                 onAskCurriculum={(content) => {
                   sendMessage(`Förklara hur det du just berättade om kopplas till den svenska läroplanen (Lgr22). Vilka centrala innehåll och kunskapskrav berörs? Ge konkreta kopplingar så jag som förälder förstår varför mitt barn lär sig detta.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.curriculumLink'));
                 }}

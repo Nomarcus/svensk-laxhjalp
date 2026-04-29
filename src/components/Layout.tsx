@@ -174,7 +174,6 @@ export default function Layout({
               ...(hidePlannerNav ? [] : [{ id: 'planner' as const, icon: <Calendar size={20} />, label: t('nav.planner') }]),
               { id: 'corrector' as const, icon: <CheckSquare size={20} />, label: t('nav.corrector') },
               { id: 'library' as const, icon: <Library size={20} />, label: t('nav.library') },
-              { id: 'teacher' as const, icon: <GraduationCap size={20} />, label: t('workspace.teacherNav') },
               { id: 'info' as const, icon: <Info size={20} />, label: t('nav.info') },
             ] as const
           ).map((item) => (
@@ -436,16 +435,6 @@ export default function Layout({
               </div>
 
               <div className="p-4 space-y-1 pb-6">
-              <button
-                onClick={() => handleTabChange('teacher')}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all text-sm",
-                  activeTab === 'teacher' ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-medium" : "text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800"
-                )}
-              >
-                <GraduationCap size={18} />
-                <span>{t('workspace.teacherNav')}</span>
-              </button>
               <button
                 onClick={() => handleTabChange('info')}
                 className={cn(
