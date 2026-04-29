@@ -66,6 +66,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   const [generatingImageId, setGeneratingImageId] = useState<string | null>(null);
   const generatingImageLockRef = useRef(false);
   const [streamingModelText, setStreamingModelText] = useState('');
+  const [lastStreamingText, setLastStreamingText] = useState('');
   const [librarySaveError, setLibrarySaveError] = useState<string | null>(null);
   /** Senast lyckade bildanalys: samma bilder skickas igen vid "nästa uppgift". */
   const [stickyImageContext, setStickyImageContext] = useState<{ payload: string[]; dataUrls: string[] } | null>(null);
@@ -239,6 +240,16 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
+
+  // Clear lastStreamingText once new messages appear in Firestore
+  useEffect(() => {
+    if (lastStreamingText && displayMessages.length > 0) {
+      const lastMsg = displayMessages[displayMessages.length - 1];
+      if (lastMsg?.role === 'model' && lastMsg.content.includes(lastStreamingText.slice(0, 100))) {
+        setLastStreamingText('');
+      }
+    }
+  }, [displayMessages, lastStreamingText]);
 
   const taskContextProcessed = useRef(false);
 
@@ -508,7 +519,23 @@ ${requirementsText}`;
         effectiveCoachMode,
       );
 
-      await addDoc(messagesRef, { role: 'model', content: response, timestamp: serverTimestamp() });
+      try {
+        await addDoc(messagesRef, { role: 'model', content: response, timestamp: serverTimestamp() });
+      } catch (err: any) {
+        console.error('Error saving AI response:', err);
+        if (err.message?.includes('exceeds the maximum allowed size')) {
+          // Response is too large, save a truncated version
+          const truncated = response.slice(0, Math.floor(response.length * 0.7)) + '\n\n[Svar avkortat på grund av längd]';
+          try {
+            await addDoc(messagesRef, { role: 'model', content: truncated, timestamp: serverTimestamp() });
+          } catch (retryErr) {
+            console.error('Error saving truncated response:', retryErr);
+            throw retryErr;
+          }
+        } else {
+          throw err;
+        }
+      }
       if (imagePayload.length) {
         setStickyImageContext({ payload: [...imagePayload], dataUrls: [...currentDataUrls] });
       }
@@ -528,6 +555,9 @@ ${requirementsText}`;
         setError(msg || t('chat.unexpectedError'));
       }
     } finally {
+      if (streamingModelText) {
+        setLastStreamingText(streamingModelText);
+      }
       setStreamingModelText('');
       setLoading(false);
     }
@@ -764,15 +794,15 @@ ${requirementsText}`;
           })
         )}
 
-        {loading && (
+        {(loading || lastStreamingText) && (
           <div className="flex gap-4 mr-auto">
             <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white">
               <Bot size={16} />
             </div>
-            {streamingModelText ? (
+            {streamingModelText || lastStreamingText ? (
               <div className="bg-white dark:bg-slate-900 border border-black/5 dark:border-white/5 shadow-sm rounded-2xl rounded-tl-none px-4 py-3 max-w-3xl">
                 <div className="markdown-body prose prose-stone prose-sm max-w-none">
-                  {streamingModelText}
+                  {streamingModelText || lastStreamingText}
                 </div>
               </div>
             ) : (
