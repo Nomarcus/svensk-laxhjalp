@@ -519,22 +519,16 @@ ${requirementsText}`;
         effectiveCoachMode,
       );
 
+      // Firestore security rules limit content to 50000 chars; truncate if needed
+      const MAX_MESSAGE_CONTENT = 49000;
+      const contentToSave = response.length >= MAX_MESSAGE_CONTENT
+        ? response.slice(0, MAX_MESSAGE_CONTENT - 60) + '\n\n*[Svar avkortat — för långt för chatten]*'
+        : response;
       try {
-        await addDoc(messagesRef, { role: 'model', content: response, timestamp: serverTimestamp() });
+        await addDoc(messagesRef, { role: 'model', content: contentToSave, timestamp: serverTimestamp() });
       } catch (err: any) {
         console.error('Error saving AI response:', err);
-        if (err.message?.includes('exceeds the maximum allowed size')) {
-          // Response is too large, save a truncated version
-          const truncated = response.slice(0, Math.floor(response.length * 0.7)) + '\n\n[Svar avkortat på grund av längd]';
-          try {
-            await addDoc(messagesRef, { role: 'model', content: truncated, timestamp: serverTimestamp() });
-          } catch (retryErr) {
-            console.error('Error saving truncated response:', retryErr);
-            throw retryErr;
-          }
-        } else {
-          throw err;
-        }
+        throw err;
       }
       if (imagePayload.length) {
         setStickyImageContext({ payload: [...imagePayload], dataUrls: [...currentDataUrls] });
