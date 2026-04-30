@@ -35,6 +35,50 @@ import { bumpUsageRefresh } from '../utils/usageRefresh';
 const CHAT_MAX_IMAGES = 5;
 const FIRESTORE_IMAGE_SOFT_LIMIT_BYTES = 1024 * 1024;
 
+// Firestore rules count `string.size()` in UTF-8 bytes. Keep each saved AI
+// message comfortably under both the original rule limit (10000) and the
+// current one (50000) so long study materials never trip permission errors,
+// regardless of which rules version is deployed.
+const MAX_MESSAGE_BYTES = 9000;
+const CONTINUATION_MARKER = '\n\n*[fortsätter…]*';
+
+const utf8ByteLength = (s: string) => new TextEncoder().encode(s).length;
+
+const splitForFirestoreMessages = (text: string): string[] => {
+  if (utf8ByteLength(text) <= MAX_MESSAGE_BYTES) return [text];
+
+  const chunks: string[] = [];
+  let remaining = text;
+  const markerBytes = utf8ByteLength(CONTINUATION_MARKER);
+
+  while (remaining.length > 0) {
+    if (utf8ByteLength(remaining) <= MAX_MESSAGE_BYTES) {
+      chunks.push(remaining);
+      break;
+    }
+    const budget = MAX_MESSAGE_BYTES - markerBytes;
+    let lo = 1;
+    let hi = remaining.length;
+    while (lo < hi) {
+      const mid = Math.floor((lo + hi + 1) / 2);
+      if (utf8ByteLength(remaining.slice(0, mid)) <= budget) lo = mid;
+      else hi = mid - 1;
+    }
+    let cut = lo;
+    const paraBreak = remaining.lastIndexOf('\n\n', lo);
+    if (paraBreak > Math.max(0, lo - 800)) {
+      cut = paraBreak + 2;
+    } else {
+      const lineBreak = remaining.lastIndexOf('\n', lo);
+      if (lineBreak > Math.max(0, lo - 200)) cut = lineBreak + 1;
+    }
+    if (cut <= 0) cut = lo;
+    chunks.push(remaining.slice(0, cut).replace(/\s+$/, '') + CONTINUATION_MARKER);
+    remaining = remaining.slice(cut);
+  }
+  return chunks;
+};
+
 interface ChatProps {
   childId: string;
   childName: string;
@@ -519,13 +563,13 @@ ${requirementsText}`;
         effectiveCoachMode,
       );
 
-      // Firestore security rules limit content to 50000 chars; truncate if needed
-      const MAX_MESSAGE_CONTENT = 49000;
-      const contentToSave = response.length >= MAX_MESSAGE_CONTENT
-        ? response.slice(0, MAX_MESSAGE_CONTENT - 60) + '\n\n*[Svar avkortat — för långt för chatten]*'
-        : response;
+      // Split long AI responses across multiple messages so each chunk stays
+      // safely under the Firestore rule's content-size cap (UTF-8 bytes).
+      const chunks = splitForFirestoreMessages(response);
       try {
-        await addDoc(messagesRef, { role: 'model', content: contentToSave, timestamp: serverTimestamp() });
+        for (const chunk of chunks) {
+          await addDoc(messagesRef, { role: 'model', content: chunk, timestamp: serverTimestamp() });
+        }
       } catch (err: any) {
         console.error('Error saving AI response:', err);
         throw err;

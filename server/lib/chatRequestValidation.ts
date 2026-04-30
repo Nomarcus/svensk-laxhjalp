@@ -1,6 +1,7 @@
 /**
- * Server-side limits aligned with Firestore (messages: content &lt; 10000)
- * so API requests cannot exceed what legitimate clients could persist.
+ * Server-side ceiling on a single chat-message payload. The client splits
+ * persisted AI responses into smaller chunks to fit the Firestore rule
+ * limit; this cap just bounds API request size.
  */
 
 export const MAX_CHAT_CONTENT_CHARS = 49999;
