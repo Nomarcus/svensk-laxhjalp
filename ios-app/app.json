@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Föräldrahjälpen",
+    "slug": "foraldrahjalpen-ios",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "foraldrahjalpen",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "se.foraldrahjalpen.ios",
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Föräldrahjälpen kan använda kameran för att fotografera läxor som AI:n analyserar.",
+        "NSPhotoLibraryUsageDescription": "Föräldrahjälpen kan använda bilder från biblioteket för läxanalys."
+      }
+    },
+    "plugins": [
+      "expo-apple-authentication",
+      "react-native-iap"
+    ],
+    "extra": {
+      "apiOrigin": "https://laxhjalp-api-288867992327.europe-west1.run.app"
+    }
+  }
+}
