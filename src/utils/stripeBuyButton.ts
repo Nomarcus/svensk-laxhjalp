@@ -1,5 +1,7 @@
-// Enabled by default for operator testing. Can still be disabled explicitly via env.
-export const STRIPE_BUY_BUTTON_ENABLED = import.meta.env.VITE_ENABLE_STRIPE_BUY_BUTTON !== 'false';
+// Tillfälligt avstängt: tjänsten är gratis just nu medan den visas upp.
+// Sätt tillbaka till `import.meta.env.VITE_ENABLE_STRIPE_BUY_BUTTON !== 'false'`
+// för att aktivera betalningar igen.
+export const STRIPE_BUY_BUTTON_ENABLED = false;
 
 /** Standardlänk tills motsvarande Payment Link sätts via env (produkt i Stripe ska vara 49 kr/mån). */
 const DEFAULT_SUBSCRIBE_PAYMENT_LINK = 'https://buy.stripe.com/bJe28kb9Y13F1xt6wJ8bS01';

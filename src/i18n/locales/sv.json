@@ -532,7 +532,7 @@
     "swishNumberNote": "Swish-nummer läggs till inom kort",
     "stripeAnonymous": "Betalning kräver inloggning. Skapa konto eller logga in med e-post för att kunna abonnera.",
     "stripeEmailRequired": "Abonnemang kräver ett konto med e-post så köpet kopplas till rätt användare.",
-    "stripeDisabled": "Betalningsknappen är tillfälligt avstängd i den här miljön.",
+    "stripeDisabled": "Betalningar är under uppbyggnad – tjänsten är helt gratis just nu.",
     "stripeMissingConfig": "Betalning är inte konfigurerad. Kontakta oss om problemet kvarstår.",
     "syncStripeHint": "Har du betalat men ser inte din status? Hämta senaste läget från Stripe (t.ex. om bekräftelsen precis kommit).",
     "syncStripeButton": "Hämta abonnemangsstatus från Stripe",

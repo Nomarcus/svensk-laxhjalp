@@ -532,7 +532,7 @@
     "swishNumberNote": "Swish number will be added shortly",
     "stripeAnonymous": "Sign in to subscribe. Create an account or sign in with email.",
     "stripeEmailRequired": "A subscription needs an account with email so the purchase is linked to the right user.",
-    "stripeDisabled": "The payment button is temporarily disabled in this environment.",
+    "stripeDisabled": "Payments are under construction – the service is completely free right now.",
     "stripeMissingConfig": "Payments are not configured. Please contact us if this persists.",
     "syncStripeHint": "Paid but don’t see your status? Pull the latest state from Stripe (e.g. right after checkout).",
     "syncStripeButton": "Refresh subscription status from Stripe",
