@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>NEXUS — Laserlänkat tornförsvar</title>
+<title>NEXUS II — Laserlänkat tornförsvar</title>
 <!--
-  NEXUS — ett helt fristående tower defense-spel byggt med three.js.
+  NEXUS II — ett helt fristående tower defense-spel byggt med three.js.
   Öppna den här filen i en webbläsare (dubbelklicka räcker) och spela.
   Ingen internetuppkoppling behövs: all spelkod OCH three.js (r147) ligger
   inbäddad i filen.
@@ -26,12 +26,11 @@
   body.mode-build #spel { cursor:crosshair; }
   body.mode-link #spel { cursor:pointer; }
 
-  /* Vinjett + svag scanline-känsla */
   body::after {
     content:""; position:fixed; inset:0; pointer-events:none; z-index:15;
     background:
       radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,10,.55) 100%),
-      linear-gradient(rgba(120,200,255,.018) 1px, transparent 1px);
+      linear-gradient(rgba(120,200,255,.016) 1px, transparent 1px);
     background-size:auto, 100% 3px;
   }
 
@@ -40,43 +39,71 @@
   /* ---------- HUD ---------- */
   #hudTop {
     position:fixed; top:14px; left:50%; transform:translateX(-50%);
-    display:flex; gap:10px; z-index:20; pointer-events:none; flex-wrap:wrap; justify-content:center;
+    display:flex; gap:9px; z-index:20; pointer-events:none; flex-wrap:wrap; justify-content:center;
   }
   .pill {
     display:flex; align-items:center; gap:7px;
     background:linear-gradient(180deg, rgba(14,28,52,.82), rgba(7,14,30,.82));
     border:1px solid rgba(80,190,255,.28);
-    border-radius:999px; padding:7px 16px;
-    font-size:15px; font-weight:600; letter-spacing:.04em;
+    border-radius:999px; padding:6px 14px;
+    font-size:14px; font-weight:600; letter-spacing:.04em;
     box-shadow:0 0 18px rgba(20,120,220,.18), inset 0 0 12px rgba(60,160,255,.06);
     backdrop-filter:blur(6px); white-space:nowrap;
   }
   .pill b { color:#fff; text-shadow:0 0 10px rgba(120,220,255,.9); font-variant-numeric:tabular-nums; }
   .pill .ikon { filter:drop-shadow(0 0 6px rgba(140,220,255,.8)); }
+  .pill small { opacity:.75; font-size:11px; }
 
   #uiCountdown {
-    position:fixed; top:64px; left:50%; transform:translateX(-50%);
+    position:fixed; top:62px; left:50%; transform:translateX(-50%);
     z-index:20; pointer-events:none; font-size:13px; letter-spacing:.12em;
     color:#8fd4ff; text-shadow:0 0 10px rgba(60,180,255,.8); text-transform:uppercase;
   }
+  #uiPreview {
+    position:fixed; top:84px; left:50%; transform:translateX(-50%);
+    z-index:20; pointer-events:none; font-size:12px; letter-spacing:.06em; color:#6fa3cc;
+  }
 
   #hint {
-    position:fixed; bottom:86px; left:50%; transform:translateX(-50%);
+    position:fixed; bottom:118px; left:50%; transform:translateX(-50%);
     z-index:20; pointer-events:none; font-size:13px; letter-spacing:.05em;
     color:#7fb6e0; text-shadow:0 0 8px rgba(40,140,255,.5);
     background:rgba(6,12,26,.55); border-radius:8px; padding:5px 14px;
     max-width:92vw; text-align:center;
   }
 
+  /* ---------- Byggmeny ---------- */
   #hudBottom {
-    position:fixed; bottom:18px; left:50%; transform:translateX(-50%);
-    display:flex; gap:10px; z-index:20; flex-wrap:wrap; justify-content:center;
+    position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
+    display:flex; gap:10px; align-items:stretch; z-index:20; flex-wrap:wrap; justify-content:center;
+    max-width:98vw;
   }
+  #buildBar { display:flex; gap:7px; flex-wrap:wrap; justify-content:center; }
+  .card {
+    position:relative; width:88px; padding:9px 5px 7px;
+    border-radius:11px; cursor:pointer; text-align:center;
+    border:1px solid rgba(80,200,255,.3);
+    background:linear-gradient(180deg, rgba(18,36,66,.92), rgba(8,16,34,.92));
+    transition:transform .12s, box-shadow .12s;
+    backdrop-filter:blur(6px);
+  }
+  .card:hover { transform:translateY(-3px); box-shadow:0 0 18px rgba(60,180,255,.35); }
+  .card.active { box-shadow:0 0 22px var(--c), inset 0 0 14px rgba(255,255,255,.08); border-color:var(--c); }
+  .card.dim { opacity:.4; }
+  .card .ico { font-size:21px; line-height:1.1; color:var(--c); text-shadow:0 0 12px var(--c); }
+  .card .nm { font-size:11.5px; font-weight:800; letter-spacing:.05em; margin-top:3px; color:#dff1ff; }
+  .card .pr { font-size:10.5px; opacity:.85; color:#9cc8ea; }
+  .card .hk {
+    position:absolute; top:4px; right:5px; font-size:9.5px; font-weight:700;
+    border:1px solid rgba(140,220,255,.4); border-radius:4px; padding:0 4px; color:#bfe9ff;
+    background:rgba(10,24,46,.8);
+  }
+
   .btn {
     border:1px solid rgba(80,200,255,.35);
     background:linear-gradient(180deg, rgba(22,44,78,.9), rgba(10,20,42,.9));
-    border-radius:12px; padding:10px 18px;
-    color:#bfe9ff; font-size:14px; font-weight:700; letter-spacing:.05em;
+    border-radius:12px; padding:9px 16px;
+    color:#bfe9ff; font-size:13.5px; font-weight:700; letter-spacing:.05em;
     cursor:pointer; transition:transform .12s, box-shadow .12s, border-color .12s;
     text-shadow:0 0 8px rgba(80,200,255,.55);
     backdrop-filter:blur(6px);
@@ -89,19 +116,41 @@
     box-shadow:0 0 24px rgba(90,232,255,.55), inset 0 0 14px rgba(90,232,255,.25);
   }
   .btn.dim { opacity:.45; }
-  .btn small { display:block; font-weight:500; font-size:11px; opacity:.75; letter-spacing:.03em; }
+  .btn small { display:block; font-weight:500; font-size:10.5px; opacity:.75; letter-spacing:.03em; }
 
   #btnMute { position:fixed; top:14px; right:14px; z-index:21; padding:8px 12px; }
 
+  /* ---------- Minimap ---------- */
+  #minimap {
+    position:fixed; top:14px; left:14px; z-index:21;
+    border:1px solid rgba(80,190,255,.4); border-radius:9px;
+    background:rgba(5,9,20,.82); cursor:pointer;
+    box-shadow:0 0 20px rgba(20,120,220,.25);
+  }
+
+  /* ---------- Valt torn-panel ---------- */
+  #selPanel {
+    position:fixed; left:14px; bottom:14px; z-index:21;
+    min-width:250px; max-width:330px; padding:13px 15px;
+    border-radius:13px;
+    background:linear-gradient(180deg, rgba(14,30,56,.94), rgba(7,14,30,.94));
+    border:1px solid rgba(80,190,255,.35);
+    box-shadow:0 0 24px rgba(20,120,220,.3);
+    font-size:13px; line-height:1.55; color:#a9d4f5;
+  }
+  #selPanel h4 { font-size:14px; letter-spacing:.07em; color:#eaffff; margin-bottom:5px; text-shadow:0 0 10px rgba(90,220,255,.7); }
+  #selPanel .knappar { display:flex; gap:8px; margin-top:9px; }
+  #selPanel .btn { padding:7px 13px; font-size:12.5px; }
+
   /* ---------- Meddelanden ---------- */
   #announce {
-    position:fixed; top:18%; left:50%; transform:translateX(-50%);
+    position:fixed; top:17%; left:50%; transform:translateX(-50%);
     z-index:22; pointer-events:none; opacity:0;
-    font-size:30px; font-weight:800; letter-spacing:.14em; text-align:center;
+    font-size:29px; font-weight:800; letter-spacing:.14em; text-align:center;
     color:#eaffff; text-shadow:0 0 18px rgba(80,220,255,.95), 0 0 60px rgba(40,160,255,.6);
     white-space:nowrap;
   }
-  #announce.show { animation:annPop 2.1s ease forwards; }
+  #announce.show { animation:annPop 2.2s ease forwards; }
   @keyframes annPop {
     0%   { opacity:0; transform:translateX(-50%) translateY(-10px) scale(.92); }
     12%  { opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
@@ -116,7 +165,6 @@
     text-shadow:0 0 24px rgba(90,200,255,.9);
   }
 
-  /* Flytande stridstext */
   #fxLayer { position:fixed; inset:0; z-index:18; pointer-events:none; overflow:hidden; }
   .ft {
     position:absolute; font-size:14px; font-weight:800; letter-spacing:.04em;
@@ -129,15 +177,15 @@
     100% { opacity:0; transform:translate(-50%,-240%) scale(1); }
   }
 
-  /* ---------- Overlays (meny / game over) ---------- */
+  /* ---------- Overlays ---------- */
   .overlay {
     position:fixed; inset:0; z-index:30;
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px;
-    background:radial-gradient(ellipse at center, rgba(6,12,26,.72), rgba(2,4,10,.95));
-    backdrop-filter:blur(5px); text-align:center; padding:24px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px;
+    background:radial-gradient(ellipse at center, rgba(6,12,26,.74), rgba(2,4,10,.95));
+    backdrop-filter:blur(5px); text-align:center; padding:24px; overflow:auto;
   }
   .titel {
-    font-size:clamp(54px, 10vw, 96px); font-weight:900; letter-spacing:.22em; line-height:1;
+    font-size:clamp(50px, 9vw, 92px); font-weight:900; letter-spacing:.2em; line-height:1;
     background:linear-gradient(180deg, #c8f6ff 15%, #3ed6ff 45%, #b35cff 80%, #ffc94a 110%);
     -webkit-background-clip:text; background-clip:text; color:transparent;
     filter:drop-shadow(0 0 26px rgba(70,200,255,.55));
@@ -147,29 +195,29 @@
     from { filter:drop-shadow(0 0 16px rgba(70,200,255,.4)); }
     to   { filter:drop-shadow(0 0 34px rgba(150,120,255,.75)); }
   }
-  .undertitel { font-size:15px; letter-spacing:.5em; color:#7fc6f2; text-transform:uppercase; margin-top:-10px; }
-  .kort-rad { display:flex; gap:14px; flex-wrap:wrap; justify-content:center; max-width:980px; }
+  .undertitel { font-size:14px; letter-spacing:.5em; color:#7fc6f2; text-transform:uppercase; margin-top:-8px; }
+  .kort-rad { display:flex; gap:13px; flex-wrap:wrap; justify-content:center; max-width:1180px; }
   .kort {
-    width:262px; padding:18px 16px; border-radius:14px;
+    width:255px; padding:16px 15px; border-radius:14px;
     background:linear-gradient(180deg, rgba(16,32,58,.85), rgba(8,16,34,.85));
     border:1px solid rgba(80,190,255,.22);
     box-shadow:0 0 22px rgba(20,120,220,.14);
-    font-size:13.5px; line-height:1.5; color:#a9d4f5; text-align:left;
+    font-size:13px; line-height:1.5; color:#a9d4f5; text-align:left;
   }
-  .kort h3 { font-size:14px; letter-spacing:.08em; color:#eaffff; margin-bottom:6px; text-shadow:0 0 10px rgba(90,220,255,.7); }
+  .kort h3 { font-size:13.5px; letter-spacing:.08em; color:#eaffff; margin-bottom:6px; text-shadow:0 0 10px rgba(90,220,255,.7); }
   .kort .nyckel {
-    display:inline-block; min-width:20px; text-align:center; padding:1px 6px; margin:0 1px;
+    display:inline-block; min-width:19px; text-align:center; padding:1px 5px; margin:0 1px;
     border:1px solid rgba(140,220,255,.5); border-radius:5px;
-    font-size:11px; font-weight:700; color:#dff4ff; background:rgba(20,50,90,.6);
+    font-size:10.5px; font-weight:700; color:#dff4ff; background:rgba(20,50,90,.6);
   }
   .startknapp {
     font-size:19px; padding:15px 54px; border-radius:14px; letter-spacing:.18em;
     border-color:rgba(120,230,255,.6);
     box-shadow:0 0 30px rgba(60,190,255,.45), inset 0 0 18px rgba(90,220,255,.15);
   }
-  #overText { font-size:17px; color:#a9d4f5; letter-spacing:.06em; line-height:1.7; }
+  #overText { font-size:16px; color:#a9d4f5; letter-spacing:.05em; line-height:1.75; }
   .gameover-titel {
-    font-size:clamp(40px, 7vw, 72px); font-weight:900; letter-spacing:.18em;
+    font-size:clamp(38px, 7vw, 70px); font-weight:900; letter-spacing:.18em;
     color:#ff5a6e; text-shadow:0 0 30px rgba(255,60,90,.8), 0 0 80px rgba(255,40,70,.4);
   }
   .fotnot { font-size:11.5px; color:#54799c; letter-spacing:.08em; }
@@ -180,51 +228,70 @@
   <div id="fxLayer"></div>
 
   <div id="hudTop" class="hidden">
-    <div class="pill"><span class="ikon">💰</span><b id="uiMoney">0</b></div>
-    <div class="pill"><span class="ikon">❤️</span><b id="uiLives">0</b></div>
+    <div class="pill"><span class="ikon">💰</span><b id="uiMoney">0</b><small id="uiIncome"></small></div>
+    <div class="pill"><span class="ikon">🛡️</span>PRIME <b id="uiHp">100%</b></div>
     <div class="pill"><span class="ikon">🌊</span>Våg <b id="uiWave">1</b></div>
     <div class="pill"><span class="ikon">👾</span><b id="uiEnemies">0</b></div>
-    <div class="pill"><span class="ikon">⚡</span>NEXUS <b id="uiPower">9</b>/s</div>
+    <div class="pill"><span class="ikon">⚡</span>PRIME-stråle <b id="uiPower">12</b>/s</div>
   </div>
   <div id="uiCountdown" class="hidden"></div>
+  <div id="uiPreview" class="hidden"></div>
   <div id="hint" class="hidden"></div>
   <div id="announce"></div>
   <div id="pauseBadge" class="hidden">⏸ PAUSAD</div>
 
+  <canvas id="minimap" class="hidden" width="216" height="124"></canvas>
+
+  <div id="selPanel" class="hidden">
+    <h4 id="selTitle"></h4>
+    <div id="selInfo"></div>
+    <div class="knappar">
+      <button class="btn" id="btnSell">Sälj (X)</button>
+      <button class="btn" id="btnCloseSel">Stäng (Esc)</button>
+    </div>
+  </div>
+
   <div id="hudBottom" class="hidden">
-    <button class="btn" id="btnBuild">🔲 Bygg torn <small id="costBuild">60 💰 · tangent B</small></button>
-    <button class="btn" id="btnLink">✨ Länka laser <small>35 💰 · tangent L</small></button>
-    <button class="btn" id="btnWave">▶ Starta våg <small id="subWave">Enter</small></button>
+    <div id="buildBar"></div>
+    <button class="btn" id="btnWave">▶ Våg <small id="subWave">Enter</small></button>
     <button class="btn" id="btnSpeed">⏩ 1x <small>tangent F</small></button>
   </div>
   <button class="btn" id="btnMute">🔊</button>
 
   <div id="menu" class="overlay">
-    <div class="titel">NEXUS</div>
+    <div class="titel">NEXUS II</div>
     <div class="undertitel">Laserlänkat tornförsvar</div>
     <div class="kort-rad">
       <div class="kort">
-        <h3>🔲 1 · BYGG</h3>
-        Tryck <span class="nyckel">B</span> och klicka på fältet för att bygga torn.
-        Fiender (cirklarna) strömmar långsamt in från vänster — når de din vägg till höger förlorar du liv.
+        <h3>🔲 BYGG ARSENALEN</h3>
+        Välj torn med <span class="nyckel">1</span>–<span class="nyckel">7</span> och klicka på fältet:
+        Puls, Prisma (genomborrar), Nova (chockvåg), Stas (saktar ner), Relä (långa länkar),
+        Generator (krediter) och Utposter.
       </div>
       <div class="kort">
-        <h3>✨ 2 · LÄNKA</h3>
-        Tryck <span class="nyckel">L</span> och klicka två torn för att koppla ihop dem med en laser.
-        Länkade torn blir starkare och starkare — vid <b>2</b> och <b>4</b> länkar <b>uppgraderas</b> de automatiskt!
+        <h3>✨ LÄNKA MED LASER</h3>
+        Tryck <span class="nyckel">L</span> och klicka två torn. Länkade torn blir starkare
+        och <b>uppgraderas</b> vid 2 och 4 länkar. Ju större nätverk som är kopplat till en bas,
+        desto mäktigare blir basens stråle!
       </div>
       <div class="kort">
-        <h3>⚡ 3 · NEXUS</h3>
-        Huvudtornet <b>NEXUS</b> skjuter en kraftstråle. Ju fler torn och lasrar som är
-        ihopkopplade med NEXUS, desto mäktigare blir strålen. Bygg nätverket — överlev vågorna!
+        <h3>🏰 FLERA BASER</h3>
+        Fiender anfaller närmaste bas och kan <b>förstöra</b> den! Skydda <b>NEXUS PRIME</b> till varje pris
+        — faller den är spelet över. Bygg utposter för att hålla linjen. Baser reparerar sig mellan vågorna.
+      </div>
+      <div class="kort">
+        <h3>🎥 STOR KARTA</h3>
+        Panorera med <span class="nyckel">W</span><span class="nyckel">A</span><span class="nyckel">S</span><span class="nyckel">D</span>/pilarna,
+        zooma med <b>scrollhjulet</b>, dra med <b>mittenknappen</b> eller klicka på <b>minikartan</b>.
+        Nya portaler öppnas norrut och söderut när vågorna stiger!
       </div>
     </div>
     <button class="btn startknapp" id="btnStart">▶ STARTA</button>
-    <div class="fotnot">Helt fristående · three.js · funkar offline</div>
+    <div class="fotnot">Helt fristående · three.js · funkar offline · X = sälj valt torn</div>
   </div>
 
   <div id="over" class="overlay hidden">
-    <div class="gameover-titel">NEXUS FÖLL</div>
+    <div class="gameover-titel">NEXUS PRIME FÖLL</div>
     <div id="overText"></div>
     <button class="btn startknapp" id="btnRestart">↻ SPELA IGEN</button>
   </div>
@@ -240,7 +307,7 @@
 </script>
 <script>
 /* ============================================================
-   NEXUS — Laserlänkat tornförsvar
+   NEXUS II — Laserlänkat tornförsvar
    All spellogik. Kräver THREE (inbäddad ovan).
    Endast cirklar och rektanglar: CircleGeometry, RingGeometry,
    BoxGeometry, PlaneGeometry samt punkt-sprites.
@@ -249,51 +316,80 @@
 'use strict';
 
 /* ---------------- Konstanter ---------------- */
-const FIELD = { minX: -18, maxX: 18, minZ: -9.5, maxZ: 9.5 };
-const WALL_X  = 16.6;   // din vägg (basen) till höger
-const SPAWN_X = -18.8;  // fiender föds till vänster
-const MAIN_POS = { x: 9, z: 0 };
+const FIELD = { minX: -35, maxX: 35, minZ: -19, maxZ: 19 }; // 70 × 38 — stor karta
+const PRIME_POS = { x: 14, z: 0 };
 
-const LINK_RANGE = 6.5;
-const LINK_COST  = 35;
-const TOWER_COST0 = 60, TOWER_COST_STEP = 8, TOWER_COST_MAX = 170;
-const START_MONEY = 140, START_LIVES = 20;
+const LINK_COST = 35;
+const START_MONEY = 220;
 
-const LEVEL_COLORS = [0, 0x39e6ff, 0xc05cff, 0xffc94a]; // nivå 1=cyan, 2=lila, 3=guld
+const LEVEL_COLORS = [0, 0x39e6ff, 0xc05cff, 0xffc94a];
 const X_AXIS = new THREE.Vector3(1, 0, 0);
-const WHITE  = new THREE.Color(0xffffff);
-const RED    = new THREE.Color(0xff3344);
+const WHITE = new THREE.Color(0xffffff);
+
+const TOWER_ORDER = ['pulse', 'prisma', 'nova', 'stas', 'rela', 'gen', 'utpost'];
+const TOWER_DEFS = {
+  pulse:  { namn: 'Puls',      kostnad: 60,  färg: 0x39e6ff, ikon: '▣', kind: 'gun',
+            desc: 'Snabba energiskott. Pålitlig allround-kanon.' },
+  prisma: { namn: 'Prisma',    kostnad: 110, färg: 0xc05cff, ikon: '◫', kind: 'rail',
+            desc: 'Genomborrande stråle som träffar ALLA fiender på linjen.' },
+  nova:   { namn: 'Nova',      kostnad: 100, färg: 0xff8c3a, ikon: '◎', kind: 'nova',
+            desc: 'Chockvåg som skadar allt runtomkring. Stark mot svärmar.' },
+  stas:   { namn: 'Stas',      kostnad: 80,  färg: 0x7ad7ff, ikon: '◌', kind: 'slow',
+            desc: 'Aura som saktar ner alla fiender i området.' },
+  rela:   { namn: 'Relä',      kostnad: 40,  färg: 0x9dffc4, ikon: '▢', kind: 'relay',
+            desc: 'Länknav med 9,5 i länkräckvidd. Billigt nätverkslim.' },
+  gen:    { namn: 'Generator', kostnad: 120, färg: 0xffd76a, ikon: '▤', kind: 'income',
+            desc: 'Producerar krediter varje sekund — men bara om den är ansluten.' },
+  utpost: { namn: 'Utpost',    kostnad: 260, färg: 0xff5ad1, ikon: '⬚', kind: 'base',
+            desc: 'Ny bas med egen stråle och 8 länkplatser. Kan förstöras — försvara den!' },
+};
+const LINKABLE_RANGE = { relay: 9.5, base: 7.5, std: 6.5 };
+
+const PORTALS = [
+  { id: 'VÄST', from: 1, color: 0xb84dff, dir: 'left',
+    seg: { x: FIELD.minX, z0: FIELD.minZ + 2, z1: FIELD.maxZ - 2 } },
+  { id: 'NORR', from: 4, color: 0xff5ad1, dir: 'top',
+    seg: { z: FIELD.minZ, x0: FIELD.minX + 4, x1: 8 } },
+  { id: 'SYD',  from: 7, color: 0xff8c3a, dir: 'bottom',
+    seg: { z: FIELD.maxZ, x0: FIELD.minX + 4, x1: 8 } },
+];
 
 /* ---------------- DOM ---------------- */
 const $ = id => document.getElementById(id);
 const el = {
-  money: $('uiMoney'), lives: $('uiLives'), wave: $('uiWave'),
+  money: $('uiMoney'), income: $('uiIncome'), hp: $('uiHp'), wave: $('uiWave'),
   enemies: $('uiEnemies'), power: $('uiPower'),
-  countdown: $('uiCountdown'), hint: $('hint'), announce: $('announce'),
-  pause: $('pauseBadge'), fx: $('fxLayer'),
-  hudTop: $('hudTop'), hudBottom: $('hudBottom'),
-  btnBuild: $('btnBuild'), costBuild: $('costBuild'), btnLink: $('btnLink'),
+  countdown: $('uiCountdown'), preview: $('uiPreview'), hint: $('hint'),
+  announce: $('announce'), pause: $('pauseBadge'), fx: $('fxLayer'),
+  hudTop: $('hudTop'), hudBottom: $('hudBottom'), buildBar: $('buildBar'),
   btnWave: $('btnWave'), subWave: $('subWave'), btnSpeed: $('btnSpeed'), btnMute: $('btnMute'),
+  minimap: $('minimap'),
+  selPanel: $('selPanel'), selTitle: $('selTitle'), selInfo: $('selInfo'),
+  btnSell: $('btnSell'), btnCloseSel: $('btnCloseSel'),
   menu: $('menu'), btnStart: $('btnStart'),
   over: $('over'), overText: $('overText'), btnRestart: $('btnRestart'),
 };
 
 /* ---------------- Tillstånd ---------------- */
-const state = { phase: 'menu', mode: 'none', money: START_MONEY, lives: START_LIVES,
+const state = { phase: 'menu', mode: 'none', money: START_MONEY,
                 wave: 1, speed: 1, paused: false, time: 0, tvis: 0 };
-const stats = { kills: 0 };
-const NET = { size: 1, links: 0 };
+const stats = { kills: 0, built: 0, basesLost: 0 };
 
-let towerCostNow = TOWER_COST0;
-let countdown = 10;
-let pendingList = [], pendingIdx = 0, waveT = 0;
-let linkFrom = null, hoverTower = null;
+let buildType = 'pulse';
+let builtCount = 0;
+let countdown = 12;
+let pendingList = [], pendingIdx = 0, waveT = 0, nextWaveList = [];
+let linkFrom = null, hoverTower = null, selected = null;
 let shakeT = 0, shakeAmp = 0;
-let wallFlash = 0, spawnFlash = 0;
-let lastShotSnd = 0;
+let lastShotSnd = 0, lastAlarmSnd = 0;
 let hudDirty = true, hudTimer = 0;
+let totalIncome = 0;
 
-const towers = [], links = [], enemies = [];
+const towers = [], links = [], enemies = [], bases = [];
+
+function costOf(key) {
+  return Math.round(TOWER_DEFS[key].kostnad * (1 + 0.045 * builtCount) / 5) * 5;
+}
 
 /* ---------------- Ljud (WebAudio, helt syntetiskt) ---------------- */
 const Sound = (() => {
@@ -345,18 +441,22 @@ const Sound = (() => {
   return {
     ensure,
     toggle() { muted = !muted; return muted; },
-    shoot()    { tone(1100, 0.05, 'square', 0.05, 500); },
-    beamLock() { tone(190, 0.14, 'sawtooth', 0.06, 420); },
-    select()   { tone(520, 0.07, 'sine', 0.14); },
-    place()    { tone(420, 0.12, 'sine', 0.22, 560); tone(630, 0.18, 'sine', 0.1); },
-    link()     { tone(660, 0.1, 'triangle', 0.18); setTimeout(() => tone(990, 0.14, 'triangle', 0.18), 70); },
-    upgrade()  { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, 0.16, 'triangle', 0.2), i * 70)); },
-    boom(big)  { noise(big ? 0.5 : 0.22, big ? 0.45 : 0.28, big ? 700 : 1200); tone(big ? 160 : 240, big ? 0.4 : 0.2, 'sine', 0.26, 40); },
-    leak()     { tone(190, 0.35, 'sawtooth', 0.26, 55); },
-    wave()     { tone(330, 0.2, 'triangle', 0.18); setTimeout(() => tone(440, 0.25, 'triangle', 0.18), 120); },
-    clear()    { [392, 494, 587, 784].forEach((f, i) => setTimeout(() => tone(f, 0.18, 'sine', 0.18), i * 90)); },
-    over()     { [440, 349, 262, 196].forEach((f, i) => setTimeout(() => tone(f, 0.4, 'sawtooth', 0.16), i * 220)); },
-    error()    { tone(150, 0.12, 'square', 0.14); },
+    shoot()    { tone(1100, 0.05, 'square', 0.045, 500); },
+    rail()     { tone(1500, 0.16, 'sawtooth', 0.1, 240); noise(0.08, 0.07, 3200); },
+    nova()     { noise(0.32, 0.26, 520); tone(95, 0.3, 'sine', 0.26, 45); },
+    beamLock() { tone(190, 0.14, 'sawtooth', 0.05, 420); },
+    select()   { tone(520, 0.07, 'sine', 0.13); },
+    place()    { tone(420, 0.12, 'sine', 0.2, 560); tone(630, 0.18, 'sine', 0.09); },
+    sell()     { tone(700, 0.09, 'triangle', 0.16, 1150); },
+    link()     { tone(660, 0.1, 'triangle', 0.16); setTimeout(() => tone(990, 0.14, 'triangle', 0.16), 70); },
+    upgrade()  { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, 0.16, 'triangle', 0.18), i * 70)); },
+    boom(big)  { noise(big ? 0.5 : 0.2, big ? 0.42 : 0.24, big ? 700 : 1200); tone(big ? 160 : 240, big ? 0.4 : 0.18, 'sine', 0.22, 40); },
+    alarm()    { tone(300, 0.13, 'square', 0.16, 210); },
+    baseDown() { noise(0.8, 0.5, 500); [220, 165, 110, 73].forEach((f, i) => setTimeout(() => tone(f, 0.4, 'sawtooth', 0.2), i * 130)); },
+    wave()     { tone(330, 0.2, 'triangle', 0.16); setTimeout(() => tone(440, 0.25, 'triangle', 0.16), 120); },
+    clear()    { [392, 494, 587, 784].forEach((f, i) => setTimeout(() => tone(f, 0.18, 'sine', 0.16), i * 90)); },
+    over()     { [440, 349, 262, 196].forEach((f, i) => setTimeout(() => tone(f, 0.45, 'sawtooth', 0.15), i * 240)); },
+    error()    { tone(150, 0.12, 'square', 0.13); },
   };
 })();
 
@@ -370,22 +470,31 @@ $('spel').appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x04060d);
 
-const camera = new THREE.PerspectiveCamera(46, innerWidth / innerHeight, 0.1, 250);
+const camera = new THREE.PerspectiveCamera(46, innerWidth / innerHeight, 0.1, 400);
 const camBase = new THREE.Vector3();
-function fitCamera() {
-  camera.aspect = innerWidth / innerHeight;
-  const k = Math.min(2.6, Math.max(1, 1.72 / camera.aspect));
-  camBase.set(0, 30.5, 16.5).multiplyScalar(k);
-  camera.position.copy(camBase);
-  camera.lookAt(0, 0, -1.2);
-  camera.updateProjectionMatrix();
+/* Kameran kan panoreras (WASD/pilar/mittenknapp/minikarta) och zoomas (hjul) */
+const cam = { tx: PRIME_POS.x - 4, tz: 0, zoom: 0.95, cx: PRIME_POS.x - 4, cz: 0, cZoom: 0.95 };
+function aspectK() {
+  return Math.min(2.6, Math.max(1, 1.72 / (innerWidth / innerHeight)));
+}
+function updateCamera(raw) {
+  const f = Math.min(1, raw * 7);
+  cam.cx += (cam.tx - cam.cx) * f;
+  cam.cz += (cam.tz - cam.cz) * f;
+  cam.cZoom += (cam.zoom - cam.cZoom) * f;
+  const k = aspectK() * cam.cZoom;
+  camBase.set(cam.cx, 30.5 * k, cam.cz + 16.5 * k);
+}
+function clampCamTarget() {
+  cam.tx = THREE.MathUtils.clamp(cam.tx, FIELD.minX - 2, FIELD.maxX + 2);
+  cam.tz = THREE.MathUtils.clamp(cam.tz, FIELD.minZ - 2, FIELD.maxZ + 4);
 }
 window.addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
-  fitCamera();
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
 });
 
-/* Temp-vektorer (återanvänds för att slippa skräpsamling) */
 const TMP_A = new THREE.Vector3(), TMP_B = new THREE.Vector3(),
       TMP_C = new THREE.Vector3(), TMP_D = new THREE.Vector3();
 
@@ -418,19 +527,19 @@ function addMat(color, opacity) {
 
 /* Delade geometrier — bara cirklar och rektanglar! */
 const GEO_BOX = new THREE.BoxGeometry(1, 1, 1);
-const GEO_CIRC = new THREE.CircleGeometry(1, 36);          GEO_CIRC.rotateX(-Math.PI / 2);
-const GEO_RING = new THREE.RingGeometry(0.78, 1, 40);      GEO_RING.rotateX(-Math.PI / 2);
+const GEO_CIRC = new THREE.CircleGeometry(1, 36);           GEO_CIRC.rotateX(-Math.PI / 2);
+const GEO_RING = new THREE.RingGeometry(0.78, 1, 40);       GEO_RING.rotateX(-Math.PI / 2);
 const GEO_RING_THIN = new THREE.RingGeometry(0.955, 1, 64); GEO_RING_THIN.rotateX(-Math.PI / 2);
 const GEO_PLANE = (() => { const g = new THREE.PlaneGeometry(1, 1); g.rotateX(-Math.PI / 2); return g; })();
 
-/* ---------------- Spelplan ---------------- */
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(70, 46),
+/* ---------------- Spelplan & dekor ---------------- */
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(150, 100),
   new THREE.MeshBasicMaterial({ color: 0x070b16 }));
 ground.geometry.rotateX(-Math.PI / 2);
 ground.position.y = -0.02;
 scene.add(ground);
 
-const gridMat = new THREE.LineBasicMaterial({ color: 0x1b3a5c, transparent: true, opacity: 0.45 });
+const gridMat = new THREE.LineBasicMaterial({ color: 0x1b3a5c, transparent: true, opacity: 0.4 });
 (function makeGrid() {
   const pts = [], step = 2;
   for (let x = FIELD.minX; x <= FIELD.maxX + 0.001; x += step) pts.push(x, 0, FIELD.minZ, x, 0, FIELD.maxZ);
@@ -447,31 +556,72 @@ const gridMat = new THREE.LineBasicMaterial({ color: 0x1b3a5c, transparent: true
   scene.add(new THREE.LineSegments(g,
     new THREE.LineBasicMaterial({ color: 0x2e6da8, transparent: true, opacity: 0.85 })));
 })();
+(function makeCorners() {
+  // L-formade hörnmarkeringar av tunna rektanglar
+  const m = new THREE.MeshBasicMaterial({ color: 0x2e6da8 });
+  for (const [cx, cz, sx, sz] of [
+    [FIELD.minX, FIELD.minZ, 1, 1], [FIELD.maxX, FIELD.minZ, -1, 1],
+    [FIELD.minX, FIELD.maxZ, 1, -1], [FIELD.maxX, FIELD.maxZ, -1, -1]]) {
+    const h = new THREE.Mesh(GEO_BOX, m);
+    h.scale.set(2.4, 0.1, 0.22); h.position.set(cx + sx * 1.2, 0.05, cz); scene.add(h);
+    const v = new THREE.Mesh(GEO_BOX, m);
+    v.scale.set(0.22, 0.1, 2.4); v.position.set(cx, 0.05, cz + sz * 1.2); scene.add(v);
+  }
+})();
+(function makeStars() {
+  // stjärnfält + nebulosor under spelplanet
+  for (let i = 0; i < 240; i++) {
+    const m = new THREE.SpriteMaterial({ map: TEX_DOT, transparent: true,
+      color: Math.random() < 0.3 ? 0x6fb6ff : 0xcfe8ff,
+      opacity: 0.08 + Math.random() * 0.22, blending: THREE.AdditiveBlending, depthWrite: false });
+    const s = new THREE.Sprite(m);
+    const sc = 0.08 + Math.random() * 0.3;
+    s.scale.set(sc, sc, 1);
+    s.position.set((Math.random() - 0.5) * 150, -1.4, (Math.random() - 0.5) * 100);
+    s.renderOrder = 1;
+    scene.add(s);
+  }
+  for (const [x, z, c] of [[-42, -22, 0x4422aa], [40, 24, 0x113b66], [-30, 26, 0x44104f]]) {
+    const n = makeGlow(c, 60, 0.16);
+    n.position.set(x, -2.5, z);
+    n.renderOrder = 0;
+    scene.add(n);
+  }
+})();
 
-/* Din vägg (basen) till höger — färgas röd när liven sjunker */
-const wallMat = new THREE.MeshBasicMaterial({ color: 0x2bd7ff });
-const wall = new THREE.Mesh(GEO_BOX, wallMat);
-wall.scale.set(0.45, 1.15, FIELD.maxZ - FIELD.minZ);
-wall.position.set(WALL_X, 0.55, 0);
-scene.add(wall);
-const wallGlowMat = addMat(0x18b8ff, 0.24);
-const wallGlow = new THREE.Mesh(GEO_PLANE, wallGlowMat);
-wallGlow.scale.set(2.6, 1, FIELD.maxZ - FIELD.minZ + 1);
-wallGlow.position.set(WALL_X, 0.05, 0);
-wallGlow.renderOrder = 2;
-scene.add(wallGlow);
-
-/* Spawn-portalen till vänster */
-const spawnMat = addMat(0xb84dff, 0.12);
-const spawnBar = new THREE.Mesh(GEO_PLANE, spawnMat);
-spawnBar.scale.set(2.2, 1, FIELD.maxZ - FIELD.minZ + 1);
-spawnBar.position.set(FIELD.minX - 0.4, 0.05, 0);
-spawnBar.renderOrder = 2;
-scene.add(spawnBar);
+/* Portaler (fiendernas ingångar) */
+for (const p of PORTALS) {
+  const horiz = p.dir !== 'left';
+  const len = horiz ? (p.seg.x1 - p.seg.x0) : (p.seg.z1 - p.seg.z0);
+  p.cx = horiz ? (p.seg.x0 + p.seg.x1) / 2 : p.seg.x;
+  p.cz = horiz ? p.seg.z : (p.seg.z0 + p.seg.z1) / 2;
+  p.mat = addMat(p.color, 0.05);
+  const bar = new THREE.Mesh(GEO_PLANE, p.mat);
+  if (horiz) { bar.scale.set(len, 1, 2.2); bar.position.set(p.cx, 0.05, p.seg.z + (p.dir === 'top' ? -0.6 : 0.6)); }
+  else { bar.scale.set(2.2, 1, len); bar.position.set(p.seg.x - 0.6, 0.05, p.cz); }
+  bar.renderOrder = 2;
+  scene.add(bar);
+  p.ringMat = addMat(p.color, 0.06);
+  p.ring = new THREE.Mesh(GEO_RING_THIN, p.ringMat);
+  p.ring.position.set(
+    p.dir === 'left' ? p.seg.x - 0.6 : p.cx, 0.07,
+    p.dir === 'top' ? p.seg.z - 0.6 : p.dir === 'bottom' ? p.seg.z + 0.6 : p.cz);
+  p.ring.scale.setScalar(2);
+  scene.add(p.ring);
+  p.flash = 0;
+  p.announced = false;
+}
+function portalActive(p) { return state.wave >= p.from; }
+function spawnPosFor(p) {
+  const r = Math.random();
+  if (p.dir === 'left') return { x: p.seg.x - 1.5 - Math.random() * 1.5, z: THREE.MathUtils.lerp(p.seg.z0, p.seg.z1, r) };
+  if (p.dir === 'top') return { x: THREE.MathUtils.lerp(p.seg.x0, p.seg.x1, r), z: p.seg.z - 1.5 - Math.random() * 1.5 };
+  return { x: THREE.MathUtils.lerp(p.seg.x0, p.seg.x1, r), z: p.seg.z + 1.5 + Math.random() * 1.5 };
+}
 
 /* ---------------- Partiklar (poolade) ---------------- */
 const particles = [];
-for (let i = 0; i < 240; i++) {
+for (let i = 0; i < 400; i++) {
   const m = new THREE.SpriteMaterial({ map: TEX_DOT, color: 0xffffff, transparent: true,
     opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
   const s = new THREE.Sprite(m);
@@ -517,7 +667,7 @@ function updateParticles(dt) {
   }
 }
 
-/* ---------------- Expanderande ringar (effekter) ---------------- */
+/* ---------------- Effekter: ringar & blixtstrålar ---------------- */
 const fxRings = [];
 function ringFx(x, z, color, maxR, dur) {
   const m = new THREE.Mesh(GEO_RING_THIN, addMat(color, 0.9));
@@ -536,11 +686,35 @@ function updateFxRings(raw) {
     f.m.material.opacity = 0.9 * (1 - k);
   }
 }
+const fxBeams = [];
+function beamFx(sx, sy, sz, ex, ey, ez, color, width, dur) {
+  const m = new THREE.Mesh(GEO_BOX, addMat(color, 0.95));
+  m.renderOrder = 6;
+  TMP_A.set(sx, sy, sz); TMP_B.set(ex, ey, ez);
+  const dir = TMP_C.copy(TMP_B).sub(TMP_A);
+  const len = Math.max(dir.length(), 1e-3);
+  m.position.copy(TMP_D.copy(TMP_A).add(TMP_B).multiplyScalar(0.5));
+  m.quaternion.setFromUnitVectors(X_AXIS, dir.normalize());
+  m.scale.set(len, width, width);
+  scene.add(m);
+  fxBeams.push({ m, t: 0, dur, w: width });
+}
+function updateFxBeams(raw) {
+  for (let i = fxBeams.length - 1; i >= 0; i--) {
+    const f = fxBeams[i];
+    f.t += raw;
+    const k = f.t / f.dur;
+    if (k >= 1) { scene.remove(f.m); f.m.material.dispose(); fxBeams.splice(i, 1); continue; }
+    f.m.material.opacity = 0.95 * (1 - k);
+    f.m.scale.y = f.m.scale.z = f.w * (1 - k * 0.7);
+  }
+}
 
-/* ---------------- Flytande stridstext (HTML) ---------------- */
+/* ---------------- Flytande text & meddelanden ---------------- */
 function floatText3(x, y, z, str, color) {
-  if (el.fx.childElementCount > 40) return;
+  if (el.fx.childElementCount > 44) return;
   TMP_A.set(x, y, z).project(camera);
+  if (TMP_A.z > 1) return;
   const d = document.createElement('div');
   d.className = 'ft';
   d.textContent = str;
@@ -553,81 +727,178 @@ function floatText3(x, y, z, str, color) {
 function announce(str) {
   el.announce.textContent = str;
   el.announce.classList.remove('show');
-  void el.announce.offsetWidth; // starta om animationen
+  void el.announce.offsetWidth;
   el.announce.classList.add('show');
 }
 
 /* ---------------- Torn ---------------- */
+function linkRangeOf(t) {
+  if (t.def.kind === 'relay') return LINKABLE_RANGE.relay + 0.75 * (t.level - 1);
+  if (t.def.kind === 'base') return LINKABLE_RANGE.base;
+  return LINKABLE_RANGE.std;
+}
 class Tower {
-  constructor(x, z, isMain) {
-    this.x = x; this.z = z; this.isMain = !!isMain;
+  constructor(x, z, type, isPrime) {
+    this.x = x; this.z = z;
+    this.type = type;
+    this.def = TOWER_DEFS[type];
+    this.isPrime = !!isPrime;
+    this.alive = true;
     this.links = [];
     this.level = 1;
     this.tier = 1;
-    this.connected = this.isMain;
-    this.depth = this.isMain ? 0 : Infinity;
-    this.maxLinks = this.isMain ? 8 : 6;
+    this.connected = false;
+    this.comp = -1;
+    this.depth = Infinity;
+    this.maxLinks = this.def.kind === 'base' ? 8 : 6;
     this.fireCd = Math.random() * 0.4;
     this.spin = Math.random() * 6;
     this.bobPhase = Math.random() * 6;
     this.flashT = 0;
+    this.incAcc = 0;
+    this.mats = [];
+    const mk = (opts) => { const m = new THREE.MeshBasicMaterial(opts); this.mats.push(m); return m; };
+    const mkAdd = (c, o) => { const m = addMat(c, o); this.mats.push(m); return m; };
 
     const g = this.group = new THREE.Group();
     g.position.set(x, 0, z);
     const dark = 0x101e34, mid = 0x16294a;
+    const färg = this.def.färg;
+    const kind = this.def.kind;
 
-    if (this.isMain) {
-      this.coreY = 2.8;
-      this.baseCoreScale = 0.95;
-      this.baseGlowScale = 5.2;
-      const base = new THREE.Mesh(GEO_BOX, new THREE.MeshBasicMaterial({ color: dark }));
-      base.scale.set(2.5, 0.7, 2.5); base.position.y = 0.35; g.add(base);
-      const trim = new THREE.Mesh(GEO_BOX, new THREE.MeshBasicMaterial({ color: mid }));
-      trim.scale.set(1.9, 0.25, 1.9); trim.position.y = 0.82; g.add(trim);
-      const pelare = new THREE.Mesh(GEO_BOX, new THREE.MeshBasicMaterial({ color: mid }));
-      pelare.scale.set(1.0, 1.8, 1.0); pelare.position.y = 1.75; g.add(pelare);
-      this.coreMat = new THREE.MeshBasicMaterial({ color: LEVEL_COLORS[1] });
+    if (kind === 'base') {
+      const big = this.isPrime;
+      this.pickR = big ? 2.2 : 1.8;
+      this.coreY = big ? 2.9 : 2.3;
+      this.radius = big ? 2.4 : 1.9;      // träffyta för fiender
+      this.beamRange = big ? 19 : 14;
+      this.maxHp = this.hp = big ? 1000 : 450;
+      this.baseCoreScale = big ? 0.95 : 0.7;
+      this.baseGlowScale = big ? 5.4 : 4.0;
+      const sc = big ? 1 : 0.78;
+      const base = new THREE.Mesh(GEO_BOX, mk({ color: dark }));
+      base.scale.set(2.6 * sc, 0.7, 2.6 * sc); base.position.y = 0.35; g.add(base);
+      const trim = new THREE.Mesh(GEO_BOX, mk({ color: mid }));
+      trim.scale.set(2.0 * sc, 0.25, 2.0 * sc); trim.position.y = 0.82; g.add(trim);
+      const pelare = new THREE.Mesh(GEO_BOX, mk({ color: mid }));
+      pelare.scale.set(1.0 * sc, big ? 1.9 : 1.4, 1.0 * sc); pelare.position.y = big ? 1.8 : 1.45; g.add(pelare);
+      this.coreMat = mk({ color: LEVEL_COLORS[1] });
       this.core = new THREE.Mesh(GEO_BOX, this.coreMat);
       this.core.position.y = this.coreY; g.add(this.core);
       this.glow = makeGlow(LEVEL_COLORS[1], this.baseGlowScale, 0.85);
+      this.mats.push(this.glow.material);
       this.glow.position.y = this.coreY; g.add(this.glow);
-      const pad = new THREE.Mesh(GEO_PLANE, addMat(0x1276b8, 0.16));
-      pad.scale.set(5.4, 1, 5.4); pad.position.y = 0.04; pad.renderOrder = 2; g.add(pad);
+      const pad = new THREE.Mesh(GEO_PLANE, mkAdd(0x1276b8, 0.15));
+      pad.scale.set(5.6 * sc, 1, 5.6 * sc); pad.position.y = 0.04; pad.renderOrder = 2; g.add(pad);
+      // kretsande kuber
+      this.orbiters = [];
+      const nOrb = big ? 4 : 3;
+      for (let i = 0; i < nOrb; i++) {
+        const o = new THREE.Mesh(GEO_BOX, this.coreMat);
+        o.scale.setScalar(0.22);
+        g.add(o);
+        this.orbiters.push({ m: o, a: (i / nOrb) * Math.PI * 2 });
+      }
+      // HP-mätare
+      const w = this.barW = big ? 4 : 3;
+      const bg = new THREE.Mesh(GEO_PLANE, mk({ color: 0x0a1430, transparent: true, opacity: 0.85 }));
+      bg.scale.set(w, 1, 0.22); bg.position.y = this.coreY + 1.25; bg.renderOrder = 5; g.add(bg);
+      this.hpMat = mk({ color: 0x44ff66, transparent: true, opacity: 0.95 });
+      this.hpBar = new THREE.Mesh(GEO_PLANE, this.hpMat);
+      this.hpBar.scale.set(w, 1, 0.14); this.hpBar.position.y = this.coreY + 1.26; this.hpBar.renderOrder = 6; g.add(this.hpBar);
+      // basens egen stråle
+      this.beam = {
+        target: null, sparkAcc: 0,
+        mesh: new THREE.Mesh(GEO_BOX, mkAdd(LEVEL_COLORS[1], 0.9)),
+        halo: new THREE.Mesh(GEO_BOX, mkAdd(LEVEL_COLORS[1], 0.2)),
+        impact: makeGlow(LEVEL_COLORS[1], 2.6, 0.9),
+      };
+      this.mats.push(this.beam.impact.material);
+      this.beam.mesh.visible = this.beam.halo.visible = this.beam.impact.visible = false;
+      this.beam.mesh.renderOrder = 6;
+      this.beam.halo.renderOrder = 5;
+      scene.add(this.beam.mesh); scene.add(this.beam.halo); scene.add(this.beam.impact);
     } else {
-      this.coreY = 1.55;
+      this.pickR = 1.3;
+      this.coreY = kind === 'relay' ? 2.0 : 1.55;
       this.baseCoreScale = 0.46;
       this.baseGlowScale = 2.4;
-      const base = new THREE.Mesh(GEO_BOX, new THREE.MeshBasicMaterial({ color: dark }));
+      const base = new THREE.Mesh(GEO_BOX, mk({ color: dark }));
       base.scale.set(1.1, 0.45, 1.1); base.position.y = 0.22; g.add(base);
-      const post = new THREE.Mesh(GEO_BOX, new THREE.MeshBasicMaterial({ color: mid }));
-      post.scale.set(0.38, 0.85, 0.38); post.position.y = 0.85; g.add(post);
-      this.coreMat = new THREE.MeshBasicMaterial({ color: LEVEL_COLORS[1] });
+      if (kind === 'relay') {
+        const ant = new THREE.Mesh(GEO_BOX, mk({ color: mid }));
+        ant.scale.set(0.16, 1.5, 0.16); ant.position.y = 1.15; g.add(ant);
+        this.baseCoreScale = 0.3;
+      } else if (kind === 'nova') {
+        const post = new THREE.Mesh(GEO_BOX, mk({ color: mid }));
+        post.scale.set(0.7, 0.6, 0.7); post.position.y = 0.72; g.add(post);
+        this.coreY = 1.25;
+      } else {
+        const post = new THREE.Mesh(GEO_BOX, mk({ color: mid }));
+        post.scale.set(kind === 'rail' ? 0.3 : 0.38, 0.85, kind === 'rail' ? 0.3 : 0.38);
+        post.position.y = 0.85; g.add(post);
+        if (kind === 'rail') this.coreY = 1.7;
+      }
+      this.coreMat = mk({ color: färg });
       this.core = new THREE.Mesh(GEO_BOX, this.coreMat);
       this.core.position.y = this.coreY; g.add(this.core);
-      this.glow = makeGlow(LEVEL_COLORS[1], this.baseGlowScale, 0.75);
+      this.glow = makeGlow(färg, this.baseGlowScale, 0.7);
+      this.mats.push(this.glow.material);
       this.glow.position.y = this.coreY; g.add(this.glow);
-      const pad = new THREE.Mesh(GEO_PLANE, addMat(0x1276b8, 0.1));
+      const pad = new THREE.Mesh(GEO_PLANE, mkAdd(0x1276b8, 0.09));
       pad.scale.set(2.1, 1, 2.1); pad.position.y = 0.04; pad.renderOrder = 2; g.add(pad);
+      if (kind === 'slow') {
+        // synligt aura-område
+        this.auraMat = mkAdd(färg, 0.07);
+        this.aura = new THREE.Mesh(GEO_CIRC, this.auraMat);
+        this.aura.position.y = 0.03; this.aura.renderOrder = 2; g.add(this.aura);
+        this.auraRing = new THREE.Mesh(GEO_RING_THIN, mkAdd(färg, 0.3));
+        this.auraRing.position.y = 0.05; this.auraRing.renderOrder = 3; g.add(this.auraRing);
+      }
     }
     this.core.scale.setScalar(this.baseCoreScale);
     scene.add(g);
   }
   corePos(target) { return target.set(this.x, this.coreY, this.z); }
-  get range() { return this.isMain ? 999 : 4.6 + this.level * 0.9 + this.links.length * 0.15; }
-  shotDmg() { return (6 + (this.level - 1) * 7) * (1 + 0.15 * this.links.length) * (this.connected ? 1.25 : 0.75); }
-  fireRate() { return 0.9 + this.level * 0.35 + this.links.length * 0.05; }
+
+  /* --- statistik per typ och nivå --- */
+  linkMult() { return (1 + 0.15 * this.links.length) * (this.connected ? 1.25 : 0.7); }
+  get range() {
+    const k = this.def.kind;
+    if (k === 'gun')  return 5.2 + this.level * 0.9 + this.links.length * 0.15;
+    if (k === 'rail') return 9.5 + this.level * 1.2;
+    if (k === 'nova') return 3.8 + 0.5 * (this.level - 1);
+    if (k === 'slow') return 4.2 + 0.6 * (this.level - 1);
+    if (k === 'base') return this.beamRange;
+    return 0;
+  }
+  gunDmg()   { return (7 + (this.level - 1) * 7) * this.linkMult(); }
+  gunRate()  { return 0.95 + this.level * 0.35 + this.links.length * 0.05; }
+  railDmg()  { return (26 + (this.level - 1) * 16) * this.linkMult(); }
+  railCd()   { return Math.max(1.2, 2.4 - 0.3 * (this.level - 1)); }
+  novaDmg()  { return (14 + (this.level - 1) * 9) * this.linkMult(); }
+  novaCd()   { return Math.max(1.4, 2.6 - 0.3 * (this.level - 1)); }
+  slowPct()  { return Math.min(0.6, (0.3 + 0.12 * (this.level - 1)) * (this.connected ? 1 : 0.6)); }
+  incRate()  { return this.connected ? 2 + 1.5 * (this.level - 1) : 0; }
+  compStats(){ return this.comp >= 0 ? comps[this.comp] : { n: 0, l: 0 }; }
+  beamDps()  {
+    const s = this.compStats();
+    return (this.isPrime ? 12 : 8) * (1 + 0.38 * (s.n + 0.5 * s.l));
+  }
+  beamWidth() {
+    const s = this.compStats();
+    return Math.min(0.6, (this.isPrime ? 0.12 : 0.09) + 0.02 * (s.n + s.l));
+  }
 
   setLevel(n) {
-    if (this.isMain || n === this.level) return;
+    if (this.def.kind === 'base' || n === this.level) return;
     const up = n > this.level;
     this.level = n;
-    const c = LEVEL_COLORS[n];
-    this.coreMat.color.setHex(c);
-    this.glow.material.color.setHex(c);
-    this.baseCoreScale = 0.46 + (n - 1) * 0.1;
+    this.baseCoreScale = (this.def.kind === 'relay' ? 0.3 : 0.46) + (n - 1) * 0.1;
     this.baseGlowScale = 2.4 + (n - 1) * 0.6;
     this.glow.scale.set(this.baseGlowScale, this.baseGlowScale, 1);
     if (up) {
+      const c = LEVEL_COLORS[n];
       ringFx(this.x, this.z, c, 3.2, 0.6);
       spawnParticles(this.x, this.coreY, this.z, c, 14, 3, 0.5, 0.6);
       floatText3(this.x, this.coreY + 0.6, this.z, n === 3 ? 'MAX-NIVÅ!' : 'UPPGRADERAD!', '#ffd76a');
@@ -636,49 +907,157 @@ class Tower {
     }
   }
   refreshTier() {
-    if (!this.isMain) return;
-    const p = (NET.size - 1) + NET.links * 0.5;
-    const tier = p >= 10 ? 3 : p >= 4 ? 2 : 1;
+    if (this.def.kind !== 'base' || !this.alive) return;
+    const s = this.compStats();
+    const p = s.n + 0.5 * s.l;
+    const tier = p >= 12 ? 3 : p >= 5 ? 2 : 1;
     if (tier !== this.tier) {
+      if (tier > this.tier) {
+        ringFx(this.x, this.z, LEVEL_COLORS[tier], 4.5, 0.7);
+        floatText3(this.x, this.coreY + 1, this.z, (this.isPrime ? 'PRIME' : 'UTPOST') + ' FÖRSTÄRKT!', '#ffd76a');
+        this.flashT = 0.3;
+        Sound.upgrade();
+      }
       this.tier = tier;
-      ringFx(this.x, this.z, LEVEL_COLORS[tier], 4.5, 0.7);
-      floatText3(this.x, this.coreY + 1, this.z, 'NEXUS FÖRSTÄRKT!', '#ffd76a');
-      this.flashT = 0.3;
-      Sound.upgrade();
     }
     const c = LEVEL_COLORS[this.tier];
     this.coreMat.color.setHex(c);
     this.glow.material.color.setHex(c);
-    this.baseCoreScale = 0.95 + Math.min(0.55, p * 0.05);
-    this.baseGlowScale = 5.2 + Math.min(3, p * 0.22);
+    const big = this.isPrime;
+    this.baseCoreScale = (big ? 0.95 : 0.7) + Math.min(0.5, p * 0.04);
+    this.baseGlowScale = (big ? 5.4 : 4.0) + Math.min(3, p * 0.2);
     this.glow.scale.set(this.baseGlowScale, this.baseGlowScale, 1);
   }
+  /* nivåfärg på kärnan för vanliga torn: blandar tornfärgen mot nivåfärgen */
+  refreshNodeColor() {
+    if (this.def.kind === 'base') return;
+    const c = new THREE.Color(this.def.färg);
+    if (this.level >= 2) c.lerp(new THREE.Color(LEVEL_COLORS[this.level]), 0.55);
+    this.coreMat.color.copy(c);
+    this.glow.material.color.copy(c);
+  }
+
+  takeDamage(d) {
+    if (!this.alive) return;
+    this.hp -= d;
+    this.flashT = Math.max(this.flashT, 0.15);
+    if (state.time - lastAlarmSnd > 0.4) { lastAlarmSnd = state.time; Sound.alarm(); }
+    hudDirty = true;
+    if (this.hp <= 0) destroyBase(this);
+  }
+
   updateVisual(raw) {
-    this.spin += raw * (this.isMain ? 0.9 : 0.6 + 0.45 * this.level);
+    if (!this.alive) return;
+    this.spin += raw * (this.def.kind === 'base' ? 0.9 : 0.6 + 0.45 * this.level);
     this.core.rotation.y = this.spin;
     this.core.position.y = this.coreY + Math.sin(state.tvis * 2 + this.bobPhase) * 0.09;
     this.glow.position.y = this.core.position.y;
-    const baseOp = this.isMain ? 0.85 : 0.7;
+    const baseOp = this.def.kind === 'base' ? 0.85 : 0.65;
     this.glow.material.opacity = baseOp * (0.8 + 0.2 * Math.sin(state.tvis * 3.1 + this.bobPhase));
     this.flashT = Math.max(0, this.flashT - raw);
     this.core.scale.setScalar(this.baseCoreScale * (1 + this.flashT * 2));
+    if (this.orbiters) {
+      for (const o of this.orbiters) {
+        o.a += raw * 1.1;
+        const R = this.isPrime ? 1.9 : 1.5;
+        o.m.position.set(Math.cos(o.a) * R, this.coreY + Math.sin(o.a * 1.7) * 0.45, Math.sin(o.a) * R);
+        o.m.rotation.y = o.a * 2;
+      }
+    }
+    if (this.hpBar) {
+      const pct = Math.max(0.001, this.hp / this.maxHp);
+      this.hpBar.scale.set(this.barW * pct, 1, 0.14);
+      this.hpBar.position.x = -this.barW * (1 - pct) / 2;
+      this.hpMat.color.setHSL(0.33 * pct, 1, 0.55);
+    }
+    if (this.aura) {
+      const r = this.range;
+      this.aura.scale.setScalar(r);
+      this.auraRing.scale.setScalar(r * (1 + 0.02 * Math.sin(state.tvis * 2.4 + this.bobPhase)));
+      this.auraRing.material.opacity = 0.22 + 0.1 * Math.sin(state.tvis * 2.4 + this.bobPhase);
+    }
   }
   updateCombat(dt) {
-    if (this.isMain) return; // huvudtornet sköts av updateMainBeam
+    if (!this.alive) return;
+    const kind = this.def.kind;
+    if (kind === 'income') {
+      const rate = this.incRate();
+      if (rate > 0) {
+        state.money += rate * dt;
+        this.incAcc += rate * dt;
+        if (this.incAcc >= 25) {
+          floatText3(this.x, this.coreY + 0.5, this.z, '+25💰', '#ffd76a');
+          this.incAcc -= 25;
+        }
+      }
+      return;
+    }
+    if (kind === 'slow') {
+      const r2 = this.range * this.range;
+      const pct = this.slowPct();
+      for (const e of enemies) {
+        if (e.dead) continue;
+        const dx = e.x - this.x, dz = e.z - this.z;
+        if (dx * dx + dz * dz <= r2) e.slowK = Math.max(e.slowK, pct);
+      }
+      return;
+    }
+    if (kind === 'relay' || kind === 'base') return; // baser sköts i updateBeams
     this.fireCd -= dt;
     if (this.fireCd > 0) return;
     const r2 = this.range * this.range;
-    let best = null;
+    let best = null, bestScore = Infinity;
     for (const e of enemies) {
       if (e.dead) continue;
       const dx = e.x - this.x, dz = e.z - this.z;
-      if (dx * dx + dz * dz <= r2 && (!best || e.x > best.x)) best = e;
+      if (dx * dx + dz * dz > r2) continue;
+      const score = e.distToTarget(); // mest brådskande = närmast sin målbas
+      if (score < bestScore) { bestScore = score; best = e; }
     }
     if (!best) return;
-    this.fireCd = 1 / this.fireRate();
-    fireBullet(this.x, this.core.position.y, this.z, best, this.shotDmg(), LEVEL_COLORS[this.level]);
-    this.flashT = Math.max(this.flashT, 0.1);
-    if (state.time - lastShotSnd > 0.09) { lastShotSnd = state.time; Sound.shoot(); }
+    if (kind === 'gun') {
+      this.fireCd = 1 / this.gunRate();
+      fireBullet(this.x, this.core.position.y, this.z, best, this.gunDmg(), this.def.färg);
+      this.flashT = Math.max(this.flashT, 0.1);
+      if (state.time - lastShotSnd > 0.09) { lastShotSnd = state.time; Sound.shoot(); }
+    } else if (kind === 'rail') {
+      this.fireCd = this.railCd();
+      const dx = best.x - this.x, dz = best.z - this.z;
+      const dl = Math.max(Math.hypot(dx, dz), 1e-4);
+      const ux = dx / dl, uz = dz / dl;
+      const L = this.range + 3;
+      const dmg = this.railDmg();
+      let hits = 0;
+      for (const e of enemies) {
+        if (e.dead) continue;
+        const px = e.x - this.x, pz = e.z - this.z;
+        const s = px * ux + pz * uz;
+        if (s < 0 || s > L) continue;
+        const perp = Math.abs(px * uz - pz * ux);
+        if (perp <= e.r + 0.35) {
+          damageEnemy(e, dmg);
+          spawnParticles(e.x, 0.7, e.z, this.def.färg, 3, 2, 0.3, 0.3);
+          hits++;
+        }
+      }
+      beamFx(this.x, this.core.position.y, this.z,
+             this.x + ux * L, 0.6, this.z + uz * L, this.def.färg, 0.14 + 0.03 * this.level, 0.22);
+      this.flashT = Math.max(this.flashT, 0.16);
+      Sound.rail();
+    } else if (kind === 'nova') {
+      this.fireCd = this.novaCd();
+      const dmg = this.novaDmg();
+      for (const e of enemies) {
+        if (e.dead) continue;
+        const dx2 = e.x - this.x, dz2 = e.z - this.z;
+        if (dx2 * dx2 + dz2 * dz2 <= r2) damageEnemy(e, dmg);
+      }
+      ringFx(this.x, this.z, this.def.färg, this.range, 0.45);
+      ringFx(this.x, this.z, 0xffffff, this.range * 0.6, 0.3);
+      spawnParticles(this.x, 0.8, this.z, this.def.färg, 12, 3.5, 0.4, 0.45);
+      this.flashT = Math.max(this.flashT, 0.18);
+      Sound.nova();
+    }
   }
 }
 
@@ -726,10 +1105,13 @@ class Link {
     if (!this.a.connected || !this.b.connected) { this.flow = 0; return; }
     this.flow = this.a.depth === this.b.depth ? 0 : (this.a.depth > this.b.depth ? 1 : -1);
   }
+  levelColor() {
+    const la = this.a.def.kind === 'base' ? 3 : this.a.level;
+    const lb = this.b.def.kind === 'base' ? 3 : this.b.level;
+    return LEVEL_COLORS[Math.min(la, lb)];
+  }
   update(raw) {
-    const la = this.a.isMain ? 3 : this.a.level;
-    const lb = this.b.isMain ? 3 : this.b.level;
-    const c = LEVEL_COLORS[Math.min(la, lb)];
+    const c = this.levelColor();
     this.mesh.material.color.setHex(c);
     this.halo.material.color.setHex(c);
     this.mesh.material.opacity = 0.42 + 0.22 * Math.sin(state.tvis * 4 + this.phase);
@@ -749,94 +1131,173 @@ class Link {
       d.s.material.color.setHex(c);
     }
   }
+  dispose() {
+    scene.remove(this.mesh); this.mesh.material.dispose();
+    scene.remove(this.halo); this.halo.material.dispose();
+    for (const d of this.dots) { scene.remove(d.s); d.s.material.dispose(); }
+  }
+}
+function removeLink(l) {
+  const ia = l.a.links.indexOf(l); if (ia >= 0) l.a.links.splice(ia, 1);
+  const ib = l.b.links.indexOf(l); if (ib >= 0) l.b.links.splice(ib, 1);
+  const i = links.indexOf(l); if (i >= 0) links.splice(i, 1);
+  l.dispose();
 }
 
-/* ---------------- Nätverket (BFS från NEXUS) ---------------- */
+/* ---------------- Nätverket (BFS från alla levande baser) ---------------- */
+let comps = [];
 function recomputeNetwork() {
-  for (const t of towers) { t.connected = t.isMain; t.depth = t.isMain ? 0 : Infinity; }
-  const q = [main];
-  let size = 1;
-  while (q.length) {
-    const t = q.shift();
-    for (const l of t.links) {
-      const o = l.other(t);
-      if (!o.connected) { o.connected = true; o.depth = t.depth + 1; size++; q.push(o); }
+  comps = [];
+  for (const t of towers) { t.connected = false; t.comp = -1; t.depth = Infinity; }
+  for (const b of bases) {
+    if (!b.alive || b.comp !== -1) continue;
+    const id = comps.length;
+    comps.push({ n: 0, l: 0, bases: 0 });
+    b.comp = id; b.connected = true; b.depth = 0;
+    const q = [b];
+    while (q.length) {
+      const t = q.shift();
+      if (t.def.kind === 'base') comps[id].bases++;
+      else comps[id].n++;
+      for (const l of t.links) {
+        const o = l.other(t);
+        if (!o.connected && o.alive) {
+          o.connected = true; o.comp = id; o.depth = t.depth + 1;
+          q.push(o);
+        }
+      }
     }
   }
-  let lc = 0;
+  for (const c of comps) c.l = 0;
   for (const l of links) {
-    if (l.a.connected && l.b.connected) lc++;
+    if (l.a.comp >= 0 && l.a.comp === l.b.comp) comps[l.a.comp].l++;
     l.refreshFlow();
   }
-  NET.size = size;
-  NET.links = lc;
-  for (const t of towers) if (!t.isMain) t.setLevel(t.links.length >= 4 ? 3 : t.links.length >= 2 ? 2 : 1);
-  main.refreshTier();
+  totalIncome = 0;
+  for (const t of towers) {
+    if (!t.alive) continue;
+    if (t.def.kind !== 'base') {
+      t.setLevel(t.links.length >= 4 ? 3 : t.links.length >= 2 ? 2 : 1);
+      t.refreshNodeColor();
+      if (t.def.kind === 'income') totalIncome += t.incRate();
+    }
+  }
+  for (const b of bases) b.refreshTier();
   hudDirty = true;
 }
-function mainDps() { return 9 * (1 + 0.5 * (NET.size - 1) + 0.22 * NET.links); }
-function beamWidth() { return Math.min(0.55, 0.1 + 0.022 * ((NET.size - 1) + NET.links)); }
 
 /* ---------------- Fiender ---------------- */
 const ENEMY_TYPES = {
-  drone:   { hp: 24,  speed: 1.55, r: 0.38, value: 8,   dmg: 1, color: 0x46e882, ring: 0x9dffc4 },
-  speeder: { hp: 15,  speed: 2.9,  r: 0.27, value: 9,   dmg: 1, color: 0xff5ad1, ring: 0xffaae8 },
-  tank:    { hp: 85,  speed: 0.95, r: 0.66, value: 18,  dmg: 2, color: 0xffa133, ring: 0xffd089 },
-  boss:    { hp: 520, speed: 0.62, r: 1.25, value: 130, dmg: 5, color: 0xff4040, ring: 0xff9a9a },
+  drone:    { namn: 'drönare',  hp: 26,  speed: 1.5,  r: 0.38, value: 8,   baseDmg: 14,  color: 0x46e882, ring: 0x9dffc4 },
+  speeder:  { namn: 'speeder',  hp: 16,  speed: 2.9,  r: 0.27, value: 9,   baseDmg: 10,  color: 0xff5ad1, ring: 0xffaae8 },
+  tank:     { namn: 'tank',     hp: 95,  speed: 0.9,  r: 0.66, value: 19,  baseDmg: 38,  color: 0xffa133, ring: 0xffd089 },
+  healer:   { namn: 'helare',   hp: 55,  speed: 1.25, r: 0.5,  value: 22,  baseDmg: 18,  color: 0x66ffb0, ring: 0xc2ffdd },
+  splitter: { namn: 'delare',   hp: 60,  speed: 1.35, r: 0.55, value: 16,  baseDmg: 16,  color: 0xb8ff4d, ring: 0xe2ffa8 },
+  mini:     { namn: 'splitter', hp: 9,   speed: 3.1,  r: 0.2,  value: 3,   baseDmg: 5,   color: 0xd6ff7a, ring: 0xeeffc4 },
+  boss:     { namn: 'BOSS',     hp: 560, speed: 0.6,  r: 1.35, value: 140, baseDmg: 160, color: 0xff4040, ring: 0xff9a9a },
 };
+function nearestBase(x, z) {
+  let best = null, bd = Infinity;
+  for (const b of bases) {
+    if (!b.alive) continue;
+    const d = (b.x - x) * (b.x - x) + (b.z - z) * (b.z - z);
+    if (d < bd) { bd = d; best = b; }
+  }
+  return best;
+}
 class Enemy {
-  constructor(type, wave) {
+  constructor(type, wave, pos) {
     const def = ENEMY_TYPES[type];
-    this.type = type; this.def = def;
-    const hpMul = (1 + 0.5 * (wave - 1)) * Math.pow(1.12, Math.max(0, wave - 6));
-    const spMul = (1 + Math.min(0.8, (wave - 1) * 0.035)) * (0.92 + Math.random() * 0.16);
-    this.maxHp = this.hp = Math.round(def.hp * hpMul * (type === 'boss' ? 1 + wave * 0.05 : 1));
+    this.type = type; this.def = def; this.wave = wave;
+    const hpMul = (1 + 0.42 * (wave - 1)) * Math.pow(1.13, Math.max(0, wave - 5));
+    const spMul = (1 + Math.min(0.85, (wave - 1) * 0.035)) * (0.92 + Math.random() * 0.16);
+    this.elite = wave >= 6 && type !== 'boss' && type !== 'mini' && Math.random() < 0.12;
+    this.maxHp = this.hp = Math.round(def.hp * hpMul * (type === 'boss' ? 1 + wave * 0.05 : 1) * (this.elite ? 2.6 : 1));
     this.speed = def.speed * spMul;
-    this.r = def.r;
-    this.value = Math.round(def.value * (1 + wave * 0.04));
-    this.dmg = def.dmg;
-    this.z0 = THREE.MathUtils.lerp(FIELD.minZ + 1.3, FIELD.maxZ - 1.3, Math.random());
+    this.r = def.r * (this.elite ? 1.25 : 1);
+    this.value = Math.round(def.value * (1 + wave * 0.04) * (this.elite ? 2 : 1));
+    this.baseDmg = Math.round(def.baseDmg * (this.elite ? 1.8 : 1));
     this.phase = Math.random() * Math.PI * 2;
-    this.amp = type === 'boss' ? 0.25 : 0.6 + Math.random() * 1.1;
-    this.x = SPAWN_X - Math.random() * 1.6;
-    this.z = this.z0;
+    this.amp = type === 'boss' ? 0.2 : 0.5 + Math.random();
+    this.x = pos.x; this.z = pos.z;
     this.dead = false;
     this.flash = 0;
+    this.slowK = 0;
+    this.healCd = 1 + Math.random();
+    this.target = nearestBase(this.x, this.z);
     this.mats = [];
-    const mkMat = (opts) => { const m = new THREE.MeshBasicMaterial(opts); this.mats.push(m); return m; };
+    const mk = (opts) => { const m = new THREE.MeshBasicMaterial(opts); this.mats.push(m); return m; };
 
     const g = this.group = new THREE.Group();
     this.baseColor = new THREE.Color(def.color);
-    this.bodyMat = mkMat({ color: def.color });
+    this.bodyMat = mk({ color: def.color });
     const body = new THREE.Mesh(GEO_CIRC, this.bodyMat);
     body.scale.setScalar(this.r); body.position.y = 0.55; g.add(body);
-    const inre = new THREE.Mesh(GEO_CIRC, mkMat({ color: 0x070d18 }));
+    const inre = new THREE.Mesh(GEO_CIRC, mk({ color: 0x070d18 }));
     inre.scale.setScalar(this.r * 0.45); inre.position.y = 0.565; g.add(inre);
     this.ringMat = addMat(def.ring, 0.95); this.mats.push(this.ringMat);
     this.ringMesh = new THREE.Mesh(GEO_RING, this.ringMat);
     this.ringMesh.scale.setScalar(this.r * 1.28); this.ringMesh.position.y = 0.55;
     this.ringMesh.renderOrder = 2; g.add(this.ringMesh);
-    const skugga = new THREE.Mesh(GEO_CIRC, mkMat({ color: 0x000000, transparent: true, opacity: 0.4 }));
+    if (this.elite) {
+      const er = new THREE.Mesh(GEO_RING_THIN, addMat(0xffffff, 0.85));
+      this.mats.push(er.material);
+      er.scale.setScalar(this.r * 1.65); er.position.y = 0.56; er.renderOrder = 2; g.add(er);
+    }
+    if (type === 'healer') {
+      this.healRing = new THREE.Mesh(GEO_RING_THIN, addMat(0x66ffb0, 0.35));
+      this.mats.push(this.healRing.material);
+      this.healRing.scale.setScalar(this.r * 2.2); this.healRing.position.y = 0.54;
+      this.healRing.renderOrder = 2; g.add(this.healRing);
+    }
+    if (type === 'splitter') {
+      this.subDots = [];
+      for (let i = 0; i < 3; i++) {
+        const sd = new THREE.Mesh(GEO_CIRC, mk({ color: 0x070d18 }));
+        sd.scale.setScalar(this.r * 0.18);
+        sd.position.y = 0.57;
+        g.add(sd);
+        this.subDots.push({ m: sd, a: i * Math.PI * 2 / 3 });
+      }
+    }
+    const skugga = new THREE.Mesh(GEO_CIRC, mk({ color: 0x000000, transparent: true, opacity: 0.4 }));
     skugga.scale.setScalar(this.r * 1.3); skugga.position.y = 0.02; g.add(skugga);
-    this.glow = makeGlow(def.ring, this.r * 4.6, 0.32);
+    this.glow = makeGlow(def.ring, this.r * 4.6, 0.3);
     this.glow.position.y = 0.8; g.add(this.glow);
     this.mats.push(this.glow.material);
-    // HP-mätare (två platta rektanglar)
     const w = this.barW = this.r * 1.6 + 0.7;
-    const bg = new THREE.Mesh(GEO_PLANE, mkMat({ color: 0x0a1430, transparent: true, opacity: 0.85 }));
+    const bg = new THREE.Mesh(GEO_PLANE, mk({ color: 0x0a1430, transparent: true, opacity: 0.85 }));
     bg.scale.set(w, 1, 0.16); bg.position.y = 1.06; bg.renderOrder = 5; g.add(bg);
-    this.fgMat = mkMat({ color: 0x44ff66, transparent: true, opacity: 0.95 });
+    this.fgMat = mk({ color: 0x44ff66, transparent: true, opacity: 0.95 });
     this.fg = new THREE.Mesh(GEO_PLANE, this.fgMat);
     this.fg.scale.set(w, 1, 0.1); this.fg.position.y = 1.07; this.fg.renderOrder = 6; g.add(this.fg);
 
     g.position.set(this.x, 0, this.z);
     scene.add(g);
   }
+  distToTarget() {
+    if (!this.target) return Infinity;
+    return Math.hypot(this.target.x - this.x, this.target.z - this.z);
+  }
   update(dt) {
-    this.x += this.speed * dt;
-    this.z = THREE.MathUtils.clamp(
-      this.z0 + Math.sin(this.x * 0.33 + this.phase) * this.amp,
-      FIELD.minZ + 0.8, FIELD.maxZ - 0.8);
+    if (!this.target || !this.target.alive) this.target = nearestBase(this.x, this.z);
+    const slow = Math.min(0.6, this.slowK);
+    this.slowK = 0;
+    const v = this.speed * (1 - slow);
+    if (this.target) {
+      const dx = this.target.x - this.x, dz = this.target.z - this.z;
+      const d = Math.max(Math.hypot(dx, dz), 1e-4);
+      const ux = dx / d, uz = dz / d;
+      // vinkelrät svajning ger organisk rörelse
+      const w = Math.sin(state.tvis * 1.7 + this.phase) * this.amp;
+      this.x += (ux + -uz * w * 0.45) * v * dt;
+      this.z += (uz + ux * w * 0.45) * v * dt;
+      if (d <= this.target.radius + this.r * 0.5) explodeOnBase(this, this.target);
+    } else {
+      this.x += v * dt; // inga baser kvar (spelet är ändå över)
+    }
+    this.x = THREE.MathUtils.clamp(this.x, FIELD.minX - 4, FIELD.maxX + 2);
+    this.z = THREE.MathUtils.clamp(this.z, FIELD.minZ - 4, FIELD.maxZ + 4);
     this.group.position.set(this.x, 0, this.z);
     if (this.flash > 0) {
       this.flash -= dt;
@@ -845,6 +1306,29 @@ class Enemy {
     }
     if (this.type === 'boss') {
       this.ringMesh.scale.setScalar(this.r * 1.28 * (1 + 0.07 * Math.sin(state.tvis * 4)));
+    }
+    if (this.type === 'healer') {
+      this.healRing.scale.setScalar(this.r * (2.2 + 0.5 * Math.sin(state.tvis * 3 + this.phase)));
+      this.healCd -= dt;
+      if (this.healCd <= 0) {
+        this.healCd = 1.2;
+        let healed = false;
+        for (const e of enemies) {
+          if (e.dead || e === this) continue;
+          const dx = e.x - this.x, dz = e.z - this.z;
+          if (dx * dx + dz * dz <= 4.5 * 4.5 && e.hp < e.maxHp) {
+            e.hp = Math.min(e.maxHp, e.hp + e.maxHp * 0.035);
+            healed = true;
+          }
+        }
+        if (healed) ringFx(this.x, this.z, 0x66ffb0, 4.5, 0.5);
+      }
+    }
+    if (this.subDots) {
+      for (const sd of this.subDots) {
+        sd.a += dt * 2.2;
+        sd.m.position.set(Math.cos(sd.a) * this.r * 0.55, 0.57, Math.sin(sd.a) * this.r * 0.55);
+      }
     }
     const pct = Math.max(0.001, this.hp / this.maxHp);
     this.fg.scale.set(this.barW * pct, 1, 0.1);
@@ -859,7 +1343,7 @@ class Enemy {
 
 /* ---------------- Skott (poolade) ---------------- */
 const bullets = [];
-for (let i = 0; i < 90; i++) {
+for (let i = 0; i < 140; i++) {
   const m = new THREE.SpriteMaterial({ map: TEX_DOT, color: 0xffffff, transparent: true,
     opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false });
   const s = new THREE.Sprite(m);
@@ -879,7 +1363,7 @@ function fireBullet(x, y, z, target, dmg, color) {
   b.s.scale.set(sc, sc, 1);
 }
 function updateBullets(dt) {
-  const SPEED = 17;
+  const SPEED = 18;
   for (const b of bullets) {
     if (b.free) continue;
     b.ttl -= dt;
@@ -903,58 +1387,56 @@ function updateBullets(dt) {
   }
 }
 
-/* ---------------- NEXUS-strålen ---------------- */
-const beam = {
-  target: null, sparkAcc: 0,
-  mesh: new THREE.Mesh(GEO_BOX, addMat(LEVEL_COLORS[1], 0.9)),
-  halo: new THREE.Mesh(GEO_BOX, addMat(LEVEL_COLORS[1], 0.2)),
-  impact: makeGlow(LEVEL_COLORS[1], 2.6, 0.9),
-};
-beam.mesh.visible = beam.halo.visible = beam.impact.visible = false;
-beam.mesh.renderOrder = 6;
-beam.halo.renderOrder = 5;
-scene.add(beam.mesh); scene.add(beam.halo); scene.add(beam.impact);
-function hideBeam() {
-  beam.target = null;
-  beam.mesh.visible = beam.halo.visible = beam.impact.visible = false;
+/* ---------------- Basernas strålar ---------------- */
+function hideBaseBeam(b) {
+  b.beam.target = null;
+  b.beam.mesh.visible = b.beam.halo.visible = b.beam.impact.visible = false;
 }
-function updateMainBeam(dt) {
-  let best = null;
-  for (const e of enemies) if (!e.dead && (!best || e.x > best.x)) best = e;
-  if (!best) { hideBeam(); return; }
-  if (beam.target !== best) { beam.target = best; Sound.beamLock(); }
-  damageEnemy(best, mainDps() * dt);
-  if (best.dead) { hideBeam(); return; }
-  const start = main.corePos(TMP_A);
-  start.y = main.core.position.y;
-  const end = TMP_B.set(best.x, 0.6, best.z);
-  const dir = TMP_C.copy(end).sub(start);
-  const len = Math.max(dir.length(), 1e-3);
-  dir.normalize();
-  const mid = TMP_D.copy(start).add(end).multiplyScalar(0.5);
-  const w = beamWidth() * (0.85 + 0.25 * Math.sin(state.tvis * 42));
-  const c = LEVEL_COLORS[main.tier];
-  beam.mesh.visible = beam.halo.visible = beam.impact.visible = true;
-  beam.mesh.position.copy(mid);
-  beam.mesh.quaternion.setFromUnitVectors(X_AXIS, dir);
-  beam.mesh.scale.set(len, w, w);
-  beam.halo.position.copy(mid);
-  beam.halo.quaternion.copy(beam.mesh.quaternion);
-  beam.halo.scale.set(len, w * 3.2, w * 3.2);
-  beam.mesh.material.color.setHex(c);
-  beam.halo.material.color.setHex(c);
-  beam.impact.material.color.setHex(c);
-  beam.impact.position.set(best.x, 0.8, best.z);
-  const isc = 1.6 + w * 3 + 0.5 * Math.sin(state.tvis * 30);
-  beam.impact.scale.set(isc, isc, 1);
-  beam.sparkAcc += dt;
-  while (beam.sparkAcc > 0.08) {
-    beam.sparkAcc -= 0.08;
-    spawnParticles(best.x, 0.7, best.z, c, 1, 2.2, 0.3, 0.3);
+function updateBeams(dt) {
+  for (const b of bases) {
+    if (!b.alive) continue;
+    const r2 = b.beamRange * b.beamRange;
+    let best = null, bd = Infinity;
+    for (const e of enemies) {
+      if (e.dead) continue;
+      const d = (e.x - b.x) * (e.x - b.x) + (e.z - b.z) * (e.z - b.z);
+      if (d <= r2 && d < bd) { bd = d; best = e; }
+    }
+    if (!best) { hideBaseBeam(b); continue; }
+    if (b.beam.target !== best) { b.beam.target = best; Sound.beamLock(); }
+    damageEnemy(best, b.beamDps() * dt);
+    if (best.dead) { hideBaseBeam(b); continue; }
+    const start = b.corePos(TMP_A);
+    start.y = b.core.position.y;
+    const end = TMP_B.set(best.x, 0.6, best.z);
+    const dir = TMP_C.copy(end).sub(start);
+    const len = Math.max(dir.length(), 1e-3);
+    dir.normalize();
+    const mid = TMP_D.copy(start).add(end).multiplyScalar(0.5);
+    const w = b.beamWidth() * (0.85 + 0.25 * Math.sin(state.tvis * 42));
+    const c = LEVEL_COLORS[b.tier];
+    b.beam.mesh.visible = b.beam.halo.visible = b.beam.impact.visible = true;
+    b.beam.mesh.position.copy(mid);
+    b.beam.mesh.quaternion.setFromUnitVectors(X_AXIS, dir);
+    b.beam.mesh.scale.set(len, w, w);
+    b.beam.halo.position.copy(mid);
+    b.beam.halo.quaternion.copy(b.beam.mesh.quaternion);
+    b.beam.halo.scale.set(len, w * 3.2, w * 3.2);
+    b.beam.mesh.material.color.setHex(c);
+    b.beam.halo.material.color.setHex(c);
+    b.beam.impact.material.color.setHex(c);
+    b.beam.impact.position.set(best.x, 0.8, best.z);
+    const isc = 1.6 + w * 3 + 0.5 * Math.sin(state.tvis * 30);
+    b.beam.impact.scale.set(isc, isc, 1);
+    b.beam.sparkAcc += dt;
+    while (b.beam.sparkAcc > 0.09) {
+      b.beam.sparkAcc -= 0.09;
+      spawnParticles(best.x, 0.7, best.z, c, 1, 2.2, 0.3, 0.3);
+    }
   }
 }
 
-/* ---------------- Skada / död / läckor ---------------- */
+/* ---------------- Skada / död / baser ---------------- */
 function damageEnemy(e, dmg) {
   if (e.dead) return;
   e.hp -= dmg;
@@ -966,116 +1448,175 @@ function kill(e) {
   e.dead = true;
   state.money += e.value;
   stats.kills++;
-  const big = e.type === 'boss' || e.type === 'tank';
+  const big = e.type === 'boss' || e.type === 'tank' || e.elite;
   spawnParticles(e.x, 0.6, e.z, e.def.ring, big ? 26 : 13, big ? 4 : 2.6, big ? 0.5 : 0.34, big ? 0.7 : 0.45);
   ringFx(e.x, e.z, e.def.ring, e.r * 3 + 1, 0.45);
   floatText3(e.x, 0.8, e.z, '+' + e.value, '#ffd76a');
   Sound.boom(big);
   if (e.type === 'boss') addShake(0.35);
+  if (e.type === 'splitter') {
+    for (let i = 0; i < 3; i++) {
+      enemies.push(new Enemy('mini', e.wave,
+        { x: e.x + (Math.random() - 0.5) * 1.4, z: e.z + (Math.random() - 0.5) * 1.4 }));
+    }
+  }
   hudDirty = true;
 }
-function leak(e) {
+function explodeOnBase(e, base) {
+  if (e.dead) return;
   e.dead = true;
-  state.lives = Math.max(0, state.lives - e.dmg);
-  wallFlash = 1;
-  addShake(e.dmg >= 5 ? 0.5 : 0.22);
-  Sound.leak();
-  ringFx(WALL_X - 0.6, e.z, 0xff4455, 2.6, 0.5);
-  floatText3(WALL_X - 1, 1, e.z, '-' + e.dmg + ' ❤️', '#ff5a6e');
-  hudDirty = true;
-  if (state.lives <= 0) gameOver();
+  spawnParticles(e.x, 0.7, e.z, 0xff5544, 16, 3.2, 0.4, 0.5);
+  ringFx(e.x, e.z, 0xff4455, 2.4, 0.4);
+  addShake(e.type === 'boss' ? 0.55 : 0.18);
+  floatText3(base.x, base.coreY + 1.6, base.z, '-' + e.baseDmg, '#ff5a6e');
+  base.takeDamage(e.baseDmg);
+}
+function destroyBase(b) {
+  if (!b.alive) return;
+  b.alive = false;
+  stats.basesLost++;
+  spawnParticles(b.x, 1.5, b.z, 0xff7744, 50, 6, 0.7, 1);
+  spawnParticles(b.x, 1.5, b.z, 0xffd089, 30, 4, 0.5, 0.8);
+  ringFx(b.x, b.z, 0xff4455, 8, 0.9);
+  ringFx(b.x, b.z, 0xffffff, 5, 0.6);
+  addShake(0.8);
+  Sound.baseDown();
+  for (const l of [...b.links]) removeLink(l);
+  hideBaseBeam(b);
+  // ruinen blir kvar, nedsläckt
+  for (const m of b.mats) {
+    if (m.color) m.color.setHex(0x232c3a);
+    if (m.transparent) m.opacity = Math.min(m.opacity, 0.25);
+  }
+  b.glow.visible = false;
+  if (b.hpBar) b.hpBar.visible = false;
+  if (selected === b) closeSelect();
+  recomputeNetwork();
+  if (b.isPrime) { gameOver(); return; }
+  announce('⚠ UTPOST FÖRSTÖRD!');
 }
 function updateEnemies(dt) {
   for (let i = enemies.length - 1; i >= 0; i--) {
     const e = enemies[i];
-    if (!e.dead) {
-      e.update(dt);
-      if (e.x >= WALL_X - 0.4) leak(e);
-    }
+    if (!e.dead) e.update(dt);
     if (e.dead) { e.dispose(); enemies.splice(i, 1); }
   }
 }
 
 /* ---------------- Vågor ---------------- */
 function buildWave(w) {
+  const act = PORTALS.filter(p => w >= p.from);
   const list = [];
   let t = 0;
-  const n = 6 + Math.round(w * 1.8);
-  const baseInt = Math.max(0.55, 1.7 - w * 0.07);
+  const n = Math.round(8 + w * 2.4);
+  const baseInt = Math.max(0.5, 1.65 - w * 0.06);
   for (let i = 0; i < n; i++) {
     let type = 'drone';
-    if (w >= 3 && i % 4 === 2) type = 'speeder';
-    if (w >= 4 && i % 5 === 4) type = 'tank';
-    if (w >= 7 && i % 6 === 1) type = 'speeder';
-    if (w >= 9 && i % 7 === 3) type = 'tank';
-    list.push({ type, t });
-    t += baseInt * (type === 'tank' ? 1.5 : 1) * (0.75 + Math.random() * 0.5);
+    if (w >= 2 && i % 5 === 3) type = 'speeder';
+    if (w >= 3 && i % 6 === 4) type = 'tank';
+    if (w >= 5 && i % 9 === 6) type = 'healer';
+    if (w >= 6 && i % 8 === 5) type = 'splitter';
+    if (w >= 9 && i % 10 === 9) type = 'tank';
+    const portal = act[(i * 7 + w) % act.length];
+    list.push({ type, t, portal });
+    t += baseInt * (type === 'tank' ? 1.4 : 1) * (0.75 + Math.random() * 0.5);
   }
-  if (w % 5 === 0) list.push({ type: 'boss', t: t + 1.6 });
+  if (w % 5 === 0) {
+    const bp = act[w % act.length];
+    list.push({ type: 'boss', t: t + 1.6, portal: bp });
+    if (w >= 10) {
+      list.push({ type: 'healer', t: t + 2.1, portal: bp });
+      list.push({ type: 'healer', t: t + 2.5, portal: bp });
+    }
+  }
   return list;
+}
+function previewText(list) {
+  const cnt = {};
+  for (const s of list) cnt[s.type] = (cnt[s.type] || 0) + 1;
+  return 'Nästa: ' + Object.keys(cnt)
+    .map(k => (k === 'boss' ? '⚠ BOSS' : cnt[k] + '×' + ENEMY_TYPES[k].namn))
+    .join(' · ');
 }
 function startWave() {
   if (state.phase !== 'idle') return;
   const bonus = Math.max(0, Math.floor(countdown)) * 2;
   if (bonus > 0) state.money += bonus;
   state.phase = 'wave';
-  pendingList = buildWave(state.wave);
+  pendingList = nextWaveList.length ? nextWaveList : buildWave(state.wave);
+  nextWaveList = [];
   pendingIdx = 0;
   waveT = 0;
+  for (const p of PORTALS) {
+    if (portalActive(p) && !p.announced) {
+      p.announced = true;
+      if (p.from > 1) {
+        announce('⚠ NY PORTAL ÖPPNAS: ' + p.id + '!');
+        ringFx(p.ring.position.x, p.ring.position.z, p.color, 7, 1);
+      }
+    }
+  }
   const boss = state.wave % 5 === 0;
   announce('🌊 VÅG ' + state.wave + (boss ? ' — BOSS!' : '') + (bonus > 0 ? ' · tidig start +' + bonus + '💰' : ''));
   Sound.wave();
   hudDirty = true;
 }
 function waveClear() {
-  const bonus = 25 + state.wave * 6;
+  const bonus = 30 + state.wave * 7;
   state.money += bonus;
   Sound.clear();
   announce('✔ VÅG ' + state.wave + ' AVKLARAD · +' + bonus + '💰');
   state.wave++;
   state.phase = 'idle';
-  countdown = state.wave % 5 === 0 ? 16 : 13;
+  countdown = state.wave % 5 === 0 ? 18 : 14;
+  nextWaveList = buildWave(state.wave);
   hudDirty = true;
 }
 function updateSpawner(dt) {
   waveT += dt;
   while (pendingIdx < pendingList.length && pendingList[pendingIdx].t <= waveT) {
     const s = pendingList[pendingIdx++];
-    enemies.push(new Enemy(s.type, state.wave));
-    spawnFlash = 1;
+    enemies.push(new Enemy(s.type, state.wave, spawnPosFor(s.portal)));
+    s.portal.flash = 1;
   }
   if (pendingIdx >= pendingList.length && enemies.length === 0) waveClear();
 }
 
-/* ---------------- Bygga & länka ---------------- */
+/* ---------------- Bygga, länka, sälja ---------------- */
 function buildValid() {
   if (!mouseOnField) return false;
   const x = mouseWorld.x, z = mouseWorld.z;
-  if (x < FIELD.minX + 1 || x > WALL_X - 1.6 || z < FIELD.minZ + 0.9 || z > FIELD.maxZ - 0.9) return false;
+  const m = 1.2;
+  if (x < FIELD.minX + m || x > FIELD.maxX - m || z < FIELD.minZ + m || z > FIELD.maxZ - m) return false;
+  const isBase = TOWER_DEFS[buildType].kind === 'base';
   for (const t of towers) {
-    const min = t.isMain ? 2.9 : 2.2;
+    const min = (t.def.kind === 'base' ? (t.isPrime ? 3.4 : 2.8) : 2.2) + (isBase ? 1 : 0);
     if ((t.x - x) * (t.x - x) + (t.z - z) * (t.z - z) < min * min) return false;
   }
   return true;
 }
 function placeTower() {
+  const cost = costOf(buildType);
   if (!buildValid()) { Sound.error(); return; }
-  if (state.money < towerCostNow) { announce('FÖR LITE KREDITER 💰'); Sound.error(); return; }
-  state.money -= towerCostNow;
-  towerCostNow = Math.min(TOWER_COST_MAX, towerCostNow + TOWER_COST_STEP);
-  const t = new Tower(mouseWorld.x, mouseWorld.z, false);
+  if (state.money < cost) { announce('FÖR LITE KREDITER 💰'); Sound.error(); return; }
+  state.money -= cost;
+  builtCount++;
+  stats.built++;
+  const t = new Tower(mouseWorld.x, mouseWorld.z, buildType, false);
   towers.push(t);
+  if (t.def.kind === 'base') bases.push(t);
   recomputeNetwork();
-  ringFx(t.x, t.z, 0x49e9ff, 2.2, 0.4);
-  spawnParticles(t.x, 1.2, t.z, 0x49e9ff, 10, 2.4, 0.35, 0.5);
+  ringFx(t.x, t.z, t.def.färg, 2.4, 0.4);
+  spawnParticles(t.x, 1.2, t.z, t.def.färg, 10, 2.4, 0.35, 0.5);
   Sound.place();
   hudDirty = true;
 }
 function canLink(a, b) {
   if (!a || !b || a === b) return { ok: false, reason: '' };
+  if (!a.alive || !b.alive) return { ok: false, reason: 'FÖRSTÖRD BAS' };
   if (a.links.some(l => l.other(a) === b)) return { ok: false, reason: 'REDAN LÄNKADE' };
   const d = Math.hypot(a.x - b.x, a.z - b.z);
-  if (d > LINK_RANGE) return { ok: false, reason: 'FÖR LÅNGT BORT' };
+  if (d > Math.max(linkRangeOf(a), linkRangeOf(b))) return { ok: false, reason: 'FÖR LÅNGT BORT' };
   if (a.links.length >= a.maxLinks || b.links.length >= b.maxLinks) return { ok: false, reason: 'MAX ANTAL LÄNKAR NÅTT' };
   if (state.money < LINK_COST) return { ok: false, reason: 'FÖR LITE KREDITER 💰' };
   return { ok: true, reason: '' };
@@ -1099,27 +1640,66 @@ function tryLink(a, b) {
   hudDirty = true;
   return true;
 }
+function sellTower(t) {
+  if (!t || t.isPrime) return;
+  if (t.def.kind === 'base' && !t.alive) return;
+  for (const l of [...t.links]) removeLink(l);
+  if (t.def.kind === 'base') {
+    hideBaseBeam(t);
+    scene.remove(t.beam.mesh); scene.remove(t.beam.halo); scene.remove(t.beam.impact);
+    const bi = bases.indexOf(t); if (bi >= 0) bases.splice(bi, 1);
+  }
+  scene.remove(t.group);
+  for (const m of t.mats) m.dispose();
+  const i = towers.indexOf(t); if (i >= 0) towers.splice(i, 1);
+  builtCount = Math.max(0, builtCount - 1);
+  const refund = Math.floor(costOf(t.type) * 0.5);
+  state.money += refund;
+  floatText3(t.x, 1.2, t.z, '+' + refund + '💰', '#ffd76a');
+  ringFx(t.x, t.z, 0xffffff, 2.2, 0.4);
+  Sound.sell();
+  if (selected === t) closeSelect();
+  if (hoverTower === t) hoverTower = null;
+  recomputeNetwork();
+  hudDirty = true;
+}
 
 /* ---------------- Spöktorn, förhandsvisning, markeringar ---------------- */
 const ghost = new THREE.Group();
 const ghostMat = new THREE.MeshBasicMaterial({ color: 0x44ff88, transparent: true, opacity: 0.5 });
-{
-  const gBox = new THREE.Mesh(GEO_BOX, ghostMat);
-  gBox.scale.set(1.1, 0.45, 1.1); gBox.position.y = 0.22; ghost.add(gBox);
-  const gPost = new THREE.Mesh(GEO_BOX, ghostMat);
-  gPost.scale.set(0.38, 0.85, 0.38); gPost.position.y = 0.85; ghost.add(gPost);
-}
+const ghostBox = new THREE.Mesh(GEO_BOX, ghostMat);
+ghost.add(ghostBox);
+const ghostPost = new THREE.Mesh(GEO_BOX, ghostMat);
+ghost.add(ghostPost);
 const ghostRingMat = addMat(0x44ff88, 0.25);
 const ghostRing = new THREE.Mesh(GEO_RING_THIN, ghostRingMat);
-ghostRing.scale.setScalar(4.6 + 0.9 + 0.0); // räckvidd för nytt torn (nivå 1)
 ghostRing.position.y = 0.05;
 ghost.add(ghostRing);
 ghost.visible = false;
 scene.add(ghost);
-
+function ghostSetType(key) {
+  const d = TOWER_DEFS[key];
+  if (d.kind === 'base') {
+    ghostBox.scale.set(2.0, 0.7, 2.0); ghostBox.position.y = 0.35;
+    ghostPost.scale.set(0.8, 1.4, 0.8); ghostPost.position.y = 1.4;
+    ghostRing.scale.setScalar(14); // strålräckvidd
+  } else {
+    ghostBox.scale.set(1.1, 0.45, 1.1); ghostBox.position.y = 0.22;
+    ghostPost.scale.set(0.38, 0.85, 0.38); ghostPost.position.y = 0.85;
+    const r = key === 'rela' ? LINKABLE_RANGE.relay
+            : key === 'gen' ? 2
+            : key === 'stas' ? 4.2
+            : key === 'nova' ? 3.8
+            : key === 'prisma' ? 10.7 : 6.1;
+    ghostRing.scale.setScalar(r);
+  }
+}
 const hoverRing = new THREE.Mesh(GEO_RING_THIN, addMat(0xffffff, 0.3));
 hoverRing.visible = false; hoverRing.position.y = 0.05;
 scene.add(hoverRing);
+const selRing = new THREE.Mesh(GEO_RING_THIN, addMat(0xffffff, 0.55));
+selRing.visible = false; selRing.position.y = 0.07;
+scene.add(selRing);
 const linkRing = new THREE.Mesh(GEO_RING_THIN, addMat(0x44ff88, 0.35));
 linkRing.visible = false; linkRing.position.y = 0.05;
 scene.add(linkRing);
@@ -1127,24 +1707,27 @@ const previewMesh = new THREE.Mesh(GEO_BOX, addMat(0x44ff88, 0.4));
 previewMesh.visible = false; previewMesh.renderOrder = 6;
 scene.add(previewMesh);
 
+function ringRadiusFor(t) {
+  if (t.def.kind === 'relay') return linkRangeOf(t);
+  if (t.def.kind === 'income') return 1.6;
+  return Math.max(1.6, t.range);
+}
 function updateGhostAndPreview() {
   const inGame = state.phase === 'idle' || state.phase === 'wave';
-  // Spöktorn i byggläget
   ghost.visible = inGame && state.mode === 'build' && mouseOnField;
   if (ghost.visible) {
     ghost.position.set(mouseWorld.x, 0, mouseWorld.z);
-    const ok = buildValid() && state.money >= towerCostNow;
+    const ok = buildValid() && state.money >= costOf(buildType);
     const c = ok ? 0x44ff88 : 0xff4455;
     ghostMat.color.setHex(c);
     ghostRingMat.color.setHex(c);
   }
-  // Länk-förhandsvisning
   const linking = inGame && state.mode === 'link' && linkFrom;
   linkRing.visible = !!linking;
   previewMesh.visible = false;
   if (linking) {
     linkRing.position.set(linkFrom.x, 0.05, linkFrom.z);
-    linkRing.scale.setScalar(LINK_RANGE);
+    linkRing.scale.setScalar(linkRangeOf(linkFrom));
     if (mouseOnField) {
       const snap = hoverTower && hoverTower !== linkFrom ? hoverTower : null;
       const start = linkFrom.corePos(TMP_A);
@@ -1153,7 +1736,7 @@ function updateGhostAndPreview() {
       const len = dir.length();
       if (len > 0.3) {
         const flat = Math.hypot(end.x - start.x, end.z - start.z);
-        const ok = snap ? canLink(linkFrom, snap).ok : flat <= LINK_RANGE;
+        const ok = snap ? canLink(linkFrom, snap).ok : flat <= linkRangeOf(linkFrom);
         previewMesh.visible = true;
         previewMesh.position.copy(TMP_D.copy(start).add(end).multiplyScalar(0.5));
         previewMesh.quaternion.setFromUnitVectors(X_AXIS, dir.normalize());
@@ -1162,13 +1745,52 @@ function updateGhostAndPreview() {
       }
     }
   }
-  // Räckviddsring vid hovring
-  const showHover = inGame && hoverTower && !hoverTower.isMain && state.mode !== 'build';
+  const showHover = inGame && hoverTower && hoverTower !== selected && state.mode !== 'build';
   hoverRing.visible = !!showHover;
   if (showHover) {
     hoverRing.position.set(hoverTower.x, 0.05, hoverTower.z);
-    hoverRing.scale.setScalar(hoverTower.range);
+    hoverRing.scale.setScalar(ringRadiusFor(hoverTower));
   }
+  selRing.visible = !!selected;
+  if (selected) {
+    selRing.position.set(selected.x, 0.07, selected.z);
+    selRing.scale.setScalar(ringRadiusFor(selected));
+    selRing.material.opacity = 0.4 + 0.2 * Math.sin(state.tvis * 4);
+  }
+}
+
+/* ---------------- Val & säljpanel ---------------- */
+function describeTower(t) {
+  if (t.def.kind === 'base') {
+    const s = t.compStats();
+    return (t.alive ? '' : '☠ FÖRSTÖRD · ') +
+      'HP ' + Math.ceil(t.hp) + '/' + t.maxHp +
+      ' · nätverk: ' + s.n + ' torn + ' + s.l + ' länkar' +
+      ' · stråle ' + Math.round(t.beamDps()) + '/s · nivå ' + t.tier;
+  }
+  const lvl = 'nivå ' + t.level + ' · ' + t.links.length + ' länkar · ';
+  const anslutning = t.connected ? 'ansluten ⚡' : 'EJ ansluten!';
+  const k = t.def.kind;
+  if (k === 'gun')    return lvl + Math.round(t.gunDmg()) + ' skada × ' + t.gunRate().toFixed(1) + '/s · ' + anslutning;
+  if (k === 'rail')   return lvl + Math.round(t.railDmg()) + ' skada, genomborrar allt · var ' + t.railCd().toFixed(1) + 's · ' + anslutning;
+  if (k === 'nova')   return lvl + Math.round(t.novaDmg()) + ' områdesskada, radie ' + t.range.toFixed(1) + ' · ' + anslutning;
+  if (k === 'slow')   return lvl + Math.round(t.slowPct() * 100) + '% nedsaktning, radie ' + t.range.toFixed(1) + ' · ' + anslutning;
+  if (k === 'relay')  return lvl + 'länkräckvidd ' + linkRangeOf(t).toFixed(1) + ' · ' + anslutning;
+  if (k === 'income') return lvl + '+' + t.incRate().toFixed(1) + ' 💰/s · ' + anslutning;
+  return lvl + anslutning;
+}
+function openSelect(t) {
+  selected = t;
+  el.selTitle.textContent = (t.isPrime ? '⚡ NEXUS PRIME' : t.def.ikon + ' ' + t.def.namn) +
+    (t.def.kind === 'base' && !t.isPrime ? ' (bas)' : '');
+  el.selInfo.textContent = describeTower(t);
+  el.btnSell.classList.toggle('hidden', !!t.isPrime);
+  el.btnSell.textContent = 'Sälj +' + Math.floor(costOf(t.type) * 0.5) + '💰 (X)';
+  el.selPanel.classList.remove('hidden');
+}
+function closeSelect() {
+  selected = null;
+  el.selPanel.classList.add('hidden');
 }
 
 /* ---------------- Inmatning ---------------- */
@@ -1177,6 +1799,8 @@ const raycaster = new THREE.Raycaster();
 const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 const mouseWorld = new THREE.Vector3();
 let mouseOnField = false;
+let panDrag = false;
+const panGrab = new THREE.Vector3();
 
 function updateMouseWorld(ev) {
   ndc.x = (ev.clientX / innerWidth) * 2 - 1;
@@ -1184,27 +1808,48 @@ function updateMouseWorld(ev) {
   raycaster.setFromCamera(ndc, camera);
   mouseOnField = raycaster.ray.intersectPlane(groundPlane, mouseWorld) !== null;
   if (mouseOnField) {
-    mouseOnField = mouseWorld.x > FIELD.minX - 2 && mouseWorld.x < FIELD.maxX + 2 &&
-                   mouseWorld.z > FIELD.minZ - 2 && mouseWorld.z < FIELD.maxZ + 2;
+    mouseOnField = mouseWorld.x > FIELD.minX - 3 && mouseWorld.x < FIELD.maxX + 3 &&
+                   mouseWorld.z > FIELD.minZ - 3 && mouseWorld.z < FIELD.maxZ + 3;
   }
   hoverTower = null;
   if (mouseOnField) {
     let bd = Infinity;
     for (const t of towers) {
+      if (!t.alive) continue;
       const d = Math.hypot(t.x - mouseWorld.x, t.z - mouseWorld.z);
-      const r = t.isMain ? 2.0 : 1.3;
-      if (d < r && d < bd) { bd = d; hoverTower = t; }
+      if (d < t.pickR && d < bd) { bd = d; hoverTower = t; }
     }
   }
 }
-window.addEventListener('pointermove', updateMouseWorld);
+window.addEventListener('pointermove', e => {
+  updateMouseWorld(e);
+  if (panDrag && (e.buttons & 4)) {
+    cam.tx += panGrab.x - mouseWorld.x;
+    cam.tz += panGrab.z - mouseWorld.z;
+    clampCamTarget();
+  }
+  if (!(e.buttons & 4)) panDrag = false;
+});
 window.addEventListener('contextmenu', e => e.preventDefault());
+renderer.domElement.addEventListener('wheel', e => {
+  e.preventDefault();
+  cam.zoom = THREE.MathUtils.clamp(cam.zoom * Math.exp(e.deltaY * 0.0011), 0.42, 1.6);
+}, { passive: false });
 
 renderer.domElement.addEventListener('pointerdown', e => {
   Sound.ensure();
   if (state.phase === 'menu' || state.phase === 'over') return;
   updateMouseWorld(e);
-  if (e.button === 2) { setMode('none'); return; }
+  if (e.button === 1) {
+    e.preventDefault();
+    panDrag = true;
+    panGrab.copy(mouseWorld);
+    return;
+  }
+  if (e.button === 2) {
+    if (state.mode !== 'none') setMode('none'); else closeSelect();
+    return;
+  }
   if (e.button !== 0) return;
   if (state.mode === 'build') {
     placeTower();
@@ -1219,23 +1864,46 @@ renderer.domElement.addEventListener('pointerdown', e => {
       linkFrom = null;
       Sound.select();
     } else if (tryLink(linkFrom, t)) {
-      linkFrom = t; // kedjelänkning: fortsätt från senaste tornet
+      linkFrom = t; // kedjelänkning
     }
+  } else {
+    if (hoverTower) { openSelect(hoverTower); Sound.select(); }
+    else closeSelect();
   }
 });
+window.addEventListener('pointerup', e => { if (e.button === 1) panDrag = false; });
 
+/* Kamerapanorering med tangenter */
+const panKeys = { w: 0, a: 0, s: 0, d: 0, arrowup: 0, arrowdown: 0, arrowleft: 0, arrowright: 0 };
+function updatePanKeys(raw) {
+  const dx = (panKeys.d || panKeys.arrowright) - (panKeys.a || panKeys.arrowleft);
+  const dz = (panKeys.s || panKeys.arrowdown) - (panKeys.w || panKeys.arrowup);
+  if (dx || dz) {
+    const v = 30 * cam.cZoom * raw;
+    cam.tx += dx * v;
+    cam.tz += dz * v;
+    clampCamTarget();
+  }
+}
+
+const cardEls = {};
+function setBuildType(key) {
+  if (state.mode === 'build' && buildType === key) { setMode('none'); return; }
+  buildType = key;
+  ghostSetType(key);
+  setMode('build');
+}
 function setMode(m) {
-  if (state.mode === m && m !== 'none') m = 'none';
   state.mode = m;
   linkFrom = null;
   document.body.classList.toggle('mode-build', m === 'build');
   document.body.classList.toggle('mode-link', m === 'link');
-  el.btnBuild.classList.toggle('active', m === 'build');
-  el.btnLink.classList.toggle('active', m === 'link');
+  for (const k of TOWER_ORDER) cardEls[k].classList.toggle('active', m === 'build' && buildType === k);
+  cardEls.link.classList.toggle('active', m === 'link');
   hudDirty = true;
 }
 function toggleSpeed() {
-  state.speed = state.speed === 1 ? 2 : 1;
+  state.speed = state.speed === 1 ? 2 : state.speed === 2 ? 3 : 1;
   el.btnSpeed.innerHTML = '⏩ ' + state.speed + 'x <small>tangent F</small>';
 }
 function togglePause() {
@@ -1254,25 +1922,34 @@ function startGame() {
   el.hudBottom.classList.remove('hidden');
   el.hint.classList.remove('hidden');
   el.countdown.classList.remove('hidden');
+  el.preview.classList.remove('hidden');
+  el.minimap.classList.remove('hidden');
   state.phase = 'idle';
-  countdown = 10;
-  announce('BYGG TORN 🔲 OCH LÄNKA DEM ✨ TILL NEXUS!');
+  countdown = 14;
+  nextWaveList = buildWave(1);
+  announce('SKYDDA NEXUS PRIME — BYGG OCH LÄNKA! ✨');
   hudDirty = true;
 }
 function gameOver() {
   if (state.phase === 'over') return;
   state.phase = 'over';
   setMode('none');
-  hideBeam();
+  closeSelect();
+  for (const b of bases) hideBaseBeam(b);
   Sound.over();
-  el.overText.innerHTML = 'Du nådde <b>våg ' + state.wave + '</b> och besegrade <b>' + stats.kills + '</b> fiender.<br>' +
-    'Nätverk: ' + (NET.size - 1) + ' länkade torn · ' + NET.links + ' laserlänkar';
+  const min = Math.floor(state.time / 60), sek = Math.floor(state.time % 60);
+  el.overText.innerHTML =
+    'Du nådde <b>våg ' + state.wave + '</b> och besegrade <b>' + stats.kills + '</b> fiender på ' +
+    min + ' min ' + sek + ' s.<br>' +
+    'Arsenal: ' + (towers.length - 1) + ' torn · ' + links.length + ' laserlänkar · ' +
+    stats.basesLost + ' förlorade utposter';
   el.over.classList.remove('hidden');
 }
 
 window.addEventListener('keydown', e => {
-  if (e.repeat) return;
   const k = e.key.toLowerCase();
+  if (k in panKeys) { panKeys[k] = 1; if (k.startsWith('arrow')) e.preventDefault(); }
+  if (e.repeat) return;
   if (state.phase === 'menu') {
     if (k === 'enter' || k === ' ') { e.preventDefault(); startGame(); }
     return;
@@ -1281,71 +1958,175 @@ window.addEventListener('keydown', e => {
     if (k === 'enter') location.reload();
     return;
   }
-  if (k === 'b') setMode('build');
-  else if (k === 'l') setMode('link');
-  else if (k === 'escape') setMode('none');
+  const num = parseInt(k, 10);
+  if (num >= 1 && num <= TOWER_ORDER.length) { setBuildType(TOWER_ORDER[num - 1]); return; }
+  if (k === 'l') setMode(state.mode === 'link' ? 'none' : 'link');
+  else if (k === 'x') { if (selected) sellTower(selected); }
+  else if (k === 'escape') { setMode('none'); closeSelect(); }
   else if (k === 'enter') startWave();
   else if (k === ' ') { e.preventDefault(); togglePause(); }
   else if (k === 'f') toggleSpeed();
   else if (k === 'm') toggleMute();
 });
-el.btnBuild.addEventListener('click', () => { Sound.ensure(); setMode('build'); });
-el.btnLink.addEventListener('click', () => { Sound.ensure(); setMode('link'); });
+window.addEventListener('keyup', e => {
+  const k = e.key.toLowerCase();
+  if (k in panKeys) panKeys[k] = 0;
+});
+
+/* Byggmenyns kort */
+(function buildCards() {
+  for (let i = 0; i < TOWER_ORDER.length; i++) {
+    const key = TOWER_ORDER[i];
+    const d = TOWER_DEFS[key];
+    const b = document.createElement('button');
+    b.className = 'card';
+    b.style.setProperty('--c', '#' + d.färg.toString(16).padStart(6, '0'));
+    b.innerHTML = '<div class="hk">' + (i + 1) + '</div><div class="ico">' + d.ikon +
+      '</div><div class="nm">' + d.namn + '</div><div class="pr">' + d.kostnad + ' 💰</div>';
+    b.addEventListener('click', () => { Sound.ensure(); setBuildType(key); });
+    el.buildBar.appendChild(b);
+    cardEls[key] = b;
+  }
+  const lb = document.createElement('button');
+  lb.className = 'card';
+  lb.style.setProperty('--c', '#49e9ff');
+  lb.innerHTML = '<div class="hk">L</div><div class="ico">✨</div><div class="nm">Länka</div><div class="pr">' + LINK_COST + ' 💰</div>';
+  lb.addEventListener('click', () => { Sound.ensure(); setMode(state.mode === 'link' ? 'none' : 'link'); });
+  el.buildBar.appendChild(lb);
+  cardEls.link = lb;
+})();
 el.btnWave.addEventListener('click', () => { Sound.ensure(); startWave(); });
 el.btnSpeed.addEventListener('click', toggleSpeed);
 el.btnMute.addEventListener('click', toggleMute);
 el.btnStart.addEventListener('click', startGame);
 el.btnRestart.addEventListener('click', () => location.reload());
+el.btnSell.addEventListener('click', () => { if (selected) sellTower(selected); });
+el.btnCloseSel.addEventListener('click', closeSelect);
+
+/* ---------------- Minikarta ---------------- */
+const mm = el.minimap.getContext('2d');
+const MM = { w: 216, h: 124, pad: 7 };
+function mmX(x) { return MM.pad + (x - FIELD.minX) / (FIELD.maxX - FIELD.minX) * (MM.w - 2 * MM.pad); }
+function mmZ(z) { return MM.pad + (z - FIELD.minZ) / (FIELD.maxZ - FIELD.minZ) * (MM.h - 2 * MM.pad); }
+function hexStr(c) { return '#' + c.toString(16).padStart(6, '0'); }
+function drawMinimap() {
+  mm.clearRect(0, 0, MM.w, MM.h);
+  mm.strokeStyle = 'rgba(60,140,220,.7)';
+  mm.lineWidth = 1;
+  mm.strokeRect(mmX(FIELD.minX), mmZ(FIELD.minZ), mmX(FIELD.maxX) - mmX(FIELD.minX), mmZ(FIELD.maxZ) - mmZ(FIELD.minZ));
+  for (const p of PORTALS) {
+    mm.fillStyle = portalActive(p) ? hexStr(p.color) : 'rgba(90,110,140,.35)';
+    if (p.dir === 'left') mm.fillRect(mmX(FIELD.minX) - 3, mmZ(p.seg.z0), 3, mmZ(p.seg.z1) - mmZ(p.seg.z0));
+    else if (p.dir === 'top') mm.fillRect(mmX(p.seg.x0), mmZ(FIELD.minZ) - 3, mmX(p.seg.x1) - mmX(p.seg.x0), 3);
+    else mm.fillRect(mmX(p.seg.x0), mmZ(FIELD.maxZ), mmX(p.seg.x1) - mmX(p.seg.x0), 3);
+  }
+  mm.strokeStyle = 'rgba(80,200,255,.3)';
+  mm.beginPath();
+  for (const l of links) {
+    mm.moveTo(mmX(l.a.x), mmZ(l.a.z));
+    mm.lineTo(mmX(l.b.x), mmZ(l.b.z));
+  }
+  mm.stroke();
+  for (const t of towers) {
+    const isBase = t.def.kind === 'base';
+    const s = isBase ? (t.isPrime ? 7 : 5) : 3;
+    mm.fillStyle = !t.alive ? 'rgba(90,100,115,.6)' : hexStr(isBase ? LEVEL_COLORS[t.tier] : t.def.färg);
+    mm.fillRect(mmX(t.x) - s / 2, mmZ(t.z) - s / 2, s, s);
+    if (t.isPrime && t.alive) {
+      mm.strokeStyle = '#fff';
+      mm.strokeRect(mmX(t.x) - s / 2 - 1, mmZ(t.z) - s / 2 - 1, s + 2, s + 2);
+    }
+  }
+  for (const e of enemies) {
+    if (e.dead) continue;
+    const s = e.type === 'boss' ? 5 : e.elite ? 3.5 : 2.2;
+    mm.fillStyle = hexStr(e.def.color);
+    mm.fillRect(mmX(e.x) - s / 2, mmZ(e.z) - s / 2, s, s);
+  }
+  // kamerans synfält
+  mm.strokeStyle = 'rgba(255,255,255,.5)';
+  mm.beginPath();
+  let first = true;
+  for (const [nx, ny] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+    ndc.set(nx, ny);
+    raycaster.setFromCamera(ndc, camera);
+    if (raycaster.ray.intersectPlane(groundPlane, TMP_A)) {
+      const px = THREE.MathUtils.clamp(mmX(TMP_A.x), 1, MM.w - 1);
+      const py = THREE.MathUtils.clamp(mmZ(TMP_A.z), 1, MM.h - 1);
+      if (first) { mm.moveTo(px, py); first = false; } else mm.lineTo(px, py);
+    }
+  }
+  mm.closePath();
+  mm.stroke();
+}
+function mmJump(e) {
+  const r = el.minimap.getBoundingClientRect();
+  const x = FIELD.minX + (e.clientX - r.left - MM.pad) / (MM.w - 2 * MM.pad) * (FIELD.maxX - FIELD.minX);
+  const z = FIELD.minZ + (e.clientY - r.top - MM.pad) / (MM.h - 2 * MM.pad) * (FIELD.maxZ - FIELD.minZ);
+  cam.tx = x; cam.tz = z;
+  clampCamTarget();
+}
+el.minimap.addEventListener('pointerdown', e => { e.stopPropagation(); mmJump(e); });
+el.minimap.addEventListener('pointermove', e => { if (e.buttons & 1) { e.stopPropagation(); mmJump(e); } });
 
 /* ---------------- Skakning ---------------- */
 function addShake(a) { shakeT = 0.4; shakeAmp = Math.max(shakeAmp, a); }
 
 /* ---------------- HUD ---------------- */
-function describeTower(t) {
-  if (t.isMain) {
-    return '⚡ NEXUS nivå ' + t.tier + ' · nätverk: ' + (NET.size - 1) + ' torn + ' + NET.links +
-      ' länkar · ' + Math.round(mainDps()) + ' skada/s';
-  }
-  return '🔲 Torn nivå ' + t.level + ' · ' + t.links.length + ' länkar · ' +
-    Math.round(t.shotDmg()) + ' skada × ' + t.fireRate().toFixed(1) + '/s · ' +
-    (t.connected ? 'ansluten till NEXUS ⚡' : 'EJ ansluten — länka mot NEXUS!');
-}
 function refreshHUD() {
   el.money.textContent = Math.floor(state.money);
-  el.lives.textContent = state.lives;
+  el.income.textContent = totalIncome > 0 ? '+' + totalIncome.toFixed(1) + '/s' : '';
+  el.hp.textContent = Math.max(0, Math.ceil(prime.hp / prime.maxHp * 100)) + '%';
   el.wave.textContent = state.wave;
   el.enemies.textContent = enemies.length + Math.max(0, pendingList.length - pendingIdx);
-  el.power.textContent = Math.round(mainDps());
-  el.costBuild.textContent = towerCostNow + ' 💰 · tangent B';
-  el.btnBuild.classList.toggle('dim', state.money < towerCostNow);
-  el.btnLink.classList.toggle('dim', state.money < LINK_COST);
+  el.power.textContent = Math.round(prime.beamDps());
+  for (const k of TOWER_ORDER) {
+    const c = costOf(k);
+    cardEls[k].classList.toggle('dim', state.money < c);
+    cardEls[k].querySelector('.pr').textContent = c + ' 💰';
+  }
+  cardEls.link.classList.toggle('dim', state.money < LINK_COST);
   const idle = state.phase === 'idle';
   el.btnWave.classList.toggle('dim', !idle);
-  el.subWave.textContent = idle ? '+' + Math.max(0, Math.floor(countdown)) * 2 + '💰 tidig start · Enter' : 'våg pågår…';
+  el.subWave.textContent = idle ? '+' + Math.max(0, Math.floor(countdown)) * 2 + '💰 nu · Enter' : 'våg pågår…';
   if (idle) {
     el.countdown.textContent = 'NÄSTA VÅG OM ' + Math.max(0, Math.ceil(countdown)) + ' S';
     el.countdown.style.visibility = 'visible';
+    el.preview.textContent = previewText(nextWaveList);
+    el.preview.style.visibility = 'visible';
   } else {
     el.countdown.style.visibility = 'hidden';
+    el.preview.style.visibility = 'hidden';
   }
   let h;
-  if (hoverTower && state.mode !== 'build' && (state.phase === 'idle' || state.phase === 'wave')) h = describeTower(hoverTower);
-  else if (state.mode === 'build') h = 'Klicka för att placera torn (' + towerCostNow + ' 💰) · högerklick/Esc avbryter';
-  else if (state.mode === 'link') h = linkFrom
-    ? 'Klicka på ett torn inom ringen — ' + LINK_COST + ' 💰/länk · klicka samma torn igen för att avmarkera'
-    : 'Klicka på tornet du vill länka FRÅN (även NEXUS)';
-  else h = 'B = bygg torn · L = länka laser · Enter = starta våg · F = fart · mellanslag = paus';
+  const inGame = state.phase === 'idle' || state.phase === 'wave';
+  if (hoverTower && state.mode !== 'build' && inGame) {
+    h = (hoverTower.isPrime ? '⚡ NEXUS PRIME · ' : hoverTower.def.ikon + ' ' + hoverTower.def.namn + ' · ') + describeTower(hoverTower);
+  } else if (state.mode === 'build') {
+    const d = TOWER_DEFS[buildType];
+    h = d.ikon + ' ' + d.namn + ' (' + costOf(buildType) + ' 💰): ' + d.desc + ' · högerklick/Esc avbryter';
+  } else if (state.mode === 'link') {
+    h = linkFrom
+      ? 'Klicka på ett torn inom ringen — ' + LINK_COST + ' 💰/länk · samma torn igen avmarkerar'
+      : 'Klicka på tornet du vill länka FRÅN (även baser)';
+  } else {
+    h = '1–7 = bygg · L = länka · klicka torn = info/sälj · WASD/hjul = kamera · Enter = våg · F = fart';
+  }
   el.hint.textContent = h;
-  wallMat.color.setHex(0x2bd7ff).lerp(RED, 1 - state.lives / START_LIVES);
+  if (selected) el.selInfo.textContent = describeTower(selected);
 }
 
 /* ---------------- Bakgrundspuls ---------------- */
 function updateAmbient(raw) {
-  wallGlowMat.opacity = 0.2 + 0.07 * Math.sin(state.tvis * 2.2) + wallFlash * 0.5;
-  wallFlash = Math.max(0, wallFlash - raw * 2.5);
-  spawnMat.opacity = 0.1 + 0.05 * Math.sin(state.tvis * 1.7) + spawnFlash * 0.3;
-  spawnFlash = Math.max(0, spawnFlash - raw * 3);
-  gridMat.opacity = 0.4 + 0.08 * Math.sin(state.tvis * 0.8);
+  for (const p of PORTALS) {
+    const on = portalActive(p);
+    const bas = on ? 0.1 : 0.025;
+    p.mat.opacity = bas + (on ? 0.05 * Math.sin(state.tvis * 2 + p.from) : 0) + p.flash * 0.4;
+    p.ringMat.opacity = (on ? 0.3 : 0.06) + p.flash * 0.5;
+    p.ring.scale.setScalar(2 + (on ? 0.3 * Math.sin(state.tvis * 2.6 + p.from * 2) : 0) + p.flash * 1.5);
+    p.flash = Math.max(0, p.flash - raw * 2.5);
+  }
+  gridMat.opacity = 0.36 + 0.07 * Math.sin(state.tvis * 0.8);
 }
 
 /* ---------------- Huvudloop ---------------- */
@@ -1361,19 +2142,25 @@ function tick() {
   if (running) {
     if (state.phase === 'idle') {
       countdown -= dt;
+      // baser reparerar sig mellan vågorna
+      for (const b of bases) if (b.alive && b.hp < b.maxHp) {
+        b.hp = Math.min(b.maxHp, b.hp + b.maxHp * 0.02 * dt);
+      }
       if (countdown <= 0) startWave();
     }
     if (state.phase === 'wave') updateSpawner(dt);
     updateEnemies(dt);
     for (const t of towers) t.updateCombat(dt);
-    updateMainBeam(dt);
+    updateBeams(dt);
     updateBullets(dt);
   }
 
+  updatePanKeys(raw);
   for (const t of towers) t.updateVisual(raw);
   for (const l of links) l.update(raw);
   updateParticles(dt > 0 ? dt : (state.phase === 'over' ? raw : 0));
   updateFxRings(raw);
+  updateFxBeams(raw);
   updateAmbient(raw);
   updateGhostAndPreview();
 
@@ -1382,8 +2169,10 @@ function tick() {
     hudTimer = 0.12;
     hudDirty = false;
     refreshHUD();
+    if (state.phase !== 'menu') drawMinimap();
   }
 
+  updateCamera(raw);
   camera.position.copy(camBase);
   if (shakeT > 0) {
     shakeT -= raw;
@@ -1393,15 +2182,19 @@ function tick() {
     camera.position.z += (Math.random() - 0.5) * k * 2;
     if (shakeT <= 0) shakeAmp = 0;
   }
-  camera.lookAt(0, 0, -1.2);
+  camera.lookAt(cam.cx, 0, cam.cz);
   renderer.render(scene, camera);
 }
 
 /* ---------------- Start ---------------- */
-const main = new Tower(MAIN_POS.x, MAIN_POS.z, true);
-towers.push(main);
+const prime = new Tower(PRIME_POS.x, PRIME_POS.z, 'utpost', true);
+towers.push(prime);
+bases.push(prime);
+ghostSetType(buildType);
 recomputeNetwork();
-fitCamera();
+updateCamera(1);
+camera.position.copy(camBase);
+camera.lookAt(cam.cx, 0, cam.cz);
 refreshHUD();
 tick();
 
