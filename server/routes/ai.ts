@@ -230,10 +230,11 @@ Anpassning för detta barn:
         const u = usage as { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number; cachedContentTokenCount?: number };
         console.log(`[usage] uid=${req.uid} prompt=${u.promptTokenCount} response=${u.candidatesTokenCount} total=${u.totalTokenCount} cached=${u.cachedContentTokenCount ?? 0}`);
       }
+      const fallbackText = fallback.text ?? '';
       if (cacheKey) {
-        imageAnalysisCache.set(cacheKey, { text: fallback.text, usage, expiresAtMs: Date.now() + IMAGE_ANALYSIS_CACHE_TTL_MS });
+        imageAnalysisCache.set(cacheKey, { text: fallbackText, usage, expiresAtMs: Date.now() + IMAGE_ANALYSIS_CACHE_TTL_MS });
       }
-      res.json({ text: fallback.text, usage });
+      res.json({ text: fallbackText, usage });
       return;
     }
 

@@ -2,6 +2,7 @@ import { enforceSubscriptionLimits } from '../server/subscriptionEnv';
 import { getServerFirestore } from '../server/lib/serverFirestore';
 import { getCachedUserSubscription, setCachedUserSubscription } from '../server/lib/subscriptionUserCache';
 import { applyApiSecurity } from './_lib/httpSecurity';
+import { reserveDailyUsage } from '../server/lib/dailyUsageQuota';
 
 async function getFirebaseAdmin() {
   const mod = await import('firebase-admin');
@@ -84,22 +85,20 @@ export default async function handler(req: any, res: any) {
     const usageRef = db.doc(`users/${uid}/usage/${today}`);
 
     if (enforceSubscriptionLimits() && !pro) {
-      const usageDoc = await usageRef.get();
-      const usage = usageDoc.data() || {};
-      const aiTtsCount = usage.aiTtsCount || 0;
-      if (aiTtsCount >= FREE_AI_TTS_PER_DAY) {
+      const reservation = await reserveDailyUsage(db, usageRef, 'aiTtsCount', FREE_AI_TTS_PER_DAY);
+      if (!reservation.allowed) {
         return res.status(403).json({
           error: `Du har använt din premiumröst för idag (${FREE_AI_TTS_PER_DAY}/dag). Använd webbläsarens röst, eller abonnemanget (49 kr/mån) för obegränsat.`,
           code: 'tts_limit',
           limit: FREE_AI_TTS_PER_DAY,
-          used: aiTtsCount,
+          used: reservation.previousCount,
         });
       }
     }
 
     const audio = await synthesizeMp3(apiKey, plain, typeof lang === 'string' ? lang : 'sv');
 
-    if (!pro) {
+    if (!pro && !enforceSubscriptionLimits()) {
       await usageRef.set(
         {
           aiTtsCount: admin.firestore.FieldValue.increment(1),

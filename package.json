@@ -14,7 +14,7 @@
     "android:build:debug": "npm run cap:sync && cd android && gradlew.bat assembleDebug",
     "android:build:release": "npm run cap:sync && cd android && gradlew.bat assembleRelease",
     "android:bundle:release": "npm run cap:sync && cd android && gradlew.bat bundleRelease",
-    "build:server": "tsc -p tsconfig.server.json",
+    "build:server": "tsc -p server/tsconfig.json",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",

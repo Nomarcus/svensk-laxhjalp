@@ -9,6 +9,7 @@ const DEFAULT_CORS_ORIGINS = [
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 20;
 const RATE_STORE_KEY = '__api_rate_limit_store_v1__';
+const RATE_STORE_MAX_BUCKETS = 10_000;
 
 type Bucket = { count: number; resetAt: number };
 type RateStore = Map<string, Bucket>;
@@ -31,7 +32,24 @@ function getAllowedOrigins(): Set<string> {
 }
 
 function getRequestPath(req: { url?: string; path?: string }): string {
-  return req.path || req.url || '/';
+  // `req.url` includes the query string on Vercel. Using it verbatim would let
+  // callers bypass a per-route limit by changing an irrelevant query value.
+  const raw = req.path || req.url || '/';
+  return raw.split(/[?#]/, 1)[0] || '/';
+}
+
+function pruneRateStore(store: RateStore, now: number): void {
+  for (const [key, bucket] of store) {
+    if (bucket.resetAt <= now) store.delete(key);
+  }
+
+  // Bound memory even when an attacker sends many distinct spoofed addresses
+  // or paths. Map iteration order is insertion order, so discard oldest rows.
+  while (store.size >= RATE_STORE_MAX_BUCKETS) {
+    const oldestKey = store.keys().next().value as string | undefined;
+    if (!oldestKey) break;
+    store.delete(oldestKey);
+  }
 }
 
 function getClientIp(req: { headers?: Record<string, string | string[] | undefined>; socket?: { remoteAddress?: string } }): string {
@@ -68,6 +86,10 @@ export function applyApiSecurity(
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, Stripe-Signature');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
 
   if (req.method === 'OPTIONS') {
     res.status(204).json({});
@@ -85,6 +107,7 @@ export function applyApiSecurity(
   const key = `${getClientIp(req)}:${path}`;
   const now = Date.now();
   const store = getRateStore();
+  if (store.size >= RATE_STORE_MAX_BUCKETS) pruneRateStore(store, now);
   const bucket = store.get(key);
 
   if (!bucket || bucket.resetAt <= now) {

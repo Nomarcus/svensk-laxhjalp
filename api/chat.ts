@@ -9,6 +9,10 @@ import {
   MULTI_EXERCISE_IMAGE_INSTRUCTION_SIMPLE,
 } from '../server/lib/homeworkImageChatHints';
 import { applyApiSecurity } from './_lib/httpSecurity';
+import { getServerFirestore } from '../server/lib/serverFirestore';
+import { enforceSubscriptionLimits } from '../server/subscriptionEnv';
+import { FREE_CHAT_LIMIT, FREE_IMAGE_LIMIT, isUnmeteredSubscription } from '../server/lib/freeTierLimits';
+import { reserveDailyUsage } from '../server/lib/dailyUsageQuota';
 
 const TEXT_MODEL = process.env.AI_TEXT_MODEL || 'gemini-2.5-flash-lite';
 
@@ -122,7 +126,8 @@ export default async function handler(req: any, res: any) {
 
   try {
     const admin = await getFirebaseAdmin();
-    await admin.auth().verifyIdToken(authHeader.split('Bearer ')[1]);
+    const decoded = await admin.auth().verifyIdToken(authHeader.split('Bearer ')[1]);
+    (req as { authenticatedUid?: string }).authenticatedUid = decoded.uid;
   } catch {
     return res.status(401).json({ error: 'Ogiltig token. Logga in igen.' });
   }
@@ -143,6 +148,30 @@ export default async function handler(req: any, res: any) {
     const p = normalizePrompt(prompt, images.parts.length > 0);
     if (p.ok === false) {
       return res.status(p.status).json({ error: p.error });
+    }
+
+    const uid = (req as { authenticatedUid: string }).authenticatedUid;
+    const db = getServerFirestore();
+    const userData = (await db.doc(`users/${uid}`).get()).data() || {};
+    const unmetered = isUnmeteredSubscription(userData.tier || 'free', userData.subscriptionStatus || 'none');
+    if (!unmetered) {
+      const hasImage = images.parts.length > 0;
+      const field = hasImage ? 'imageCount' : 'chatCount';
+      const limit = enforceSubscriptionLimits()
+        ? (hasImage ? FREE_IMAGE_LIMIT : FREE_CHAT_LIMIT)
+        : null;
+      const today = new Date().toISOString().split('T')[0];
+      const reservation = await reserveDailyUsage(db, db.doc(`users/${uid}/usage/${today}`), field, limit);
+      if (!reservation.allowed) {
+        return res.status(hasImage ? 403 : 429).json({
+          error: hasImage
+            ? `Du har använt dagens gratis bildanalyser (${FREE_IMAGE_LIMIT}/dag).`
+            : `Du har använt dagens ${FREE_CHAT_LIMIT} gratis AI-svar.`,
+          upgradeRequired: true,
+          limit,
+          used: reservation.previousCount,
+        });
+      }
     }
 
     // Use completely different system instruction for simple Swedish
