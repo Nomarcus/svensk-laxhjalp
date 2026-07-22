@@ -1,18 +1,31 @@
 import { GoogleGenAI } from '@google/genai';
 import { normalizeImageGenerationPrompt } from '../server/lib/chatRequestValidation';
 import { applyApiSecurity } from './_lib/httpSecurity';
-const IMAGE_MODEL = process.env.AI_IMAGE_MODEL || 'gemini-3.1-flash-image-preview';
+import { getServerFirestore } from '../server/lib/serverFirestore';
+import { enforceSubscriptionLimits } from '../server/subscriptionEnv';
+import { isUnmeteredSubscription } from '../server/lib/freeTierLimits';
+const IMAGE_MODEL = process.env.AI_IMAGE_MODEL || 'gemini-2.5-flash-image';
 async function getFirebaseAdmin() { const mod = await import('firebase-admin'); const admin = mod.default; if (!admin.apps?.length) { const sa = process.env.FIREBASE_SERVICE_ACCOUNT; if (sa) admin.initializeApp({ credential: admin.credential.cert(JSON.parse(sa)) }); else admin.initializeApp(); } return admin; }
 export default async function handler(req: any, res: any) {
   if (!applyApiSecurity(req, res)) return;
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: 'Ingen autentisering.' });
-  try { const admin = await getFirebaseAdmin(); await admin.auth().verifyIdToken(authHeader.split('Bearer ')[1]); } catch { return res.status(401).json({ error: 'Ogiltig token.' }); }
+  let uid: string;
+  try { const admin = await getFirebaseAdmin(); const decoded = await admin.auth().verifyIdToken(authHeader.split('Bearer ')[1]); uid = decoded.uid; } catch { return res.status(401).json({ error: 'Ogiltig token.' }); }
   try {
     const { prompt } = req.body;
     const np = normalizeImageGenerationPrompt(prompt);
     if (np.ok === false) return res.status(np.status).json({ error: np.error });
+    if (enforceSubscriptionLimits()) {
+      const userData = (await getServerFirestore().doc(`users/${uid}`).get()).data() || {};
+      if (!isUnmeteredSubscription(userData.tier || 'free', userData.subscriptionStatus || 'none')) {
+        return res.status(403).json({
+          error: 'AI-illustrationer ingår i abonnemanget (49 kr/mån).',
+          upgradeRequired: true,
+        });
+      }
+    }
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
     const response = await ai.models.generateContent({
       model: IMAGE_MODEL,

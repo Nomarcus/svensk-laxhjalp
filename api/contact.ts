@@ -9,8 +9,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { name, email, message } = req.body || {};
 
-  if (!name || !email || !message) {
+  if (typeof name !== 'string' || typeof email !== 'string' || typeof message !== 'string') {
     return res.status(400).json({ error: 'Alla fält krävs.' });
+  }
+
+  const safeName = name.trim();
+  const safeEmail = email.trim();
+  const safeMessage = message.trim();
+  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(safeEmail);
+  if (!safeName || !safeMessage || !validEmail) {
+    return res.status(400).json({ error: 'Kontrollera att alla fält är korrekt ifyllda.' });
+  }
+  if (safeName.length > 100 || safeEmail.length > 254 || safeMessage.length > 5000) {
+    return res.status(413).json({ error: 'Kontaktmeddelandet är för långt.' });
   }
 
   const RECIPIENT = 'marcus.mpai@gmail.com';
@@ -32,9 +43,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         body: JSON.stringify({
           from: 'Föräldrahjälpen <noreply@resend.dev>',
           to: RECIPIENT,
-          subject: `Kontaktformulär: ${name}`,
-          text: `Namn: ${name}\nE-post: ${email}\n\nMeddelande:\n${message}`,
-          reply_to: email,
+          subject: `Kontaktformulär: ${safeName}`,
+          text: `Namn: ${safeName}\nE-post: ${safeEmail}\n\nMeddelande:\n${safeMessage}`,
+          reply_to: safeEmail,
         }),
       });
 
@@ -47,11 +58,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Kunde inte skicka meddelandet.' });
     }
   } else {
-    // No email service configured — log the message for now
-    console.log('=== CONTACT FORM ===');
-    console.log(`From: ${name} <${email}>`);
-    console.log(`Message: ${message}`);
-    console.log('====================');
+    // Do not silently claim delivery or write contact details to provider logs.
+    return res.status(503).json({ error: 'Kontaktformuläret är tillfälligt inte konfigurerat.' });
   }
 
   return res.status(200).json({ ok: true });

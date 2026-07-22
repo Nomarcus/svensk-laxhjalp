@@ -1,15 +1,13 @@
 import { Response, NextFunction } from 'express';
-import admin from 'firebase-admin';
 import { AuthenticatedRequest } from './auth';
 import { getServerFirestore } from '../lib/serverFirestore';
 import { enforceSubscriptionLimits } from '../subscriptionEnv';
 import { getCachedUserSubscription, setCachedUserSubscription } from '../lib/subscriptionUserCache';
 import { FREE_CHAT_LIMIT, FREE_IMAGE_LIMIT, isUnmeteredSubscription } from '../lib/freeTierLimits';
+import { reserveDailyUsage } from '../lib/dailyUsageQuota';
 
 export interface SubscriptionRequest extends AuthenticatedRequest {
   tier?: 'free' | 'pro';
-  dailyChatCount?: number;
-  dailyImageCount?: number;
 }
 
 export async function subscriptionMiddleware(
@@ -57,13 +55,7 @@ export async function subscriptionMiddleware(
         Boolean(req.body?.imageBase64)
         || (Array.isArray(req.body?.imageBase64s) && req.body.imageBase64s.length > 0);
       const field = chatHasImage ? 'imageCount' : 'chatCount';
-      await usageRef.set(
-        {
-          [field]: admin.firestore.FieldValue.increment(1),
-          lastUpdated: new Date().toISOString(),
-        },
-        { merge: true },
-      );
+      await reserveDailyUsage(getServerFirestore(), usageRef, field, null);
     };
 
     if (!enforceSubscriptionLimits()) {
@@ -76,15 +68,6 @@ export async function subscriptionMiddleware(
       next();
       return;
     }
-    const usageDoc = await usageRef.get();
-    const usage = usageDoc.data() || { chatCount: 0, imageCount: 0 };
-
-    const chatCount = usage.chatCount || 0;
-    const imageCount = usage.imageCount || 0;
-
-    req.dailyChatCount = chatCount;
-    req.dailyImageCount = imageCount;
-
     if (req.path === '/image') {
       res.status(403).json({
         error:
@@ -99,37 +82,35 @@ export async function subscriptionMiddleware(
       || (Array.isArray(req.body?.imageBase64s) && req.body.imageBase64s.length > 0);
 
     if (req.path === '/chat' && chatHasImage) {
-      if (imageCount >= FREE_IMAGE_LIMIT) {
+      const reservation = await reserveDailyUsage(
+        getServerFirestore(), usageRef, 'imageCount', FREE_IMAGE_LIMIT,
+      );
+      if (!reservation.allowed) {
         res.status(403).json({
           error: `Du har använt dagens gratis bildanalyser (${FREE_IMAGE_LIMIT}/dag). Med abonnemang (49 kr/mån) får du obegränsat.`,
           upgradeRequired: true,
           limit: FREE_IMAGE_LIMIT,
-          used: imageCount,
+          used: reservation.previousCount,
         });
         return;
       }
-      await usageRef.set(
-        { imageCount: admin.firestore.FieldValue.increment(1), lastUpdated: new Date().toISOString() },
-        { merge: true },
-      );
       next();
       return;
     }
 
     if (req.path === '/chat') {
-      if (chatCount >= FREE_CHAT_LIMIT) {
+      const reservation = await reserveDailyUsage(
+        getServerFirestore(), usageRef, 'chatCount', FREE_CHAT_LIMIT,
+      );
+      if (!reservation.allowed) {
         res.status(429).json({
           error: `Du har använt dagens ${FREE_CHAT_LIMIT} gratis AI-svar. Imorgon nollställs kvoten — eller välj abonnemang (49 kr/mån) för obegränsat.`,
           upgradeRequired: true,
           limit: FREE_CHAT_LIMIT,
-          used: chatCount,
+          used: reservation.previousCount,
         });
         return;
       }
-      await usageRef.set(
-        { chatCount: admin.firestore.FieldValue.increment(1), lastUpdated: new Date().toISOString() },
-        { merge: true },
-      );
       next();
       return;
     }
