@@ -1,38 +1,49 @@
-import { GoogleGenAI } from '@google/genai';
-import { normalizeImageGenerationPrompt } from '../server/lib/chatRequestValidation';
 import { applyApiSecurity } from './_lib/httpSecurity';
-const IMAGE_MODEL = process.env.AI_IMAGE_MODEL || 'gemini-3.1-flash-image-preview';
-async function getFirebaseAdmin() { const mod = await import('firebase-admin'); const admin = mod.default; if (!admin.apps?.length) { const sa = process.env.FIREBASE_SERVICE_ACCOUNT; if (sa) admin.initializeApp({ credential: admin.credential.cert(JSON.parse(sa)) }); else admin.initializeApp(); } return admin; }
+
+/**
+ * Thin proxy to the Cloud Run backend (server/routes/ai.ts).
+ * See api/chat.ts for why this no longer calls Gemini directly.
+ */
+const CLOUD_RUN_API_ORIGIN =
+  process.env.CLOUD_RUN_API_ORIGIN || 'https://laxhjalp-api-288867992327.europe-west1.run.app';
+
 export default async function handler(req: any, res: any) {
   if (!applyApiSecurity(req, res)) return;
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
   const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: 'Ingen autentisering.' });
-  try { const admin = await getFirebaseAdmin(); await admin.auth().verifyIdToken(authHeader.split('Bearer ')[1]); } catch { return res.status(401).json({ error: 'Ogiltig token.' }); }
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Ingen autentisering.' });
+  }
+
   try {
-    const { prompt } = req.body;
-    const np = normalizeImageGenerationPrompt(prompt);
-    if (np.ok === false) return res.status(np.status).json({ error: np.error });
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-    const response = await ai.models.generateContent({
-      model: IMAGE_MODEL,
-      contents: 'Skapa en pedagogisk illustration för barn: ' + np.text,
-      config: {
-        responseModalities: ['TEXT', 'IMAGE'],
-        imageConfig: { aspectRatio: '1:1' }
-      }
+    const upstream = await fetch(`${CLOUD_RUN_API_ORIGIN}/api/image`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      body: JSON.stringify(req.body),
     });
-    if (response.candidates?.[0]?.content?.parts) {
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          const mimeType = part.inlineData.mimeType || 'image/png';
-          return res.json({ imageData: `data:${mimeType};base64,${part.inlineData.data}` });
-        }
-      }
+
+    const contentType = upstream.headers.get('content-type');
+    if (contentType) res.setHeader('Content-Type', contentType);
+    res.status(upstream.status);
+
+    if (!upstream.body) {
+      res.end();
+      return;
     }
-    res.json({ imageData: null });
-  } catch (error: any) {
-    console.error('Image generation error:', error.message, error.stack);
-    res.status(500).json({ error: 'Bildgenerering misslyckades: ' + (error.message || 'Okänt fel') });
+
+    const reader = upstream.body.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      res.write(Buffer.from(value));
+    }
+    res.end();
+  } catch (error) {
+    console.error('Image proxy error:', error instanceof Error ? error.message : error);
+    res.status(502).json({ error: 'Kunde inte nå AI-tjänsten. Försök igen.' });
   }
 }
