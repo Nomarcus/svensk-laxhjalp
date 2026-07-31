@@ -24,6 +24,30 @@ import { isLikelyImageFile } from '../utils/imageUpload';
 import { cn } from '../utils/cn';
 import { isRequirementsList } from '../utils/detectRequirementsList';
 import type { Message, ChatSession, Task } from '../types';
+
+/**
+ * Mirrors the server's token budget (server/lib/chatRequestValidation.ts,
+ * MAX_HISTORY_TOKEN_BUDGET) so the client doesn't upload the entire, ever-growing
+ * conversation on every message when the server trims most of it away anyway.
+ * The server remains authoritative — this is a bandwidth/CPU optimization, not a
+ * correctness boundary.
+ */
+const CLIENT_HISTORY_TOKEN_BUDGET = 4000;
+
+function trimHistoryForRequest(
+  items: { role: 'user' | 'model'; content: string }[],
+): { role: 'user' | 'model'; content: string }[] {
+  const kept: { role: 'user' | 'model'; content: string }[] = [];
+  let usedTokens = 0;
+  for (let i = items.length - 1; i >= 0; i--) {
+    const msg = items[i];
+    const approxTokens = Math.max(1, Math.ceil(msg.content.length / 4));
+    if (usedTokens + approxTokens > CLIENT_HISTORY_TOKEN_BUDGET) break;
+    usedTokens += approxTokens;
+    kept.push(msg);
+  }
+  return kept.reverse();
+}
 import ChatHeader from './chat/ChatHeader';
 import ChatMessage from './chat/ChatMessage';
 import ChatInput from './chat/ChatInput';
@@ -550,7 +574,9 @@ ${requirementsText}`;
         }
       }
 
-      const history = displayMessages.map((m) => ({ role: m.role, content: m.content }));
+      const history = trimHistoryForRequest(
+        displayMessages.map((m) => ({ role: m.role, content: m.content })),
+      );
       const response = await generateHomeworkHelp(
         messageText || t('chat.analyzeImage'),
         history,

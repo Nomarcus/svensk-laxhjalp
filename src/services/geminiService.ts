@@ -20,6 +20,15 @@ export async function requestPremiumTts(text: string, lang?: string): Promise<Re
   });
 }
 
+export class ApiRequestError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiRequestError';
+    this.status = status;
+  }
+}
+
 async function apiRequest(endpoint: string, body: object): Promise<any> {
   const token = await getAuthToken();
   const response = await fetch(apiUrl(`/api/${endpoint}`), {
@@ -33,7 +42,7 @@ async function apiRequest(endpoint: string, body: object): Promise<any> {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Nätverksfel' }));
-    throw new Error(error.error || `HTTP ${response.status}`);
+    throw new ApiRequestError(error.error || `HTTP ${response.status}`, response.status);
   }
 
   return response.json();
@@ -126,8 +135,15 @@ export async function generateHomeworkHelp(
 }
 
 function isImageRequestNonRetryable(err: unknown): boolean {
+  // 429 (rate-limited / RESOURCE_EXHAUSTED) is deliberately NOT retried here either —
+  // retrying a request that's already being rate-limited just amplifies the overload
+  // it's meant to protect against. Checking `status` directly is more reliable than the
+  // string match below, which breaks silently if a server error message ever changes.
+  if (err instanceof ApiRequestError) {
+    return err.status === 401 || err.status === 403 || err.status === 429;
+  }
   const msg = err instanceof Error ? err.message : String(err);
-  return /403|401|Uppgradera|abonnemang|upgrade|subscription/i.test(msg);
+  return /403|401|429|Uppgradera|abonnemang|upgrade|subscription|överbelastad|RESOURCE_EXHAUSTED/i.test(msg);
 }
 
 export async function generateImage(prompt: string, childGrade?: string): Promise<string | null> {

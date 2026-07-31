@@ -16,8 +16,15 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 const TEXT_MODEL = process.env.AI_TEXT_MODEL || 'gemini-2.5-flash-lite';
 const IMAGE_MODEL = process.env.AI_IMAGE_MODEL || 'gemini-2.5-flash-image';
+/** Model used when a chat message includes photos to analyze — separate from TEXT_MODEL
+ * so changing AI_TEXT_MODEL doesn't silently leave the (usually pricier) image path untouched. */
+const IMAGE_ANALYSIS_MODEL = process.env.AI_IMAGE_ANALYSIS_MODEL || 'gemini-2.5-flash';
 const PROMPT_CACHE_TTL_MS = 60 * 60 * 1000;
 const IMAGE_ANALYSIS_CACHE_TTL_MS = 10 * 60 * 1000;
+/** Hard ceiling on response length — protects against runaway/looping generations. */
+const MAX_OUTPUT_TOKENS_CHAT = Number(process.env.AI_MAX_OUTPUT_TOKENS) || 4096;
+/** Generous on purpose: image-gen output includes the image itself, and a too-low cap risks truncating it. */
+const MAX_OUTPUT_TOKENS_IMAGE_GEN = 8192;
 
 type PromptCacheEntry = { cachedContentName: string; expiresAtMs: number };
 const promptCacheByBucket = new Map<string, PromptCacheEntry>();
@@ -67,26 +74,30 @@ async function getOrCreatePromptCache(
   const key = `${model}|${bucket}`;
   const now = Date.now();
   const hit = promptCacheByBucket.get(key);
-  if (hit && hit.expiresAtMs > now) return hit.cachedContentName;
+  if (hit && hit.expiresAtMs > now) {
+    console.log(`[cache] hit bucket=${bucket} model=${model}`);
+    return hit.cachedContentName;
+  }
 
   try {
-    const api = ai as unknown as {
-      caches?: { create: (args: Record<string, unknown>) => Promise<{ name?: string }> };
-    };
-    if (!api.caches?.create) return null;
-
-    const cache = await api.caches.create({
+    const cache = await ai.caches.create({
       model,
       config: {
         systemInstruction,
         ttl: '3600s',
       },
     });
-    const name = cache?.name;
-    if (!name) return null;
+    const name = cache.name;
+    if (!name) {
+      console.warn(`[cache] Gemini returned no cache name bucket=${bucket} model=${model}`);
+      return null;
+    }
+    console.log(`[cache] created bucket=${bucket} model=${model} tokens=${cache.usageMetadata?.totalTokenCount ?? 'unknown'}`);
     promptCacheByBucket.set(key, { cachedContentName: name, expiresAtMs: now + PROMPT_CACHE_TTL_MS });
     return name;
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[cache] create failed bucket=${bucket} model=${model}: ${message}`);
     return null;
   }
 }
@@ -169,7 +180,7 @@ router.post('/chat', async (req: AuthenticatedRequest, res: Response) => {
     const imageMultiHint = images.parts.length > 0
       ? (isCoach ? MULTI_EXERCISE_IMAGE_INSTRUCTION_COACH : MULTI_EXERCISE_IMAGE_INSTRUCTION)
       : '';
-    const effectiveModel = images.parts.length > 0 ? 'gemini-2.5-flash' : TEXT_MODEL;
+    const effectiveModel = images.parts.length > 0 ? IMAGE_ANALYSIS_MODEL : TEXT_MODEL;
     const bucket = `${gradeBucket(safeChildGrade)}|${images.parts.length > 0 ? 'image' : 'text'}|${isCoach ? 'coach' : 'teach'}`;
     const baseInstruction = isCoach ? COACH_SYSTEM_INSTRUCTION : SYSTEM_INSTRUCTION;
     const effectiveSystemInstruction = `${baseInstruction}
@@ -215,29 +226,11 @@ Anpassning för detta barn:
         },
       ],
       config: cachedContent
-        ? { cachedContent }
-        : { systemInstruction: effectiveSystemInstruction },
+        ? { cachedContent, maxOutputTokens: MAX_OUTPUT_TOKENS_CHAT }
+        : { systemInstruction: effectiveSystemInstruction, maxOutputTokens: MAX_OUTPUT_TOKENS_CHAT },
     };
 
-    const streamApi = ai.models as unknown as {
-      generateContentStream?: (payload: unknown) => Promise<AsyncIterable<{ text?: string; usageMetadata?: unknown }>>;
-    };
-
-    if (!streamApi.generateContentStream) {
-      const fallback = await ai.models.generateContent(requestPayload);
-      const usage = fallback.usageMetadata;
-      if (usage) {
-        const u = usage as { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number; cachedContentTokenCount?: number };
-        console.log(`[usage] uid=${req.uid} prompt=${u.promptTokenCount} response=${u.candidatesTokenCount} total=${u.totalTokenCount} cached=${u.cachedContentTokenCount ?? 0}`);
-      }
-      if (cacheKey) {
-        imageAnalysisCache.set(cacheKey, { text: fallback.text, usage, expiresAtMs: Date.now() + IMAGE_ANALYSIS_CACHE_TTL_MS });
-      }
-      res.json({ text: fallback.text, usage });
-      return;
-    }
-
-    const stream = await streamApi.generateContentStream(requestPayload);
+    const stream = await ai.models.generateContentStream(requestPayload);
     res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('X-Accel-Buffering', 'no');
@@ -301,6 +294,7 @@ router.post('/image', async (req: AuthenticatedRequest, res: Response) => {
         imageConfig: {
           aspectRatio: '1:1',
         },
+        maxOutputTokens: MAX_OUTPUT_TOKENS_IMAGE_GEN,
       },
     });
 
