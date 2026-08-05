@@ -262,15 +262,7 @@
     "noSpeechInBrowser": "Webbläsaren har ingen inbyggd uppläsning här, och AI-rösten för idag är förbrukad.",
     "dismissVoiceNotice": "Stäng",
     "imageActionExtraInstruction": "Extra instruktion från användaren",
-    "learningGuide": "Tryggt stöd för vuxna hemma",
-    "imageStepPhoto": "Bild vald",
-    "imageStepChoose": "Välj hjälp",
-    "imageStepSend": "Skicka",
-    "imageActionRecommendation": "Osäker? Välj Förklara enkelt — då får du en lugn start.",
-    "nextStepTitle": "Nästa steg",
-    "nextStepHint": "Läs svaret tillsammans, prova en uppgift och spara till planeringen om ni vill fortsätta senare.",
-    "moreSupport": "Mer stöd",
-    "parentReassurance": "Du behöver inte kunna allt själv — börja med en bild eller en enkel fråga."
+    "learningGuide": "Tryggt stöd för vuxna hemma"
   },
   "chatEmpty": {
     "helpWith": "Hjälp {{name}} med läxan",

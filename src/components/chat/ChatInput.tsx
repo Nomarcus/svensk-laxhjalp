@@ -175,15 +175,15 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
             </div>
             <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl border border-emerald-100 dark:border-emerald-900/50 shadow-sm">
               <div className="mb-3 grid grid-cols-3 gap-1.5 text-[10px] font-medium text-emerald-900 dark:text-emerald-100">
-                <span className="rounded-full bg-white/80 dark:bg-slate-900/70 px-2 py-1 text-center">1. {t('chat.imageStepPhoto', { defaultValue: 'Bild vald' })}</span>
-                <span className="rounded-full bg-emerald-600 text-white px-2 py-1 text-center shadow-sm">2. {t('chat.imageStepChoose', { defaultValue: 'Välj hjälp' })}</span>
-                <span className="rounded-full bg-white/80 dark:bg-slate-900/70 px-2 py-1 text-center">3. {t('chat.imageStepSend', { defaultValue: 'Skicka' })}</span>
+                <span className="rounded-full bg-white/80 dark:bg-slate-900/70 px-2 py-1 text-center">1. {t('chat.imageStepPhoto')}</span>
+                <span className="rounded-full bg-emerald-600 text-white px-2 py-1 text-center shadow-sm">2. {t('chat.imageStepChoose')}</span>
+                <span className="rounded-full bg-white/80 dark:bg-slate-900/70 px-2 py-1 text-center">3. {t('chat.imageStepSend')}</span>
               </div>
               <p className="mb-1 text-xs font-semibold text-emerald-900 dark:text-emerald-100">
                 {t('chat.imageActionsTitle')}
               </p>
               <p className="mb-2 text-[10px] text-emerald-800/75 dark:text-emerald-100/75">
-                {t('chat.imageActionRecommendation', { defaultValue: 'Osäker? Välj Förklara enkelt — då får du en lugn start.' })}
+                {t('chat.imageActionRecommendation')}
               </p>
               <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {homeworkImageActions.map((action) => {
