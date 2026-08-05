@@ -67,8 +67,6 @@ export type SubscriptionStatus = 'active' | 'trialing' | 'canceled' | 'past_due'
 export interface UserSubscription {
   tier: SubscriptionTier;
   status: SubscriptionStatus;
-  stripeCustomerId?: string;
-  stripeSubscriptionId?: string;
   currentPeriodEnd?: Timestamp | null;
   cancelAtPeriodEnd?: boolean;
 }

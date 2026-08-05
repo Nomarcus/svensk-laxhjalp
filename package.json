@@ -54,7 +54,6 @@
     "react-markdown": "^10.1.0",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0",
-    "stripe": "^20.4.1",
     "tailwind-merge": "^3.5.0",
     "tsx": "^4.21.0",
     "vite": "^6.2.0"

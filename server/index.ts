@@ -11,7 +11,7 @@ import { authMiddleware } from './middleware/auth';
 import { subscriptionMiddleware } from './middleware/subscription';
 import { aiRouter } from './routes/ai';
 import { ttsRouter } from './routes/tts';
-import { billingRouter, stripeWebhookHandler } from './routes/billing';
+import { billingRouter } from './routes/billing';
 import { adminRouter } from './routes/admin';
 import { accountRouter } from './routes/account';
 
@@ -23,18 +23,8 @@ const SECURITY_HEADERS = {
   'X-Frame-Options': 'DENY',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
-  'Content-Security-Policy': "default-src 'self'; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' https://js.stripe.com https://apis.google.com; font-src 'self' data: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.run.app https://api.stripe.com https://lead-agent-489101.web.app https://foraldrahjalpen.se https://www.foraldrahjalpen.se; frame-src https://js.stripe.com https://hooks.stripe.com;",
+  'Content-Security-Policy': "default-src 'self'; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' https://apis.google.com; font-src 'self' data: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.run.app https://lead-agent-489101.web.app https://foraldrahjalpen.se https://www.foraldrahjalpen.se;",
 };
-
-// CRITICAL: Stripe webhook MUST come before express.json() — needs raw body.
-// Firebase Hosting rewrites only /api/** to Cloud Run, so the live URL must be /api/webhook/stripe
-// (see firebase.json). Keep /webhook/stripe for backwards compatibility / Vercel-style proxies.
-app.post(
-  '/api/webhook/stripe',
-  express.raw({ type: 'application/json' }),
-  stripeWebhookHandler,
-);
-app.post('/webhook/stripe', express.raw({ type: 'application/json' }), stripeWebhookHandler);
 
 const DEFAULT_CORS_ORIGINS = [
   'http://localhost:3000',
@@ -90,7 +80,7 @@ const limiter = rateLimit({
   legacyHeaders: false,
   skip: (req) => {
     const u = req.originalUrl || req.url || '';
-    return u.includes('/admin/') || u.includes('/webhook/');
+    return u.includes('/admin/');
   },
 });
 
@@ -106,7 +96,7 @@ const uidLimiter = rateLimit({
   message: { error: 'For manga AI-anrop for detta konto. Forsok igen om en minut.' },
   skip: (req) => {
     const u = req.originalUrl || req.url || '';
-    return u.includes('/admin/') || u.includes('/webhook/');
+    return u.includes('/admin/');
   },
 });
 
