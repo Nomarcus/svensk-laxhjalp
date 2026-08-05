@@ -1,6 +1,19 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Send, Image as ImageIcon, Camera, X, Mic, MicOff, Lightbulb } from 'lucide-react';
+import {
+  Send,
+  Image as ImageIcon,
+  Camera,
+  X,
+  Mic,
+  MicOff,
+  Lightbulb,
+  CheckCircle2,
+  HelpCircle,
+  ListChecks,
+  Sparkles,
+  Wand2,
+} from 'lucide-react';
 import { compressImage } from '../../utils/image';
 import { isLikelyImageFile } from '../../utils/imageUpload';
 import { cn } from '../../utils/cn';
@@ -13,6 +26,9 @@ interface ChatInputProps {
   maxImages?: number;
   loading: boolean;
   onSubmit: (e: React.FormEvent) => void;
+  selectedImageActionId?: string | null;
+  onImageActionSelect?: (actionId: HomeworkImageActionId) => void;
+  onClearImageAction?: () => void;
   coachMode?: boolean;
 }
 
@@ -20,12 +36,23 @@ const SpeechRecognitionAPI = typeof window !== 'undefined'
   ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
   : null;
 
-export default function ChatInput({ input, setInput, images, setImages, maxImages = 5, loading, onSubmit, coachMode = false }: ChatInputProps) {
+const homeworkImageActions = [
+  { id: 'explainSimple', icon: Sparkles },
+  { id: 'correct', icon: CheckCircle2 },
+  { id: 'getStarted', icon: HelpCircle },
+  { id: 'stepByStep', icon: ListChecks },
+  { id: 'summarize', icon: Wand2 },
+] as const;
+
+export type HomeworkImageActionId = typeof homeworkImageActions[number]['id'];
+
+export default function ChatInput({ input, setInput, images, setImages, maxImages = 5, loading, onSubmit, selectedImageActionId, onImageActionSelect, onClearImageAction, coachMode = false }: ChatInputProps) {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
   const inputRef = useRef(input);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isListening, setIsListening] = useState(false);
 
   useEffect(() => { inputRef.current = input; }, [input]);
@@ -101,6 +128,21 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
   };
 
   const atMax = images.length >= maxImages;
+  const showHomeworkImageActions = images.length > 0;
+
+  const handleImageActionClick = (actionId: HomeworkImageActionId) => {
+    if (onImageActionSelect) {
+      onImageActionSelect(actionId);
+    } else {
+      setInput(t(`chat.imageActionPrompts.${actionId}`));
+    }
+    textareaRef.current?.focus();
+  };
+
+  const focusCustomPrompt = () => {
+    onClearImageAction?.();
+    textareaRef.current?.focus();
+  };
 
   return (
     <div className="p-4 md:p-8 bg-white dark:bg-slate-950 md:bg-transparent md:dark:bg-transparent border-t md:border-t-0 dark:border-white/5">
@@ -111,24 +153,69 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
             <span>{t('chat.coachModeActive')}</span>
           </div>
         )}
-        {images.length > 0 && (
-          <div className="absolute bottom-full left-0 mb-4 p-2 bg-white dark:bg-slate-800 rounded-xl border border-black/5 dark:border-white/5 shadow-lg flex flex-wrap gap-2 max-w-full">
-            {images.map((img, idx) => (
-              <div key={idx} className="relative group/thumb">
-                <img src={img} alt="" className="w-12 h-12 object-cover rounded-lg border border-black/5" />
+        {showHomeworkImageActions && (
+          <div className="mb-3 space-y-2">
+            <div className="p-2 bg-white dark:bg-slate-800 rounded-xl border border-black/5 dark:border-white/5 shadow-sm flex flex-wrap gap-2 max-w-full">
+              {images.map((img, idx) => (
+                <div key={idx} className="relative group/thumb">
+                  <img src={img} alt="" className="w-12 h-12 object-cover rounded-lg border border-black/5" />
+                  <button
+                    type="button"
+                    onClick={() => setImages((prev) => prev.filter((_, i) => i !== idx))}
+                    className="absolute -top-1 -right-1 p-0.5 bg-stone-800 text-white rounded-full opacity-100 md:opacity-0 md:group-hover/thumb:opacity-100 transition-opacity"
+                    aria-label={t('chat.removeAttachment')}
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+              <span className="self-center text-[10px] text-stone-400 tabular-nums">
+                {images.length}/{maxImages}
+              </span>
+            </div>
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl border border-emerald-100 dark:border-emerald-900/50 shadow-sm">
+              <p className="mb-2 text-xs font-semibold text-emerald-900 dark:text-emerald-100">
+                {t('chat.imageActionsTitle')}
+              </p>
+              <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {homeworkImageActions.map((action) => {
+                  const Icon = action.icon;
+                  return (
+                    <button
+                      key={action.id}
+                      type="button"
+                      disabled={loading}
+                      onClick={() => handleImageActionClick(action.id)}
+                      className={cn(
+                        'shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-medium transition-colors',
+                        selectedImageActionId === action.id
+                          ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm'
+                          : 'border-emerald-200 bg-white text-emerald-800 hover:border-emerald-300 hover:bg-emerald-100 dark:border-emerald-800/60 dark:bg-slate-900 dark:text-emerald-100 dark:hover:bg-emerald-900/40',
+                        loading && 'cursor-not-allowed opacity-60'
+                      )}
+                      aria-pressed={selectedImageActionId === action.id}
+                    >
+                      <Icon size={14} />
+                      {t(`chat.imageActions.${action.id}`)}
+                    </button>
+                  );
+                })}
                 <button
                   type="button"
-                  onClick={() => setImages((prev) => prev.filter((_, i) => i !== idx))}
-                  className="absolute -top-1 -right-1 p-0.5 bg-stone-800 text-white rounded-full opacity-0 group-hover/thumb:opacity-100 transition-opacity"
-                  aria-label={t('chat.removeAttachment')}
+                  disabled={loading}
+                  onClick={focusCustomPrompt}
+                  className={cn(
+                    'shrink-0 rounded-full border border-stone-200 bg-white px-3 py-2 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-50 dark:border-white/10 dark:bg-slate-900 dark:text-stone-200 dark:hover:bg-white/5',
+                    loading && 'cursor-not-allowed opacity-60'
+                  )}
                 >
-                  <X size={12} />
+                  {t('chat.imageActions.custom')}
                 </button>
               </div>
-            ))}
-            <span className="self-center text-[10px] text-stone-400 tabular-nums">
-              {images.length}/{maxImages}
-            </span>
+              <p className="mt-2 text-[10px] text-emerald-800/70 dark:text-emerald-100/70">
+                {t('chat.imageActionsHint')}
+              </p>
+            </div>
           </div>
         )}
         <div className="relative flex items-end gap-2 bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-2xl p-2 shadow-sm focus-within:border-emerald-500/50 transition-all">
@@ -197,6 +284,7 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
             className="hidden"
           />
           <textarea
+            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onPaste={handlePaste}
