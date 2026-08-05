@@ -888,6 +888,9 @@ ${requirementsText}`;
         maxImages={CHAT_MAX_IMAGES}
         loading={loading}
         onSubmit={sendMessage}
+        onImageActionSelect={(prompt, displayText) => {
+          void sendMessage(prompt, displayText);
+        }}
         coachMode={coachMode}
       />
 
