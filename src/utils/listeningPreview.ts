@@ -1,9 +1,9 @@
 /**
- * Text för Lyssna: bara början / en kort ingång så TTS inte läser hela svaret
- * (billigare, snabbare, bättre för att komma igång tillsammans).
+ * Text för Lyssna: städa AI-svaret till uppläsningsbar text.
+ * Uppläsningen ska läsa hela svaret och inte bara en kort förhandsvisning.
  */
 
-const DEFAULT_MAX = 880;
+export const PREMIUM_TTS_SAFE_CHAR_LIMIT = 4500;
 
 /** Samma städning som tidigare i useSpeech (utan server-import). */
 export function stripMarkdownForListen(text: string): string {
@@ -36,42 +36,19 @@ function cutBeforeOptionalSections(plain: string): string {
   return t.trim();
 }
 
-function truncateAtSentence(text: string, maxLen: number): string {
-  if (text.length <= maxLen) return text;
-  const slice = text.slice(0, maxLen);
-  const last = Math.max(
-    slice.lastIndexOf('. '),
-    slice.lastIndexOf('! '),
-    slice.lastIndexOf('? '),
-    slice.lastIndexOf('.\n'),
-  );
-  if (last >= Math.floor(maxLen * 0.35)) {
-    return slice.slice(0, last + 1).trim();
-  }
-  return `${slice.trim()}…`;
-}
-
 /**
- * Första delen av AI-svaret: ingress / början, utan långa avslut om de markerats tydligt.
+ * Hela AI-svaret, utan avslutande knappval/sektioner som inte bör läsas upp.
  */
-export function listeningPreview(raw: string, maxChars: number = DEFAULT_MAX): string {
+export function listeningText(raw: string): string {
   let plain = stripMarkdownForListen(raw);
   plain = cutBeforeOptionalSections(plain);
   plain = plain.replace(/\$\$[\s\S]*?\$\$/g, ' ').replace(/\$[^$\n]{1,120}\$/g, ' ');
-  plain = plain.trim();
-  if (!plain) return '';
+  return plain.trim();
+}
 
-  const paragraphs = plain.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
-  if (paragraphs.length === 0) return '';
-
-  let out = '';
-  for (const p of paragraphs) {
-    const next = out ? `${out}\n\n${p}` : p;
-    if (next.length > maxChars) {
-      if (!out) return truncateAtSentence(p, maxChars);
-      return truncateAtSentence(out, maxChars);
-    }
-    out = next;
-  }
-  return truncateAtSentence(out, maxChars);
+/**
+ * Bakåtkompatibelt namn för äldre anrop: returnerar numera hela texten.
+ */
+export function listeningPreview(raw: string): string {
+  return listeningText(raw);
 }

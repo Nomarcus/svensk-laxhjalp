@@ -261,7 +261,8 @@
     "aiVoiceDailyUsed": "Using the browser voice instead.",
     "noSpeechInBrowser": "This browser has no speech synthesis here, and today’s AI voice quota is used up.",
     "dismissVoiceNotice": "Dismiss",
-    "imageActionExtraInstruction": "Extra instruction from the user"
+    "imageActionExtraInstruction": "Extra instruction from the user",
+    "learningGuide": "Calm support for adults at home"
   },
   "chatEmpty": {
     "helpWith": "Help {{name}} with homework",
@@ -271,7 +272,11 @@
     "starter2": "Help with multiplication tables",
     "starter3": "How do you write a good story?",
     "starter4": "What is a verb?",
-    "starter5": "Tell me about space"
+    "starter5": "Tell me about space",
+    "kicker": "Föräldrahjälpen",
+    "cardExplain": "Explains step by step",
+    "cardPhoto": "Reads homework photos",
+    "cardPlan": "Helps you plan the week"
   },
   "corrector": {
     "title": "Correct homework",
