@@ -13,8 +13,9 @@ import {
   CheckCircle2,
   RefreshCw,
   Star,
+  Trash2,
 } from 'lucide-react';
-import { auth, linkGuestWithGoogle } from '../firebase';
+import { auth, linkGuestWithGoogle, logout } from '../firebase';
 import type { UserSubscription } from '../types';
 import { hasPaidPlanAccess } from '../utils/subscriptionAccess';
 import { apiUrl } from '../utils/apiBase';
@@ -24,6 +25,8 @@ import {
   STRIPE_PAYMENT_LINKS_READY,
   buildStripePaymentLinkUrl,
 } from '../utils/stripeBuyButton';
+import ConfirmDialog from './ui/ConfirmDialog';
+import { openExternalUrl } from '../utils/openExternal';
 
 function formatPeriodEnd(value: unknown, locale: string): string | null {
   if (value == null) return null;
@@ -53,6 +56,11 @@ export default function Subscription({ subscription }: SubscriptionProps) {
   const [syncFeedback, setSyncFeedback] = React.useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [linkingGuest, setLinkingGuest] = React.useState(false);
   const [linkGuestError, setLinkGuestError] = React.useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
+  const [deletingAccount, setDeletingAccount] = React.useState(false);
+  const [deleteAccountError, setDeleteAccountError] = React.useState<string | null>(null);
+  const [portalLoading, setPortalLoading] = React.useState(false);
+  const [portalError, setPortalError] = React.useState<string | null>(null);
   const user = auth.currentUser;
   const isAnonymous = Boolean(user?.isAnonymous);
   const userUid = user?.uid || '';
@@ -133,6 +141,63 @@ export default function Subscription({ subscription }: SubscriptionProps) {
       setLinkGuestError(t('authErrors.generic'));
     } finally {
       setLinkingGuest(false);
+    }
+  }, [t]);
+
+  const openBillingPortal = React.useCallback(async () => {
+    const u = auth.currentUser;
+    if (!u) return;
+    setPortalLoading(true);
+    setPortalError(null);
+    try {
+      const token = await u.getIdToken();
+      const res = await fetch(apiUrl('/api/billing/create-portal-session'), {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.url) {
+        setPortalError(data?.error || t('subscription.portalError'));
+        return;
+      }
+      await openExternalUrl(data.url);
+    } catch {
+      setPortalError(t('subscription.portalError'));
+    } finally {
+      setPortalLoading(false);
+    }
+  }, [t]);
+
+  const deleteAccount = React.useCallback(async () => {
+    const u = auth.currentUser;
+    if (!u) return;
+    setDeletingAccount(true);
+    setDeleteAccountError(null);
+    try {
+      const token = await u.getIdToken();
+      const res = await fetch(apiUrl('/api/account/delete'), {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        let message = t('subscription.deleteAccountError');
+        try {
+          const data = await res.json();
+          if (data?.error) message = data.error;
+        } catch {
+          /* ignore */
+        }
+        setDeleteAccountError(message);
+        setDeletingAccount(false);
+        setShowDeleteConfirm(false);
+        return;
+      }
+      await logout();
+      window.location.href = '/';
+    } catch {
+      setDeleteAccountError(t('subscription.deleteAccountError'));
+      setDeletingAccount(false);
+      setShowDeleteConfirm(false);
     }
   }, [t]);
 
@@ -249,7 +314,17 @@ export default function Subscription({ subscription }: SubscriptionProps) {
             </div>
           ) : paid ? (
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-800/30 p-3 text-sm text-emerald-900 dark:text-emerald-200">
-              {t('subscription.alreadySubscribed')}
+              <p>{t('subscription.alreadySubscribed')}</p>
+              <button
+                type="button"
+                onClick={openBillingPortal}
+                disabled={portalLoading}
+                className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800/60 text-sm font-medium hover:bg-emerald-50 dark:hover:bg-emerald-950/40 disabled:opacity-60 transition-colors"
+              >
+                <CreditCard size={14} />
+                {portalLoading ? t('subscription.portalLoading') : t('subscription.manageSubscription')}
+              </button>
+              {portalError && <p className="mt-2 text-xs text-rose-700 dark:text-rose-400">{portalError}</p>}
             </div>
           ) : !STRIPE_BUY_BUTTON_ENABLED ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800/30 p-3 text-sm text-amber-800 dark:text-amber-300">
@@ -268,14 +343,13 @@ export default function Subscription({ subscription }: SubscriptionProps) {
               <p className="text-2xl font-bold text-stone-800 dark:text-stone-100 mb-1">{t('subscription.planPlusPrice')}</p>
               <p className="text-xs text-stone-500 dark:text-stone-400 mb-4 flex-1">{t('subscription.planPlusPerMonth')}</p>
               {subscribeUrl ? (
-                <a
-                  href={subscribeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block text-center px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
+                <button
+                  type="button"
+                  onClick={() => void openExternalUrl(subscribeUrl)}
+                  className="block w-full text-center px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
                 >
                   {t('subscription.planCta')}
-                </a>
+                </button>
               ) : (
                 <button
                   type="button"
@@ -333,7 +407,38 @@ export default function Subscription({ subscription }: SubscriptionProps) {
             <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">{t('subscription.swishNumberNote')}</p>
           </div>
         </div>
+
+        <div className="rounded-2xl border border-red-200 dark:border-red-900/40 bg-red-50/60 dark:bg-red-950/20 p-6">
+          <h3 className="font-medium text-red-900 dark:text-red-300 mb-1">{t('subscription.dangerZoneTitle')}</h3>
+          <p className="text-sm text-red-800/80 dark:text-red-300/70 mb-4">{t('subscription.dangerZoneBody')}</p>
+          <button
+            type="button"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-white dark:bg-slate-900 text-red-700 dark:text-red-400 border border-red-300 dark:border-red-800/60 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300 dark:focus-visible:ring-red-800"
+          >
+            <Trash2 size={16} />
+            {t('subscription.deleteAccountButton')}
+          </button>
+          {deleteAccountError && (
+            <p className="text-sm mt-2 text-red-700 dark:text-red-400">{deleteAccountError}</p>
+          )}
+        </div>
       </div>
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title={t('subscription.deleteAccountButton')}
+        message={t('subscription.deleteAccountConfirm')}
+        confirmLabel={deletingAccount ? t('subscription.deleteAccountInProgress') : t('subscription.deleteAccountConfirmCta')}
+        onConfirm={() => {
+          if (deletingAccount) return;
+          void deleteAccount();
+        }}
+        onCancel={() => {
+          if (deletingAccount) return;
+          setShowDeleteConfirm(false);
+        }}
+      />
     </div>
   );
 }

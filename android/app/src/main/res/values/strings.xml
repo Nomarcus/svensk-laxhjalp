@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Svensk Läxhjälp</string>
-    <string name="title_activity_main">Svensk Läxhjälp</string>
+    <string name="app_name">Föräldrahjälpen</string>
+    <string name="title_activity_main">Föräldrahjälpen</string>
     <string name="package_name">se.foraldrahjalpen.app</string>
     <string name="custom_url_scheme">se.foraldrahjalpen.app</string>
 </resources>

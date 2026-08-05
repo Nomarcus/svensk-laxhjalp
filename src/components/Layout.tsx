@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, BookOpen, User as UserIcon, ChevronDown, Settings, Crown, Download, Users, X, Menu, Moon, Sun, Mail, Shield, FileText, Share2, BarChart3, Info } from 'lucide-react';
+import { LogOut, BookOpen, User as UserIcon, ChevronDown, Settings, Crown, Download, Users, X, Menu, Moon, Sun, Mail, Shield, FileText, Share2, BarChart3, Info, WifiOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { logout, User } from '../firebase';
 import { cn } from '../utils/cn';
@@ -10,6 +10,7 @@ import LanguageSwitcher from './LanguageSwitcher';
 import NavButton from './layout/NavButton';
 import { NAV_ITEMS } from './layout/navItems';
 import { useDialogA11y } from '../hooks/useDialogA11y';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -47,6 +48,7 @@ export default function Layout({
   showAdminNav = false,
 }: LayoutProps) {
   const { t, i18n } = useTranslation();
+  const isOnline = useOnlineStatus();
   const [showChildSelect, setShowChildSelect] = React.useState(false);
   const [showMobileMenu, setShowMobileMenu] = React.useState(false);
   const closeMobileMenu = React.useCallback(() => setShowMobileMenu(false), []);
@@ -332,6 +334,15 @@ export default function Layout({
 
       {/* Main Content */}
       <main inert={showMobileMenu || undefined} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        {!isOnline && (
+          <div
+            role="status"
+            className="bg-red-50 dark:bg-red-950/30 border-b border-red-200 dark:border-red-800 px-4 py-2 flex items-center gap-2 text-red-800 dark:text-red-200 text-sm shrink-0"
+          >
+            <WifiOff size={16} className="shrink-0" />
+            {t('common.offlineNotice')}
+          </div>
+        )}
         {i18n.language === 'ar' && (
           <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-2 flex items-center gap-2 text-amber-800 dark:text-amber-200 text-sm shrink-0">
             <span>⚠️</span>

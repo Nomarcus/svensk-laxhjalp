@@ -4,6 +4,9 @@ export const LAXHJALP_LARARE_PATH = '/laxhjalp-larare';
 export const AI_LAXHJALP_PATH = '/ai-laxhjalp';
 export const LAXHJALP_MATTE_PATH = '/laxhjalp-matte';
 export const LAXHJALP_ONLINE_PATH = '/laxhjalp-online';
+/** Must be directly loadable (no login/click required) — used as the Privacy Policy URL in App Store Connect / Play Console. */
+export const PRIVACY_PATH = '/privacy';
+export const TERMS_PATH = '/terms';
 
 export const LANDING_PATHS = [
   LAXHJALP_FORALDRAR_PATH,
