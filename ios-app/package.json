@@ -1,0 +1,28 @@
+{
+  "name": "foraldrahjalpen-ios-app",
+  "version": "0.1.0",
+  "private": true,
+  "main": "node_modules/expo/AppEntry.js",
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo run:ios",
+    "android": "expo run:android",
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "expo": "^54.0.0",
+    "expo-apple-authentication": "^8.0.0",
+    "expo-constants": "^18.0.0",
+    "expo-status-bar": "^3.0.0",
+    "firebase": "^12.10.0",
+    "react": "^19.0.0",
+    "react-native": "^0.81.0",
+    "react-native-iap": "^14.4.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "typescript": "~5.8.2"
+  }
+}

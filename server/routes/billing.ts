@@ -152,6 +152,97 @@ function resolveCheckoutPriceId(priceId: unknown): string | null {
   return directAllowlist.has(resolved) ? resolved : null;
 }
 
+
+type AppleVerifyReceiptResponse = {
+  status: number;
+  environment?: 'Sandbox' | 'Production';
+  latest_receipt_info?: Array<{
+    product_id?: string;
+    transaction_id?: string;
+    original_transaction_id?: string;
+    expires_date_ms?: string;
+    cancellation_date_ms?: string;
+  }>;
+  pending_renewal_info?: Array<{
+    original_transaction_id?: string;
+    auto_renew_status?: string;
+    product_id?: string;
+  }>;
+};
+
+const APPLE_PRODUCTION_VERIFY_URL = 'https://buy.itunes.apple.com/verifyReceipt';
+const APPLE_SANDBOX_VERIFY_URL = 'https://sandbox.itunes.apple.com/verifyReceipt';
+const APPLE_SUBSCRIPTION_PRODUCT_IDS = new Set(
+  (process.env.APPLE_SUBSCRIPTION_PRODUCT_IDS || 'foraldrahjalpen_monthly')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean),
+);
+
+function getAppleSharedSecret(): string {
+  const secret = process.env.APPLE_SHARED_SECRET?.trim();
+  if (!secret) throw new Error('APPLE_SHARED_SECRET saknas for Apple In-App Purchase-verifiering.');
+  return secret;
+}
+
+async function postAppleReceipt(url: string, receiptData: string): Promise<AppleVerifyReceiptResponse> {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      'receipt-data': receiptData,
+      password: getAppleSharedSecret(),
+      'exclude-old-transactions': true,
+    }),
+  });
+  if (!response.ok) throw new Error(`Apple receipt verification failed: ${response.status}`);
+  return (await response.json()) as AppleVerifyReceiptResponse;
+}
+
+async function verifyAppleReceipt(receiptData: string): Promise<AppleVerifyReceiptResponse> {
+  let result = await postAppleReceipt(APPLE_PRODUCTION_VERIFY_URL, receiptData);
+  if (result.status === 21007) result = await postAppleReceipt(APPLE_SANDBOX_VERIFY_URL, receiptData);
+  return result;
+}
+
+function pickLatestAppleSubscription(result: AppleVerifyReceiptResponse, expectedProductId?: string) {
+  const allowedProducts = new Set(APPLE_SUBSCRIPTION_PRODUCT_IDS);
+  if (expectedProductId?.trim()) allowedProducts.add(expectedProductId.trim());
+
+  return (result.latest_receipt_info || [])
+    .filter((item) => item.product_id && allowedProducts.has(item.product_id))
+    .sort((a, b) => Number(b.expires_date_ms || 0) - Number(a.expires_date_ms || 0))[0];
+}
+
+async function writeAppleSubscriptionStatus(uid: string, result: AppleVerifyReceiptResponse, expectedProductId?: string) {
+  const latest = pickLatestAppleSubscription(result, expectedProductId);
+  if (!latest) throw new Error('Ingen giltig Apple-prenumeration hittades for denna produkt.');
+
+  const expiresAtMs = Number(latest.expires_date_ms || 0);
+  const canceled = Boolean(latest.cancellation_date_ms);
+  const active = !canceled && expiresAtMs > Date.now();
+  const renewal = (result.pending_renewal_info || []).find(
+    (item) => item.original_transaction_id === latest.original_transaction_id,
+  );
+
+  const patch = {
+    tier: active ? 'pro' : 'free',
+    subscriptionStatus: active ? 'active' : 'canceled',
+    subscriptionProvider: 'apple',
+    appleProductId: latest.product_id || expectedProductId || null,
+    appleTransactionId: latest.transaction_id || null,
+    appleOriginalTransactionId: latest.original_transaction_id || null,
+    appleEnvironment: result.environment || null,
+    appleAutoRenewStatus: renewal?.auto_renew_status || null,
+    currentPeriodEnd: expiresAtMs > 0 ? new Date(expiresAtMs).toISOString() : null,
+    cancelAtPeriodEnd: renewal?.auto_renew_status === '0',
+    appleLastVerifiedAt: new Date().toISOString(),
+  };
+
+  await getServerFirestore().doc(`users/${uid}`).set(patch, { merge: true });
+  return patch;
+}
+
 // POST /api/billing/create-checkout-session
 router.post('/billing/create-checkout-session', async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -300,6 +391,65 @@ router.get('/billing/status', async (req: AuthenticatedRequest, res: Response) =
   } catch (error: any) {
     console.error('Billing status error:', error.message);
     res.status(500).json({ error: 'Kunde inte hämta abonnemangsstatus.' });
+  }
+});
+
+
+// POST /api/billing/apple/verify-purchase
+router.post('/billing/apple/verify-purchase', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const uid = req.uid;
+    if (!uid) {
+      res.status(401).json({ error: 'Inte autentiserad.' });
+      return;
+    }
+
+    const { productId, transactionReceipt } = req.body as { productId?: string; transactionReceipt?: string };
+    if (!transactionReceipt || typeof transactionReceipt !== 'string') {
+      res.status(400).json({ error: 'Apple-kvitto saknas.' });
+      return;
+    }
+
+    const result = await verifyAppleReceipt(transactionReceipt);
+    if (result.status !== 0) {
+      res.status(400).json({ error: 'Apple kunde inte verifiera köpet.', status: result.status });
+      return;
+    }
+
+    const status = await writeAppleSubscriptionStatus(uid, result, productId);
+    res.json(status);
+  } catch (error: any) {
+    console.error('Apple purchase verification error:', error.message);
+    res.status(500).json({ error: 'Kunde inte verifiera Apple-prenumerationen.' });
+  }
+});
+
+// POST /api/billing/apple/restore
+router.post('/billing/apple/restore', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const uid = req.uid;
+    if (!uid) {
+      res.status(401).json({ error: 'Inte autentiserad.' });
+      return;
+    }
+
+    const { transactionReceipt } = req.body as { transactionReceipt?: string };
+    if (!transactionReceipt || typeof transactionReceipt !== 'string') {
+      res.status(400).json({ error: 'Apple-kvitto saknas.' });
+      return;
+    }
+
+    const result = await verifyAppleReceipt(transactionReceipt);
+    if (result.status !== 0) {
+      res.status(400).json({ error: 'Apple kunde inte återställa köpet.', status: result.status });
+      return;
+    }
+
+    const status = await writeAppleSubscriptionStatus(uid, result);
+    res.json(status);
+  } catch (error: any) {
+    console.error('Apple restore error:', error.message);
+    res.status(500).json({ error: 'Kunde inte återställa Apple-prenumerationen.' });
   }
 });
 
