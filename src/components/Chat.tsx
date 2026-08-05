@@ -779,18 +779,18 @@ ${requirementsText}`;
         )}
 
         {showOnboardingTips && displayMessages.length === 0 && !loading && (
-          <div className="max-w-3xl mx-auto mb-4 rounded-3xl border border-emerald-100 bg-emerald-50/90 p-4 text-sm text-emerald-950 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/25 dark:text-emerald-100">
+          <div className="max-w-3xl mx-auto mb-3 rounded-3xl border border-emerald-100 bg-emerald-50/90 p-3 text-sm text-emerald-950 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/25 dark:text-emerald-100 sm:mb-4 sm:p-4">
             <div className="mb-2 flex items-start justify-between gap-3">
-              <div className="flex items-center gap-2 font-semibold"><Sparkles size={16} />Kom igång på en minut</div>
+              <div className="flex items-center gap-2 font-semibold leading-tight"><Sparkles size={16} className="shrink-0" />Kom igång på en minut</div>
               <button type="button" onClick={dismissOnboardingTips} className="rounded-lg p-1 text-emerald-700 hover:bg-emerald-100 dark:text-emerald-200 dark:hover:bg-emerald-900/40" aria-label="Stäng tips"><X size={14} /></button>
             </div>
-            <ol className="grid gap-2 sm:grid-cols-4">
-              <li className="rounded-2xl bg-white/80 p-2 dark:bg-slate-900/50">1. Lägg till barn.</li>
-              <li className="rounded-2xl bg-white/80 p-2 dark:bg-slate-900/50">2. Välj årskurs.</li>
-              <li className="rounded-2xl bg-white/80 p-2 dark:bg-slate-900/50">3. Fota en läxa.</li>
-              <li className="rounded-2xl bg-white/80 p-2 dark:bg-slate-900/50">4. Spara till planeringen.</li>
+            <ol className="grid grid-cols-2 gap-1.5 text-xs sm:grid-cols-4 sm:gap-2 sm:text-sm">
+              <li className="rounded-2xl bg-white/80 px-2 py-1.5 dark:bg-slate-900/50 sm:p-2">1. Lägg till barn.</li>
+              <li className="rounded-2xl bg-white/80 px-2 py-1.5 dark:bg-slate-900/50 sm:p-2">2. Välj årskurs.</li>
+              <li className="rounded-2xl bg-white/80 px-2 py-1.5 dark:bg-slate-900/50 sm:p-2">3. Fota en läxa.</li>
+              <li className="rounded-2xl bg-white/80 px-2 py-1.5 dark:bg-slate-900/50 sm:p-2">4. Spara till planeringen.</li>
             </ol>
-            <p className="mt-3 text-xs text-emerald-800/80 dark:text-emerald-100/80">Du behöver inte kunna ämnet själv. Vi tar en uppgift i taget. Börja med en bild om du är osäker.</p>
+            <p className="mt-2 text-[11px] leading-snug text-emerald-800/80 dark:text-emerald-100/80 sm:mt-3 sm:text-xs">Du behöver inte kunna ämnet själv. Vi tar en uppgift i taget. Börja med en bild om du är osäker.</p>
           </div>
         )}
 
