@@ -210,6 +210,9 @@
     "inputPlaceholder": "Ställ en fråga eller fota läxan med kameraknappen...",
     "takePhoto": "Fota läxan",
     "chooseImage": "Välj bild",
+    "imageStepPhoto": "Fota läxan",
+    "imageStepChoose": "Välj bild",
+    "imageStepSend": "Skicka",
     "removeAttachment": "Ta bort bilaga",
     "multiImageHint": "Högst {{max}} bilder (t.ex. fram- och baksida)",
     "stopRecording": "Stoppa inspelning",
@@ -272,7 +275,8 @@
     "noSpeechInBrowser": "Webbläsaren har ingen inbyggd uppläsning här, och AI-rösten för idag är förbrukad.",
     "dismissVoiceNotice": "Stäng",
     "imageActionExtraInstruction": "Extra instruktion från användaren",
-    "learningGuide": "Trygg läxhjälp för vuxna hemma"
+    "learningGuide": "Trygg läxhjälp för vuxna hemma",
+    "moreSupport": "Mer stöd"
   },
   "chatEmpty": {
     "helpWith": "Hjälp {{name}} med läxan",
