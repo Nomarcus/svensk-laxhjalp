@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Bot, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine, X, Volume2, Square, Pause, Play, SkipForward, Calculator, ListOrdered, Flag, Trash2 } from 'lucide-react';
+import { User, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine, X, Volume2, Square, Pause, Play, SkipForward, Calculator, ListOrdered, Flag, Trash2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -144,7 +144,7 @@ export default function ChatMessage({
           msg.role === 'user' ? 'bg-stone-200 dark:bg-slate-700 text-stone-600 dark:text-stone-300' : 'bg-emerald-600 text-white'
         )}
       >
-        {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
+        {msg.role === 'user' ? <User size={16} /> : <GraduationCap size={16} />}
       </div>
       <div className={cn('space-y-2', msg.role === 'user' ? 'items-end' : 'items-start')}>
         {msg.attachments && msg.attachments.length > 0 && (
@@ -246,7 +246,12 @@ export default function ChatMessage({
           </div>
         )}
         {msg.role === 'model' && (
-          <div className="flex flex-wrap gap-2 mt-1">
+          <>
+            <div className="mt-1 max-w-2xl rounded-2xl border border-emerald-100 bg-emerald-50/80 px-3 py-2 text-xs text-emerald-900 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/25 dark:text-emerald-100">
+              <p className="font-semibold">{t('chat.nextStepTitle', { defaultValue: 'Nästa steg' })}</p>
+              <p className="mt-0.5">{t('chat.nextStepHint', { defaultValue: 'Läs svaret tillsammans, prova en uppgift och spara till planeringen om ni vill fortsätta senare.' })}</p>
+            </div>
+            <div className="flex flex-wrap gap-2 mt-1">
             {hasImage && detectMathType(msg.content) && (
               <span className="inline-flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100">
                 <Calculator size={11} />
@@ -350,6 +355,12 @@ export default function ChatMessage({
                 {t('chat.deepDive')}
               </button>
             )}
+            <details className="group/more relative">
+              <summary className={cn(ACTION_BTN, ACTION_FRAME, 'cursor-pointer list-none hover:border-stone-600 dark:hover:border-stone-300 [&::-webkit-details-marker]:hidden')}>
+                {t('chat.moreSupport', { defaultValue: 'Mer stöd' })}
+                <span className="text-[9px] transition-transform group-open/more:rotate-180">⌄</span>
+              </summary>
+              <div className="mt-2 flex max-w-2xl flex-wrap gap-2 rounded-2xl border border-stone-200 bg-stone-50/90 p-2 shadow-sm dark:border-white/10 dark:bg-slate-900/90">
             {onAskCurriculum && (
               <button
                 type="button"
@@ -439,6 +450,8 @@ export default function ChatMessage({
                 {t('chat.createTask')}
               </button>
             )}
+              </div>
+            </details>
             {isRequirementsList && onCreateStudyMaterial && (
               <button
                 type="button"
@@ -449,7 +462,8 @@ export default function ChatMessage({
                 Skapa komplett läxunderlag
               </button>
             )}
-          </div>
+            </div>
+          </>
         )}
       </div>
     </div>

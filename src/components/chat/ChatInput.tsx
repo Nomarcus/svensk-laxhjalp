@@ -174,8 +174,16 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
               </span>
             </div>
             <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl border border-emerald-100 dark:border-emerald-900/50 shadow-sm">
-              <p className="mb-2 text-xs font-semibold text-emerald-900 dark:text-emerald-100">
+              <div className="mb-3 grid grid-cols-3 gap-1.5 text-[10px] font-medium text-emerald-900 dark:text-emerald-100">
+                <span className="rounded-full bg-white/80 dark:bg-slate-900/70 px-2 py-1 text-center">1. {t('chat.imageStepPhoto', { defaultValue: 'Bild vald' })}</span>
+                <span className="rounded-full bg-emerald-600 text-white px-2 py-1 text-center shadow-sm">2. {t('chat.imageStepChoose', { defaultValue: 'Välj hjälp' })}</span>
+                <span className="rounded-full bg-white/80 dark:bg-slate-900/70 px-2 py-1 text-center">3. {t('chat.imageStepSend', { defaultValue: 'Skicka' })}</span>
+              </div>
+              <p className="mb-1 text-xs font-semibold text-emerald-900 dark:text-emerald-100">
                 {t('chat.imageActionsTitle')}
+              </p>
+              <p className="mb-2 text-[10px] text-emerald-800/75 dark:text-emerald-100/75">
+                {t('chat.imageActionRecommendation', { defaultValue: 'Osäker? Välj Förklara enkelt — då får du en lugn start.' })}
               </p>
               <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {homeworkImageActions.map((action) => {
@@ -316,6 +324,9 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
             {t('chat.multiImageHint', { max: maxImages })}
           </p>
         )}
+        <p className="text-[11px] text-center text-emerald-700/80 dark:text-emerald-300/80 mt-2 font-medium">
+          {t('chat.parentReassurance', { defaultValue: 'Du behöver inte kunna allt själv — börja med en bild eller en enkel fråga.' })}
+        </p>
         <p className="text-[10px] text-center text-stone-400 mt-1 uppercase tracking-widest">
           {t('chat.aiDisclaimer')}
         </p>
