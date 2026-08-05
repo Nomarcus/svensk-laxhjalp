@@ -324,6 +324,9 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
             {t('chat.multiImageHint', { max: maxImages })}
           </p>
         )}
+        <p className="text-[11px] text-center text-emerald-700/80 dark:text-emerald-300/80 mt-2 font-medium">
+          {t('chat.parentReassurance', { defaultValue: 'Du behöver inte kunna allt själv — börja med en bild eller en enkel fråga.' })}
+        </p>
         <p className="text-[10px] text-center text-stone-400 mt-1 uppercase tracking-widest">
           {t('chat.aiDisclaimer')}
         </p>
