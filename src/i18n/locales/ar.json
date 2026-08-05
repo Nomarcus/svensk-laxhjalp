@@ -480,11 +480,11 @@
     "networkError": "خطأ في الشبكة"
   },
   "welcome": {
-    "title": "مرحباً في Föräldrahjälpen!",
-    "description": "أضف طفلاً للتخطيط لكل طفل، أو تابع بدون طفل للدردشة السريعة وتصحيح الواجبات.",
-    "addChild": "إضافة طفل",
-    "continueWithoutChild": "المتابعة بدون طفل",
-    "creatingWorkspace": "جارٍ التحضير…"
+    "creatingWorkspace": "جارٍ التحضير…",
+    "addChildNudgeTitle": "أضف طفلك",
+    "addChildNudgeDescription": "احصل على مساعدة مخصصة لصف طفلك، مع حفظ التخطيط لكل طفل على حدة.",
+    "addChildNudgeCta": "إضافة طفل",
+    "addChildNudgeDismiss": "ليس الآن"
   },
   "workspace": {
     "generalLabel": "مساعدة واجبات عامة",

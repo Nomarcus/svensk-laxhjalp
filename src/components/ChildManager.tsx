@@ -5,6 +5,8 @@ import { collection, onSnapshot, addDoc, deleteDoc, doc, deleteField, serverTime
 import { Plus, Trash2, User as UserIcon, X, Check, Share2, Mail, Pencil } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { isWorkspaceChildId } from '../constants/workspaces';
+import { useDialogA11y } from '../hooks/useDialogA11y';
+import ConfirmDialog from './ui/ConfirmDialog';
 
 interface ChildWithSharing {
   id: string;
@@ -28,6 +30,8 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
   const [editingChildId, setEditingChildId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editGrade, setEditGrade] = useState('');
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const containerRef = useDialogA11y<HTMLDivElement>(true, onClose);
 
   useEffect(() => {
     if (!auth.currentUser) return;
@@ -66,7 +70,6 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
 
   const deleteChild = async (id: string) => {
     if (!auth.currentUser || isWorkspaceChildId(id)) return;
-    if (!window.confirm(t('childManager.removeConfirm'))) return;
 
     try {
       await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'children', id));
@@ -78,6 +81,11 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `children/${id}`);
     }
+  };
+
+  const confirmDeleteChild = () => {
+    if (pendingDeleteId) void deleteChild(pendingDeleteId);
+    setPendingDeleteId(null);
   };
 
   const startEdit = (child: ChildWithSharing) => {
@@ -144,11 +152,24 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+    <div
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="child-manager-title"
+    >
+      <div
+        ref={containerRef}
+        tabIndex={-1}
+        className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 outline-none"
+      >
         <div className="p-6 border-b border-stone-100 flex items-center justify-between">
-          <h2 className="text-xl font-serif italic">{t('childManager.title')}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-stone-100 rounded-full transition-colors">
+          <h2 id="child-manager-title" className="text-xl font-serif italic">{t('childManager.title')}</h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-stone-100 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200"
+            aria-label={t('common.close')}
+          >
             <X size={20} className="text-stone-400" />
           </button>
         </div>
@@ -217,8 +238,9 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
                     <button
                       type="button"
                       onClick={() => startEdit(child)}
-                      className="p-2 text-stone-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition-all"
+                      className="p-2 text-stone-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200"
                       title={t('childManager.edit')}
+                      aria-label={t('childManager.edit')}
                     >
                       <Pencil size={18} />
                     </button>
@@ -228,7 +250,7 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
                         setSharingChildId(sharingChildId === child.id ? null : child.id);
                       }}
                       className={cn(
-                        "p-2 rounded-xl transition-all flex items-center gap-1",
+                        "p-2 rounded-xl transition-all flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200",
                         sharingChildId === child.id
                           ? "bg-blue-100 text-blue-600"
                           : child.sharedWith?.length
@@ -236,6 +258,8 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
                             : "text-stone-400 hover:text-blue-600 hover:bg-blue-50"
                       )}
                       title={t('childManager.shareWithParent')}
+                      aria-label={t('childManager.shareWithParent')}
+                      aria-pressed={sharingChildId === child.id}
                     >
                       <Share2 size={16} />
                       {(child.sharedWith?.length || 0) > 0 && (
@@ -243,9 +267,10 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
                       )}
                     </button>
                     <button
-                      onClick={() => deleteChild(child.id)}
-                      className="p-2 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                      onClick={() => setPendingDeleteId(child.id)}
+                      className="p-2 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200"
                       title={t('childManager.remove')}
+                      aria-label={t('childManager.remove')}
                     >
                       <Trash2 size={18} />
                     </button>
@@ -373,6 +398,14 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
           </button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        message={t('childManager.removeConfirm')}
+        confirmLabel={t('childManager.remove')}
+        onConfirm={confirmDeleteChild}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </div>
   );
 }

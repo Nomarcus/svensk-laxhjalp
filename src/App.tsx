@@ -11,7 +11,7 @@ import Info from './components/Info';
 import Library from './components/Library';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import ChildManager from './components/ChildManager';
-import { Plus } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import type { AppTab, Child, UserSubscription, Task } from './types';
 import { isGeneralWorkspaceId, isWorkspaceChildId, WORKSPACE_GENERAL_ID, WORKSPACE_TEACHER_ID } from './constants/workspaces';
 import { ensureWorkspaceChild } from './utils/ensureWorkspaceChild';
@@ -61,7 +61,6 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<AppTab>('chat');
-  const [workspaceWelcomeBusy, setWorkspaceWelcomeBusy] = useState(false);
   const [subscription, setSubscription] = useState<UserSubscription>({ tier: 'free', status: 'none' });
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
@@ -88,12 +87,15 @@ export default function App() {
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   /** Bumps when child list / owner map changes so task listener picks up correct ownerId for shared children. */
   const [childMapVersion, setChildMapVersion] = useState(0);
+  /** True once the own-children Firestore snapshot has fired at least once, so we don't auto-provision a workspace before we actually know the user has no children. */
+  const [childrenLoaded, setChildrenLoaded] = useState(false);
   const { dark, toggle: toggleDark } = useTheme();
   const { t } = useTranslation();
   const [routePath, setRoutePath] = useState(() => normalizePathname(window.location.pathname));
   const userDocUnsubRef = useRef<(() => void) | null>(null);
   const childOwnerByIdRef = useRef<Map<string, string>>(new Map());
   const stripeSyncInFlightRef = useRef(false);
+  const autoProvisionAttemptedRef = useRef(false);
 
   const navigateTab = useCallback(
     (tab: AppTab) => {
@@ -267,6 +269,9 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
 
+    setChildrenLoaded(false);
+    autoProvisionAttemptedRef.current = false;
+
     // Fetch own children
     const childrenRef = collection(db, 'users', user.uid, 'children');
     const qOwn = query(childrenRef, orderBy('createdAt', 'asc'));
@@ -313,8 +318,10 @@ export default function App() {
         ...doc.data()
       })) as Child[];
       updateChildren();
+      setChildrenLoaded(true);
     }, (error) => {
       handleFirestoreError(error, OperationType.GET, 'children');
+      setChildrenLoaded(true);
     });
 
     const unsubscribeShared = qShared ? onSnapshot(qShared, (snapshot) => {
@@ -340,6 +347,16 @@ export default function App() {
     };
   }, [user]);
 
+  // Auto-provision the general workspace instead of blocking the user behind a
+  // "continue without child" click once we know for sure they have no children yet.
+  useEffect(() => {
+    if (!user || !childrenLoaded || children.length > 0 || autoProvisionAttemptedRef.current) return;
+    autoProvisionAttemptedRef.current = true;
+    void ensureWorkspaceChild(user.uid, WORKSPACE_GENERAL_ID).catch((e) =>
+      console.warn('Auto-provisioning general workspace failed:', e),
+    );
+  }, [user, childrenLoaded, children.length]);
+
   // Listen to tasks for the selected child (capped) for AI-planner linking
   useEffect(() => {
     if (!user || !selectedChildId) {
@@ -364,18 +381,6 @@ export default function App() {
       setActiveTab('chat');
     }
   }, [selectedChildId, activeTab]);
-
-  const continueWithoutChild = async () => {
-    if (!user || workspaceWelcomeBusy) return;
-    setWorkspaceWelcomeBusy(true);
-    try {
-      await ensureWorkspaceChild(user.uid, WORKSPACE_GENERAL_ID);
-    } catch (e) {
-      console.warn('ensureWorkspaceChild general failed:', e);
-    } finally {
-      setWorkspaceWelcomeBusy(false);
-    }
-  };
 
   const handleSelectChild = useCallback(
     (id: string) => {
@@ -505,30 +510,8 @@ export default function App() {
           <Info />
         ) : children.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center app-soft-bg">
-            <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center surface-card mb-6">
-              <Plus size={40} className="text-emerald-600" />
-            </div>
-            <h2 className="text-2xl font-serif italic mb-2">{t('welcome.title')}</h2>
-            <p className="text-stone-500 max-w-md mb-8">
-              {t('welcome.description')}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md justify-center">
-              <button
-                type="button"
-                onClick={() => setShowChildManager(true)}
-                className="px-8 py-3 bg-emerald-600 text-white rounded-2xl font-medium shadow-[0_18px_40px_-24px_rgba(5,150,105,0.65)] hover:bg-emerald-700 hover:shadow-[0_22px_48px_-24px_rgba(5,150,105,0.7)] transition-all"
-              >
-                {t('welcome.addChild')}
-              </button>
-              <button
-                type="button"
-                disabled={workspaceWelcomeBusy}
-                onClick={() => void continueWithoutChild()}
-                className="px-8 py-3 rounded-2xl font-medium border-2 border-emerald-600 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-all disabled:opacity-50"
-              >
-                {workspaceWelcomeBusy ? t('welcome.creatingWorkspace') : t('welcome.continueWithoutChild')}
-              </button>
-            </div>
+            <Loader2 className="animate-spin text-emerald-600 mb-4" size={32} aria-hidden="true" />
+            <p className="text-stone-500">{t('welcome.creatingWorkspace')}</p>
           </div>
         ) : (
           <>
@@ -554,6 +537,7 @@ export default function App() {
                 tasks={allTasks}
                 taskContext={chatFromTask}
                 onTaskContextUsed={() => setChatFromTask(null)}
+                onManageChildren={() => setShowChildManager(true)}
                 onCreateTask={
                   selectedChildId && isGeneralWorkspaceId(selectedChildId)
                     ? undefined

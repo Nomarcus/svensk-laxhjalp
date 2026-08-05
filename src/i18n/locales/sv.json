@@ -686,11 +686,11 @@
     "networkError": "Nätverksfel"
   },
   "welcome": {
-    "title": "Välkommen till Föräldrahjälpen!",
-    "description": "Lägg till ett barn för planering per barn, eller fortsätt utan barn för snabb chatt och rättning.",
-    "addChild": "Lägg till barn",
-    "continueWithoutChild": "Fortsätt utan barn",
-    "creatingWorkspace": "Förbereder …"
+    "creatingWorkspace": "Förbereder …",
+    "addChildNudgeTitle": "Lägg till ditt barn",
+    "addChildNudgeDescription": "Få hjälp anpassad efter barnets årskurs och sparad planering per barn.",
+    "addChildNudgeCta": "Lägg till barn",
+    "addChildNudgeDismiss": "Inte nu"
   },
   "workspace": {
     "generalLabel": "Allmän läxhjälp",

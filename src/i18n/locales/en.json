@@ -680,11 +680,11 @@
     "networkError": "Network error"
   },
   "welcome": {
-    "title": "Welcome to Föräldrahjälpen!",
-    "description": "Add a child for per-child planning, or continue without a child for quick chat and homework checking.",
-    "addChild": "Add child",
-    "continueWithoutChild": "Continue without a child",
-    "creatingWorkspace": "Preparing…"
+    "creatingWorkspace": "Preparing…",
+    "addChildNudgeTitle": "Add your child",
+    "addChildNudgeDescription": "Get help tailored to your child's grade, with planning saved per child.",
+    "addChildNudgeCta": "Add child",
+    "addChildNudgeDismiss": "Not now"
   },
   "workspace": {
     "generalLabel": "General homework help",
