@@ -303,6 +303,7 @@
     "createTask": "Skapa läxa i planeringen",
     "creatingTask": "Skapar läxa...",
     "resultTitle": "Rättning",
+    "newCorrection": "Ny rättning",
     "emptyResult": "Ingen rättning ännu. Lägg till bilder och tryck på \"Rätta läxan\".",
     "emptyResultFallback": "Jag kunde inte tolka tillräckligt från bilderna. Ta gärna tydligare bilder och försök igen.",
     "saveCorrection": "Spara rättning i biblioteket",

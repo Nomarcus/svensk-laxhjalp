@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Camera, Image as ImageIcon, Loader2, Send, X, CheckSquare, CalendarPlus, History, Save } from 'lucide-react';
+import { Camera, Image as ImageIcon, Loader2, Send, X, CheckSquare, CalendarPlus, History, Save, RotateCcw } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 import { compressImage } from '../utils/image';
 import { isLikelyImageFile } from '../utils/imageUpload';
 import { analyzeHomeworkForTask, correctHomeworkFromImages } from '../services/geminiService';
@@ -38,6 +41,7 @@ export default function HomeworkCorrector({ childName, childId, ownerId, onCreat
   const [savedNow, setSavedNow] = useState(false);
   const [result, setResult] = useState('');
   const [recentCorrections, setRecentCorrections] = useState<LibraryItem[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const cameraInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -60,11 +64,15 @@ export default function HomeworkCorrector({ childName, childId, ownerId, onCreat
   const formatCorrectionText = (raw: string) =>
     raw
       .replace(/\r/g, '')
-      .replace(/```[\s\S]*?```/g, '')
-      .replace(/\*\*/g, '')
-      .replace(/^\s*\*\s+/gm, '- ')
-      .replace(/`/g, '')
       .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
+  /** Plain-text snippet for the compact recent-corrections list; the full result keeps its markdown. */
+  const stripMarkdownForPreview = (raw: string) =>
+    raw
+      .replace(/```[\s\S]*?```/g, ' ')
+      .replace(/[#*`_>-]/g, '')
+      .replace(/\s+/g, ' ')
       .trim();
 
   const pushImage = async (dataUrl: string) => {
@@ -137,7 +145,7 @@ export default function HomeworkCorrector({ childName, childId, ownerId, onCreat
     setSavingCorrection(true);
     try {
       await addDoc(collection(db, 'users', ownerId, 'children', childId, 'library'), {
-        title: (result.split('\n')[0] || t('corrector.title')).slice(0, 80),
+        title: (stripMarkdownForPreview(result.split('\n')[0] || '') || t('corrector.title')).slice(0, 80),
         content: result,
         type: 'correction',
         imageUrl: images[0] || null,
@@ -153,8 +161,40 @@ export default function HomeworkCorrector({ childName, childId, ownerId, onCreat
     }
   };
 
+  const startNewCorrection = () => {
+    setImages([]);
+    setExtraContext('');
+    setResult('');
+    setSavedNow(false);
+  };
+
+  const handleDroppedFiles = async (fileList: FileList | null) => {
+    if (!fileList?.length) return;
+    await handlePickedFiles(Array.from(fileList));
+  };
+
   return (
-    <div className="flex-1 overflow-y-auto app-soft-bg p-4 md:p-8">
+    <div
+      className="flex-1 overflow-y-auto app-soft-bg p-4 md:p-8"
+      onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+      onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
+      onDrop={(e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        void handleDroppedFiles(e.dataTransfer.files);
+      }}
+    >
+      {isDragging && (
+        <div className="fixed inset-0 z-50 m-4 flex items-center justify-center rounded-3xl border-4 border-dashed border-emerald-600 bg-emerald-600/10 backdrop-blur-[2px] pointer-events-none">
+          <div className="bg-white p-8 rounded-3xl shadow-2xl text-center">
+            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 mx-auto mb-4">
+              <ImageIcon size={32} />
+            </div>
+            <h3 className="text-xl font-serif italic text-emerald-900">{t('chat.dropImageHere')}</h3>
+            <p className="text-emerald-600/60 text-sm">{t('chat.toAnalyzeHomework')}</p>
+          </div>
+        </div>
+      )}
       <div className="max-w-3xl mx-auto space-y-4">
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 border border-black/5 dark:border-white/5 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.45)]">
           <div className="flex items-start gap-3 mb-5">
@@ -274,11 +314,28 @@ export default function HomeworkCorrector({ childName, childId, ownerId, onCreat
         </div>
 
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 border border-black/5 dark:border-white/5 shadow-[0_20px_50px_-42px_rgba(15,23,42,0.45)]">
-          <h3 className="text-base font-semibold mb-3">{t('corrector.resultTitle')}</h3>
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h3 className="text-base font-semibold">{t('corrector.resultTitle')}</h3>
+            {result && (
+              <button
+                type="button"
+                onClick={startNewCorrection}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-500 dark:text-stone-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 dark:focus-visible:ring-emerald-800 rounded-lg px-2 py-1"
+              >
+                <RotateCcw size={14} />
+                {t('corrector.newCorrection')}
+              </button>
+            )}
+          </div>
           {result ? (
             <div className="space-y-4">
-              <div className="text-sm leading-relaxed whitespace-pre-wrap text-stone-700 dark:text-stone-200">
-                {result}
+              <div className="markdown-body text-sm leading-relaxed text-stone-700 dark:text-stone-200 [&_.katex-display]:overflow-x-auto">
+                <ReactMarkdown
+                  remarkPlugins={[remarkMath]}
+                  rehypePlugins={[[rehypeKatex, { strict: false, throwOnError: false }]]}
+                >
+                  {result}
+                </ReactMarkdown>
               </div>
               <div className="flex flex-wrap gap-2">
                 {onCreateTaskFromCorrection && (
@@ -309,14 +366,12 @@ export default function HomeworkCorrector({ childName, childId, ownerId, onCreat
             </p>
           )}
         </div>
-        <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 border border-black/5 dark:border-white/5 shadow-[0_20px_50px_-42px_rgba(15,23,42,0.45)]">
-          <div className="flex items-center gap-2 mb-3">
-            <History size={16} className="text-stone-500" />
-            <h3 className="text-base font-semibold">{t('corrector.recentTitle')}</h3>
-          </div>
-          {recentCorrections.length === 0 ? (
-            <p className="text-sm text-stone-500 dark:text-stone-400">{t('corrector.recentEmpty')}</p>
-          ) : (
+        {recentCorrections.length > 0 && (
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 border border-black/5 dark:border-white/5 shadow-[0_20px_50px_-42px_rgba(15,23,42,0.45)]">
+            <div className="flex items-center gap-2 mb-3">
+              <History size={16} className="text-stone-500" />
+              <h3 className="text-base font-semibold">{t('corrector.recentTitle')}</h3>
+            </div>
             <div className="space-y-2">
               {recentCorrections.slice(0, 10).map((item) => (
                 <button
@@ -329,12 +384,12 @@ export default function HomeworkCorrector({ childName, childId, ownerId, onCreat
                   className="w-full text-left p-3 rounded-xl border border-black/5 dark:border-white/10 hover:bg-stone-50 dark:hover:bg-slate-800 transition-colors"
                 >
                   <div className="text-sm font-medium text-stone-800 dark:text-stone-100 line-clamp-1">{item.title}</div>
-                  <div className="text-xs text-stone-500 dark:text-stone-400 line-clamp-2">{item.content}</div>
+                  <div className="text-xs text-stone-500 dark:text-stone-400 line-clamp-2">{stripMarkdownForPreview(item.content || '')}</div>
                 </button>
               ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

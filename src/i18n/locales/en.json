@@ -297,6 +297,7 @@
     "createTask": "Create task in planner",
     "creatingTask": "Creating task...",
     "resultTitle": "Correction",
+    "newCorrection": "New correction",
     "emptyResult": "No correction yet. Add images and press \"Correct homework\".",
     "emptyResultFallback": "I could not read enough from the photos. Try clearer photos and run again.",
     "saveCorrection": "Save correction to library",
