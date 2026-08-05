@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image as ImageIcon, Loader2, Bot, X, Calculator, BookOpen, Languages, Beaker, Globe, Book, Check } from 'lucide-react';
+import { Image as ImageIcon, Loader2, Bot, X, Calculator, BookOpen, Languages, Beaker, Globe, Book, Check, Sparkles } from 'lucide-react';
 import { db, auth, OperationType, handleFirestoreError } from '../firebase';
 import {
   collection,
@@ -146,6 +146,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   const [creatingAutoTask, setCreatingAutoTask] = useState(false);
   const [simpleSwedish, setSimpleSwedish] = useState(() => localStorage.getItem('simple-swedish') === 'true');
   const [coachMode, setCoachMode] = useState(() => localStorage.getItem('coach-mode') === 'true');
+  const [showOnboardingTips, setShowOnboardingTips] = useState(() => localStorage.getItem('homework-chat-onboarding-seen') !== 'true');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const dataUrlSizeBytes = (dataUrl: string): number => {
@@ -311,6 +312,22 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   };
 
   const displayMessages = [...olderMessages, ...messages];
+
+  const dismissOnboardingTips = () => {
+    localStorage.setItem('homework-chat-onboarding-seen', 'true');
+    setShowOnboardingTips(false);
+  };
+
+  const readSummary = (content: string) => {
+    const summary = content
+      .replace(/[#*_`>-]/g, ' ')
+      .split(/\n+/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .slice(0, 4)
+      .join('. ');
+    if (summary) void speech.speak(summary, i18n.language);
+  };
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -761,6 +778,22 @@ ${requirementsText}`;
           </div>
         )}
 
+        {showOnboardingTips && displayMessages.length === 0 && !loading && (
+          <div className="max-w-3xl mx-auto mb-4 rounded-3xl border border-emerald-100 bg-emerald-50/90 p-4 text-sm text-emerald-950 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/25 dark:text-emerald-100">
+            <div className="mb-2 flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2 font-semibold"><Sparkles size={16} />Kom igång på en minut</div>
+              <button type="button" onClick={dismissOnboardingTips} className="rounded-lg p-1 text-emerald-700 hover:bg-emerald-100 dark:text-emerald-200 dark:hover:bg-emerald-900/40" aria-label="Stäng tips"><X size={14} /></button>
+            </div>
+            <ol className="grid gap-2 sm:grid-cols-4">
+              <li className="rounded-2xl bg-white/80 p-2 dark:bg-slate-900/50">1. Lägg till barn.</li>
+              <li className="rounded-2xl bg-white/80 p-2 dark:bg-slate-900/50">2. Välj årskurs.</li>
+              <li className="rounded-2xl bg-white/80 p-2 dark:bg-slate-900/50">3. Fota en läxa.</li>
+              <li className="rounded-2xl bg-white/80 p-2 dark:bg-slate-900/50">4. Spara till planeringen.</li>
+            </ol>
+            <p className="mt-3 text-xs text-emerald-800/80 dark:text-emerald-100/80">Du behöver inte kunna ämnet själv. Vi tar en uppgift i taget. Börja med en bild om du är osäker.</p>
+          </div>
+        )}
+
         {hasMoreOlder && (
           <div className="max-w-3xl mx-auto flex justify-center pb-2">
             <button
@@ -859,6 +892,7 @@ ${requirementsText}`;
                   onNext: speech.next,
                   onStop: () => { speech.stop(); setSpeakingMessageId(null); },
                 }}
+                onReadSummary={readSummary}
                 speechSupported={speech.isSupported}
                 onAutoCreateTask={onCreateTaskFromPhoto ? handleAutoCreateTask : undefined}
                 creatingAutoTask={creatingAutoTask}

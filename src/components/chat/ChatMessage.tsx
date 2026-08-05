@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine, X, Volume2, Square, Pause, Play, SkipForward, Calculator, ListOrdered, Flag, Trash2 } from 'lucide-react';
+import { User, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine, X, Volume2, Square, Pause, Play, SkipForward, Calculator, ListOrdered, Flag, Trash2, HeartHandshake, Baby } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -29,6 +29,7 @@ interface ChatMessageProps {
   onContinueNextExercise?: () => void;
   onAutoCreateTask?: (messageId: string, content: string) => void;
   onAddToPlanner?: (content: string) => void;
+  onReadSummary?: (content: string) => void;
   onCreateTask?: (content: string) => void;
   onCreateStudyMaterial?: (content: string) => void;
   hasImage?: boolean;
@@ -65,6 +66,7 @@ export default function ChatMessage({
   onContinueNextExercise,
   onAutoCreateTask,
   onAddToPlanner,
+  onReadSummary,
   onCreateTask,
   onCreateStudyMaterial,
   hasImage,
@@ -86,6 +88,17 @@ export default function ChatMessage({
     if (text.includes('division')) return t('chat.mathTypeDivision');
     if (text.includes('multiplikation')) return t('chat.mathTypeMultiplication');
     return t('chat.mathTypeGeneral');
+  };
+
+  const isPlanningRelevant = (content: string) => {
+    const text = content.toLowerCase();
+    return ['läxa', 'prov', 'inlämning', 'deadline', 'öva', 'träna', 'checklista', 'planering'].some((word) => text.includes(word));
+  };
+
+  const extractSectionPreview = (content: string, heading: string) => {
+    const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const match = content.match(new RegExp(`(?:\\*\\*)?${escaped}:?(?:\\*\\*)?\\s*([\\s\\S]*?)(?=\\n\\s*(?:\\*\\*)?(Till dig som vuxen|Så säger du till barnet|Nästa bästa steg|Nästa steg|📘):?|$)`, 'i'));
+    return match?.[1]?.replace(/[#*_`>-]/g, ' ').replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 220) || '';
   };
 
   const isFacitMessage = (content: string) => {
@@ -168,6 +181,18 @@ export default function ChatMessage({
               : 'bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 shadow-sm rounded-tl-none'
           )}
         >
+          {msg.role === 'model' && (extractSectionPreview(msg.content, 'Till dig som vuxen') || extractSectionPreview(msg.content, 'Så säger du till barnet')) && (
+            <div className="mb-3 grid gap-2 sm:grid-cols-2">
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50/80 p-3 text-xs text-emerald-950 dark:border-emerald-900/50 dark:bg-emerald-950/25 dark:text-emerald-100">
+                <div className="mb-1 flex items-center gap-1.5 font-semibold"><HeartHandshake size={13} />{t('chat.parentViewTitle')}</div>
+                <p className="text-emerald-900/80 dark:text-emerald-100/80">{extractSectionPreview(msg.content, 'Till dig som vuxen') || t('chat.parentViewHint')}</p>
+              </div>
+              <div className="rounded-2xl border border-blue-100 bg-blue-50/80 p-3 text-xs text-blue-950 dark:border-blue-900/50 dark:bg-blue-950/25 dark:text-blue-100">
+                <div className="mb-1 flex items-center gap-1.5 font-semibold"><Baby size={13} />{t('chat.childViewTitle')}</div>
+                <p className="text-blue-900/80 dark:text-blue-100/80">{extractSectionPreview(msg.content, 'Så säger du till barnet') || t('chat.childViewHint')}</p>
+              </div>
+            </div>
+          )}
           <div className="markdown-body prose prose-stone prose-sm max-w-none [&_.katex-display]:overflow-x-auto">
             <ReactMarkdown
               remarkPlugins={[remarkMath]}
@@ -251,6 +276,12 @@ export default function ChatMessage({
               <p className="font-semibold">{t('chat.nextStepTitle')}</p>
               <p className="mt-0.5">{t('chat.nextStepHint')}</p>
             </div>
+            {isPlanningRelevant(msg.content) && (onAddToPlanner || onCreateTask) && (
+              <div className="mt-1 max-w-2xl rounded-2xl border border-amber-200 bg-amber-50/90 px-3 py-2 text-xs text-amber-950 shadow-sm dark:border-amber-800/60 dark:bg-amber-950/25 dark:text-amber-100">
+                <p className="font-semibold">{t('chat.planningPromptTitle')}</p>
+                <p className="mt-0.5">{t('chat.planningPromptHint')}</p>
+              </div>
+            )}
             <div className="flex flex-wrap gap-2 mt-1">
             {hasImage && detectMathType(msg.content) && (
               <span className="inline-flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100">
@@ -261,6 +292,8 @@ export default function ChatMessage({
             {speechSupported && speechState && (
               (speechState.isSpeaking || speechState.isPaused) ? (
                 <div className="flex flex-wrap items-center gap-1 rounded-lg border-2 border-stone-400 dark:border-stone-500 bg-stone-50/80 dark:bg-slate-800/80 px-1 py-1">
+                  <span className="px-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">{t('chat.readingWholeAnswer')}</span>
+                  <div className="h-1.5 w-20 overflow-hidden rounded-full bg-stone-200 dark:bg-slate-700"><div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${speechState.totalChunks ? ((speechState.currentChunk + 1) / speechState.totalChunks) * 100 : 0}%` }} /></div>
                   <button
                     type="button"
                     onClick={speechState.isSpeaking ? speechState.onPause : speechState.onResume}
@@ -293,15 +326,23 @@ export default function ChatMessage({
                   )}
                 </div>
               ) : (
-                <button
-                  type="button"
-                  onClick={speechState.onSpeak}
-                  title={t('chat.listenHint')}
-                  className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-emerald-600 dark:hover:border-emerald-400')}
-                >
-                  <Volume2 size={12} />
-                  {t('chat.listen')}
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={speechState.onSpeak}
+                    title={t('chat.listenHint')}
+                    className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-emerald-600 dark:hover:border-emerald-400')}
+                  >
+                    <Volume2 size={12} />
+                    {t('chat.listen')}
+                  </button>
+                  {onReadSummary && (
+                    <button type="button" onClick={() => onReadSummary(msg.content)} className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-emerald-600 dark:hover:border-emerald-400')}>
+                      <Volume2 size={12} />
+                      {t('chat.readSummary')}
+                    </button>
+                  )}
+                </>
               )
             )}
             {!msg.generatedImage && (
