@@ -60,7 +60,6 @@ import {
   applyParentLandingSeo,
   applyTeacherLandingSeo,
 } from './utils/seoMeta';
-import { apiUrl } from './utils/apiBase';
 
 const isFirestorePermissionError = (error: unknown) => {
   if (!(error instanceof Error)) return false;
@@ -68,7 +67,6 @@ const isFirestorePermissionError = (error: unknown) => {
 };
 
 const LAST_LOGIN_STORAGE_KEY = 'foraldrahjalpen_lastLoginDate';
-const STRIPE_SYNC_PENDING_KEY = 'foraldrahjalpen_pendingStripeSync';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -107,7 +105,6 @@ export default function App() {
   const [routePath, setRoutePath] = useState(() => normalizePathname(window.location.pathname));
   const userDocUnsubRef = useRef<(() => void) | null>(null);
   const childOwnerByIdRef = useRef<Map<string, string>>(new Map());
-  const stripeSyncInFlightRef = useRef(false);
   const autoProvisionAttemptedRef = useRef(false);
 
   const navigateTab = useCallback(
@@ -225,8 +222,6 @@ export default function App() {
             setSubscription({
               tier: data.tier || 'free',
               status: data.subscriptionStatus || 'none',
-              stripeCustomerId: data.stripeCustomerId,
-              stripeSubscriptionId: data.stripeSubscriptionId,
               currentPeriodEnd: data.currentPeriodEnd || null,
               cancelAtPeriodEnd: data.cancelAtPeriodEnd || false,
             });
@@ -239,14 +234,6 @@ export default function App() {
         setSubscription({ tier: 'free', status: 'none' });
       }
       setLoading(false);
-
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('subscription') === 'success') {
-        sessionStorage.setItem(STRIPE_SYNC_PENDING_KEY, '1');
-        window.history.replaceState({}, '', window.location.pathname);
-      } else if (params.get('subscription') === 'canceled') {
-        window.history.replaceState({}, '', window.location.pathname);
-      }
     });
 
     return () => {
@@ -255,29 +242,6 @@ export default function App() {
       userDocUnsubRef.current = null;
     };
   }, []);
-
-  useEffect(() => {
-    const shouldSync = sessionStorage.getItem(STRIPE_SYNC_PENDING_KEY) === '1';
-    if (!shouldSync || !user?.email || user.isAnonymous || stripeSyncInFlightRef.current) return;
-
-    const run = async () => {
-      stripeSyncInFlightRef.current = true;
-      try {
-        const token = await user.getIdToken();
-        await fetch(apiUrl('/api/billing/sync-stripe-subscription'), {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      } catch (err) {
-        console.warn('Stripe sync after return failed:', err);
-      } finally {
-        sessionStorage.removeItem(STRIPE_SYNC_PENDING_KEY);
-        stripeSyncInFlightRef.current = false;
-      }
-    };
-
-    void run();
-  }, [user]);
 
   useEffect(() => {
     if (!user) return;

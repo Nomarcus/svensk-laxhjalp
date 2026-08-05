@@ -11,9 +11,6 @@
       "maxDuration": 60
     }
   },
-  "rewrites": [
-    { "source": "/webhook/stripe", "destination": "/api/webhook/stripe" }
-  ],
   "headers": [
     {
       "source": "/assets/(.*)",

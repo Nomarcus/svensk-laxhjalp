@@ -1,37 +1,9 @@
 import { Router, Response } from 'express';
 import admin from 'firebase-admin';
-import Stripe from 'stripe';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { getServerFirestore } from '../lib/serverFirestore';
 
 const router = Router();
-
-let _stripe: Stripe | null = null;
-function getStripeIfConfigured(): Stripe | null {
-  const key = process.env.STRIPE_SECRET_KEY?.trim();
-  if (!key) return null;
-  if (!_stripe) _stripe = new Stripe(key);
-  return _stripe;
-}
-
-/** Best-effort: cancel any active Stripe subscription so account deletion doesn't leave a dangling charge behind. */
-async function cancelStripeSubscriptions(customerId: string | undefined): Promise<void> {
-  if (!customerId) return;
-  const stripe = getStripeIfConfigured();
-  if (!stripe) return;
-  try {
-    const subs = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 25 });
-    await Promise.all(
-      subs.data
-        .filter((s) => s.status === 'active' || s.status === 'trialing' || s.status === 'past_due')
-        .map((s) =>
-          stripe.subscriptions.cancel(s.id).catch((err) => console.warn('Failed to cancel subscription', s.id, err)),
-        ),
-    );
-  } catch (err) {
-    console.warn('Stripe subscription cleanup failed during account deletion:', err);
-  }
-}
 
 /** Best-effort: drop this user's e-mail from any other parent's shared-child list. */
 async function removeFromSharedChildren(email: string | undefined, ownUid: string): Promise<void> {
@@ -53,7 +25,7 @@ async function removeFromSharedChildren(email: string | undefined, ownUid: strin
   }
 }
 
-// POST /api/account/delete — permanently deletes the caller's own account, subscription and all Firestore data.
+// POST /api/account/delete — permanently deletes the caller's own account and all Firestore data.
 // POST (not DELETE) to match the CORS method allowlist shared with the rest of the API.
 router.post('/account/delete', async (req: AuthenticatedRequest, res: Response) => {
   const uid = req.uid;
@@ -65,10 +37,6 @@ router.post('/account/delete', async (req: AuthenticatedRequest, res: Response) 
 
   try {
     const db = getServerFirestore();
-    const userDoc = await db.doc(`users/${uid}`).get();
-    const customerId = userDoc.data()?.stripeCustomerId as string | undefined;
-
-    await cancelStripeSubscriptions(customerId);
     await removeFromSharedChildren(email, uid);
     // Deletes users/{uid} and every nested subcollection (children, chatSessions, tasks, library, usage, …).
     await db.recursiveDelete(db.doc(`users/${uid}`));

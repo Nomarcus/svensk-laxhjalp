@@ -65,7 +65,7 @@ export function applyApiSecurity(
   if (allowOrigin) {
     res.setHeader('Access-Control-Allow-Origin', allowOrigin);
   }
-  res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, Stripe-Signature');
+  res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
 
@@ -80,7 +80,7 @@ export function applyApiSecurity(
   }
 
   const path = getRequestPath(req);
-  if (path.includes('/admin/') || path.includes('/webhook/')) return true;
+  if (path.includes('/admin/')) return true;
 
   const key = `${getClientIp(req)}:${path}`;
   const now = Date.now();

@@ -11,22 +11,15 @@ import {
   FileText,
   CreditCard,
   CheckCircle2,
-  RefreshCw,
   Star,
   Trash2,
+  Clock,
 } from 'lucide-react';
-import { auth, linkGuestWithGoogle, logout } from '../firebase';
+import { auth, logout } from '../firebase';
 import type { UserSubscription } from '../types';
 import { hasPaidPlanAccess } from '../utils/subscriptionAccess';
 import { apiUrl } from '../utils/apiBase';
-import {
-  STRIPE_BUY_BUTTON_ENABLED,
-  STRIPE_PAYMENT_LINK_SUBSCRIBE,
-  STRIPE_PAYMENT_LINKS_READY,
-  buildStripePaymentLinkUrl,
-} from '../utils/stripeBuyButton';
 import ConfirmDialog from './ui/ConfirmDialog';
-import { openExternalUrl } from '../utils/openExternal';
 
 function formatPeriodEnd(value: unknown, locale: string): string | null {
   if (value == null) return null;
@@ -52,19 +45,9 @@ interface SubscriptionProps {
 
 export default function Subscription({ subscription }: SubscriptionProps) {
   const { t, i18n } = useTranslation();
-  const [syncLoading, setSyncLoading] = React.useState(false);
-  const [syncFeedback, setSyncFeedback] = React.useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
-  const [linkingGuest, setLinkingGuest] = React.useState(false);
-  const [linkGuestError, setLinkGuestError] = React.useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
   const [deletingAccount, setDeletingAccount] = React.useState(false);
   const [deleteAccountError, setDeleteAccountError] = React.useState<string | null>(null);
-  const [portalLoading, setPortalLoading] = React.useState(false);
-  const [portalError, setPortalError] = React.useState<string | null>(null);
-  const user = auth.currentUser;
-  const isAnonymous = Boolean(user?.isAnonymous);
-  const userUid = user?.uid || '';
-  const userEmail = user?.email || '';
 
   const paid = hasPaidPlanAccess(subscription);
   const periodLabel = formatPeriodEnd(subscription.currentPeriodEnd, i18n.language);
@@ -72,101 +55,6 @@ export default function Subscription({ subscription }: SubscriptionProps) {
     subscription.status === 'trialing' ? t('subscription.statusTrialing') : t('subscription.statusActive');
   const memberHeadline = t('subscription.memberTitle');
   const memberSubtitle = t('subscription.memberSubtitle');
-
-  const subscribeUrl =
-    userUid && userEmail && STRIPE_PAYMENT_LINK_SUBSCRIBE
-      ? buildStripePaymentLinkUrl(STRIPE_PAYMENT_LINK_SUBSCRIBE, userUid, userEmail)
-      : null;
-
-  const syncFromStripe = React.useCallback(async () => {
-    const u = auth.currentUser;
-    if (!u || !u.email) return;
-    setSyncLoading(true);
-    setSyncFeedback(null);
-    try {
-      const token = await u.getIdToken();
-      const res = await fetch(apiUrl('/api/billing/sync-stripe-subscription'), {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      let data: {
-        ok?: boolean;
-        synced?: boolean;
-        reason?: string;
-        error?: string;
-        detail?: string;
-        duplicateActiveCount?: number;
-      } = {};
-      try {
-        data = await res.json();
-      } catch {
-        /* ignore */
-      }
-      if (!res.ok) {
-        const parts = [(data as { error?: string }).error, (data as { detail?: string }).detail].filter(
-          Boolean,
-        ) as string[];
-        setSyncFeedback({
-          kind: 'err',
-          text: parts.length > 0 ? parts.join(' — ') : t('subscription.syncServerError'),
-        });
-        return;
-      }
-      if (data.synced) {
-        const dup = data.duplicateActiveCount || 0;
-        setSyncFeedback({
-          kind: 'ok',
-          text: dup > 0 ? t('subscription.syncDuplicatesWarning', { count: dup }) : t('subscription.syncSuccess'),
-        });
-      } else if (data.reason === 'no_stripe_customer') {
-        setSyncFeedback({ kind: 'err', text: t('subscription.syncNoCustomer') });
-      } else if (data.reason === 'no_active_subscription') {
-        setSyncFeedback({ kind: 'err', text: t('subscription.syncNoSubscription') });
-      } else {
-        setSyncFeedback({ kind: 'err', text: t('subscription.syncNoSubscription') });
-      }
-    } catch {
-      setSyncFeedback({ kind: 'err', text: t('subscription.syncError') });
-    } finally {
-      setSyncLoading(false);
-    }
-  }, [t]);
-
-  const linkGuestAccount = React.useCallback(async () => {
-    setLinkGuestError(null);
-    setLinkingGuest(true);
-    try {
-      await linkGuestWithGoogle();
-    } catch {
-      setLinkGuestError(t('authErrors.generic'));
-    } finally {
-      setLinkingGuest(false);
-    }
-  }, [t]);
-
-  const openBillingPortal = React.useCallback(async () => {
-    const u = auth.currentUser;
-    if (!u) return;
-    setPortalLoading(true);
-    setPortalError(null);
-    try {
-      const token = await u.getIdToken();
-      const res = await fetch(apiUrl('/api/billing/create-portal-session'), {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data?.url) {
-        setPortalError(data?.error || t('subscription.portalError'));
-        return;
-      }
-      await openExternalUrl(data.url);
-    } catch {
-      setPortalError(t('subscription.portalError'));
-    } finally {
-      setPortalLoading(false);
-    }
-  }, [t]);
 
   const deleteAccount = React.useCallback(async () => {
     const u = auth.currentUser;
@@ -237,13 +125,6 @@ export default function Subscription({ subscription }: SubscriptionProps) {
           </div>
         )}
 
-        {subscription.status === 'past_due' && !paid && (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800/40 p-4 text-sm text-amber-950 dark:text-amber-200">
-            <p className="font-medium">{t('subscription.pastDueTitle')}</p>
-            <p className="mt-1 opacity-90">{t('subscription.pastDueBody')}</p>
-          </div>
-        )}
-
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-black/5 dark:border-white/5">
           <h3 className="font-medium text-lg dark:text-stone-100 mb-3">{t('subscription.introTitle')}</h3>
           <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed mb-3">{t('subscription.introP1')}</p>
@@ -281,112 +162,23 @@ export default function Subscription({ subscription }: SubscriptionProps) {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-black/5 dark:border-white/5">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
-              <CreditCard size={22} />
+        {!paid && (
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-black/5 dark:border-white/5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                <CreditCard size={22} />
+              </div>
+              <div>
+                <h3 className="font-medium text-lg dark:text-stone-100">{t('subscription.paymentTitle')}</h3>
+                <p className="text-sm text-stone-400">{t('subscription.paymentSubtitle')}</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-medium text-lg dark:text-stone-100">{t('subscription.paymentTitle')}</h3>
-              <p className="text-sm text-stone-400">{t('subscription.paymentSubtitle')}</p>
+            <div className="rounded-xl border border-stone-200 dark:border-white/10 bg-stone-50/80 dark:bg-slate-800/50 p-4 flex items-start gap-3">
+              <Clock size={18} className="text-stone-400 mt-0.5 shrink-0" />
+              <p className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed">{t('subscription.comingSoon')}</p>
             </div>
           </div>
-          <p className="text-sm text-stone-600 dark:text-stone-300 mb-4 leading-relaxed">{t('subscription.plansExplainer')}</p>
-
-          {isAnonymous ? (
-            <div className="rounded-xl border border-rose-200 bg-rose-50 dark:bg-rose-900/20 dark:border-rose-800/30 p-3 text-sm text-rose-800 dark:text-rose-300">
-              {t('subscription.stripeAnonymous')}
-              <div className="mt-3">
-                <button
-                  type="button"
-                  onClick={linkGuestAccount}
-                  disabled={linkingGuest}
-                  className="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 disabled:opacity-60"
-                >
-                  {linkingGuest ? t('auth.waiting') : `${t('auth.createAccount')} (${t('auth.loginGoogle')})`}
-                </button>
-              </div>
-              {linkGuestError && <p className="mt-2 text-xs">{linkGuestError}</p>}
-            </div>
-          ) : !userUid || !userEmail ? (
-            <div className="rounded-xl border border-rose-200 bg-rose-50 dark:bg-rose-900/20 dark:border-rose-800/30 p-3 text-sm text-rose-800 dark:text-rose-300">
-              {t('subscription.stripeEmailRequired')}
-            </div>
-          ) : paid ? (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-800/30 p-3 text-sm text-emerald-900 dark:text-emerald-200">
-              <p>{t('subscription.alreadySubscribed')}</p>
-              <button
-                type="button"
-                onClick={openBillingPortal}
-                disabled={portalLoading}
-                className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800/60 text-sm font-medium hover:bg-emerald-50 dark:hover:bg-emerald-950/40 disabled:opacity-60 transition-colors"
-              >
-                <CreditCard size={14} />
-                {portalLoading ? t('subscription.portalLoading') : t('subscription.manageSubscription')}
-              </button>
-              {portalError && <p className="mt-2 text-xs text-rose-700 dark:text-rose-400">{portalError}</p>}
-            </div>
-          ) : !STRIPE_BUY_BUTTON_ENABLED ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800/30 p-3 text-sm text-amber-800 dark:text-amber-300">
-              {t('subscription.stripeDisabled')}
-            </div>
-          ) : !STRIPE_PAYMENT_LINKS_READY ? (
-            <div className="rounded-xl border border-rose-200 bg-rose-50 dark:bg-rose-900/20 dark:border-rose-800/30 p-3 text-sm text-rose-800 dark:text-rose-300">
-              {t('subscription.stripeMissingConfig')}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-stone-200 dark:border-white/10 bg-stone-50/80 dark:bg-slate-800/50 p-4 flex flex-col max-w-md mx-auto sm:mx-0">
-              <div className="flex items-center gap-2 mb-2">
-                <Star size={20} className="text-blue-600 dark:text-blue-400" />
-                <h4 className="font-semibold text-stone-900 dark:text-stone-100">{t('subscription.planMemberName')}</h4>
-              </div>
-              <p className="text-2xl font-bold text-stone-800 dark:text-stone-100 mb-1">{t('subscription.planPlusPrice')}</p>
-              <p className="text-xs text-stone-500 dark:text-stone-400 mb-4 flex-1">{t('subscription.planPlusPerMonth')}</p>
-              {subscribeUrl ? (
-                <button
-                  type="button"
-                  onClick={() => void openExternalUrl(subscribeUrl)}
-                  className="block w-full text-center px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
-                >
-                  {t('subscription.planCta')}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  disabled
-                  className="w-full px-4 py-2.5 rounded-xl bg-stone-200 dark:bg-slate-700 text-stone-500 text-sm font-medium cursor-not-allowed"
-                >
-                  {t('subscription.planPlusSoon')}
-                </button>
-              )}
-            </div>
-          )}
-          {!isAnonymous && userEmail ? (
-            <div className="mt-5 pt-4 border-t border-stone-100 dark:border-white/10">
-              <p className="text-xs text-stone-500 dark:text-stone-400 mb-2">{t('subscription.syncStripeHint')}</p>
-              <button
-                type="button"
-                onClick={syncFromStripe}
-                disabled={syncLoading}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-stone-100 dark:bg-slate-800 text-stone-800 dark:text-stone-200 hover:bg-stone-200 dark:hover:bg-slate-700 disabled:opacity-60 transition-colors"
-              >
-                <RefreshCw size={16} className={syncLoading ? 'animate-spin' : ''} />
-                {syncLoading ? t('subscription.syncStripeLoading') : t('subscription.syncStripeButton')}
-              </button>
-              {syncFeedback ? (
-                <p
-                  className={
-                    syncFeedback.kind === 'ok'
-                      ? 'text-sm mt-2 text-emerald-700 dark:text-emerald-400'
-                      : 'text-sm mt-2 text-rose-700 dark:text-rose-400'
-                  }
-                >
-                  {syncFeedback.text}
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
+        )}
 
         <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-900/20 dark:to-emerald-900/10 rounded-2xl p-6 shadow-sm border border-emerald-200/50 dark:border-emerald-800/30">
           <div className="flex items-center gap-3 mb-3">

@@ -1,4 +1,3 @@
-import Stripe from 'stripe';
 import { getServerFirestore } from '../../server/lib/serverFirestore';
 import { applyApiSecurity } from '../_lib/httpSecurity';
 
@@ -11,22 +10,6 @@ async function getFirebaseAdmin() {
     else admin.initializeApp();
   }
   return admin;
-}
-
-async function cancelStripeSubscriptions(customerId: string | undefined): Promise<void> {
-  const key = process.env.STRIPE_SECRET_KEY?.trim();
-  if (!customerId || !key) return;
-  try {
-    const stripe = new Stripe(key);
-    const subs = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 25 });
-    await Promise.all(
-      subs.data
-        .filter((s) => s.status === 'active' || s.status === 'trialing' || s.status === 'past_due')
-        .map((s) => stripe.subscriptions.cancel(s.id).catch((err) => console.warn('Failed to cancel subscription', s.id, err))),
-    );
-  } catch (err) {
-    console.warn('Stripe subscription cleanup failed during account deletion:', err);
-  }
 }
 
 async function removeFromSharedChildren(admin: Awaited<ReturnType<typeof getFirebaseAdmin>>, email: string | undefined, ownUid: string): Promise<void> {
@@ -48,7 +31,7 @@ async function removeFromSharedChildren(admin: Awaited<ReturnType<typeof getFire
   }
 }
 
-// POST /api/account/delete — permanently deletes the caller's own account, subscription and all Firestore data.
+// POST /api/account/delete — permanently deletes the caller's own account and all Firestore data.
 export default async function handler(req: any, res: any) {
   if (!applyApiSecurity(req, res)) return;
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -63,10 +46,6 @@ export default async function handler(req: any, res: any) {
     const email = decoded.email as string | undefined;
 
     const db = getServerFirestore();
-    const userDoc = await db.doc(`users/${uid}`).get();
-    const customerId = userDoc.data()?.stripeCustomerId as string | undefined;
-
-    await cancelStripeSubscriptions(customerId);
     await removeFromSharedChildren(admin, email, uid);
     await db.recursiveDelete(db.doc(`users/${uid}`));
     try {
