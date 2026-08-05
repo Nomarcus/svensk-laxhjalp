@@ -262,14 +262,7 @@
     "noSpeechInBrowser": "This browser has no speech synthesis here, and today’s AI voice quota is used up.",
     "dismissVoiceNotice": "Dismiss",
     "imageActionExtraInstruction": "Extra instruction from the user",
-    "learningGuide": "Calm support for adults at home",
-    "imageStepPhoto": "Photo chosen",
-    "imageStepChoose": "Choose help",
-    "imageStepSend": "Send",
-    "imageActionRecommendation": "Not sure? Choose Explain simply for a calm start.",
-    "nextStepTitle": "Next step",
-    "nextStepHint": "Read the answer together, try one exercise, and save it to the planner if you want to continue later.",
-    "moreSupport": "More support"
+    "learningGuide": "Calm support for adults at home"
   },
   "chatEmpty": {
     "helpWith": "Help {{name}} with homework",
