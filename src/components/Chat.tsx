@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image as ImageIcon, Loader2, Bot, X, Calculator, BookOpen, Languages, Beaker, Globe, Book, Check, Sparkles } from 'lucide-react';
+import { Image as ImageIcon, Loader2, Bot, X, Calculator, BookOpen, Languages, Beaker, Globe, Book, Check, Sparkles, UserPlus } from 'lucide-react';
 import { db, auth, OperationType, handleFirestoreError } from '../firebase';
 import {
   collection,
@@ -23,6 +23,9 @@ import { compressImage } from '../utils/image';
 import { isLikelyImageFile } from '../utils/imageUpload';
 import { cn } from '../utils/cn';
 import { isRequirementsList } from '../utils/detectRequirementsList';
+import { isGeneralWorkspaceId } from '../constants/workspaces';
+import { useDialogA11y } from '../hooks/useDialogA11y';
+import ConfirmDialog from './ui/ConfirmDialog';
 import type { Message, ChatSession, Task } from '../types';
 
 /**
@@ -114,9 +117,10 @@ interface ChatProps {
   onTaskContextUsed?: () => void;
   onCreateTask?: (subject: string, description: string) => void;
   onCreateTaskFromPhoto?: (data: { subject: string; description: string; workDays: string[]; dueDay: string; minutesPerDay: number; imageUrl?: string }) => void;
+  onManageChildren?: () => void;
 }
 
-export default function Chat({ childId, childName, childGrade, ownerId, tasks = [], taskContext, onTaskContextUsed, onCreateTask, onCreateTaskFromPhoto }: ChatProps) {
+export default function Chat({ childId, childName, childGrade, ownerId, tasks = [], taskContext, onTaskContextUsed, onCreateTask, onCreateTaskFromPhoto, onManageChildren }: ChatProps) {
   const { t, i18n } = useTranslation();
   const speech = useSpeech();
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
@@ -142,11 +146,13 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   const [stickyImageContext, setStickyImageContext] = useState<{ payload: string[]; dataUrls: string[] } | null>(null);
   const [savedMessageIds, setSavedMessageIds] = useState<Set<string>>(new Set());
   const [taskPickerContent, setTaskPickerContent] = useState<string | null>(null);
+  const taskPickerRef = useDialogA11y<HTMLDivElement>(taskPickerContent !== null, () => setTaskPickerContent(null));
   const [linkedTaskIds, setLinkedTaskIds] = useState<Set<string>>(new Set());
   const [creatingAutoTask, setCreatingAutoTask] = useState(false);
   const [simpleSwedish, setSimpleSwedish] = useState(() => localStorage.getItem('simple-swedish') === 'true');
   const [coachMode, setCoachMode] = useState(() => localStorage.getItem('coach-mode') === 'true');
   const [showOnboardingTips, setShowOnboardingTips] = useState(() => localStorage.getItem('homework-chat-onboarding-seen') !== 'true');
+  const [addChildNudgeDismissed, setAddChildNudgeDismissed] = useState(() => localStorage.getItem('add-child-nudge-dismissed') === 'true');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const dataUrlSizeBytes = (dataUrl: string): number => {
@@ -318,6 +324,11 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
     setShowOnboardingTips(false);
   };
 
+  const dismissAddChildNudge = () => {
+    localStorage.setItem('add-child-nudge-dismissed', 'true');
+    setAddChildNudgeDismissed(true);
+  };
+
   const readSummary = (content: string) => {
     const summary = content
       .replace(/[#*_`>-]/g, ' ')
@@ -345,9 +356,10 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
 
   const taskContextProcessed = useRef(false);
 
+  const [showClearChatConfirm, setShowClearChatConfirm] = useState(false);
+
   const clearChat = async () => {
     if (!auth.currentUser || !childId || !activeSessionId) return;
-    if (!window.confirm(t('chat.clearChatConfirm'))) return;
     try {
       await deleteDoc(doc(db, 'users', ownerId, 'children', childId, 'chatSessions', activeSessionId));
       setStickyImageContext(null);
@@ -355,6 +367,11 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, `chatSessions/${activeSessionId}`);
     }
+  };
+
+  const confirmClearChat = () => {
+    setShowClearChatConfirm(false);
+    void clearChat();
   };
 
   const saveToLibrary = async (message: Message) => {
@@ -735,7 +752,7 @@ ${requirementsText}`;
         activeSessionId={activeSessionId}
         onSelectSession={setActiveSessionId}
         onNewSession={createNewSession}
-        onClearChat={clearChat}
+        onClearChat={() => setShowClearChatConfirm(true)}
         simpleSwedish={simpleSwedish}
         onToggleSimpleSwedish={toggleSimpleSwedish}
         coachMode={coachMode}
@@ -775,6 +792,37 @@ ${requirementsText}`;
             <button type="button" onClick={() => setLibrarySaveError(null)} className="p-1 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg">
               <X size={16} />
             </button>
+          </div>
+        )}
+
+        {onManageChildren && isGeneralWorkspaceId(childId) && !addChildNudgeDismissed && displayMessages.length === 0 && !loading && (
+          <div className="max-w-3xl mx-auto mb-3 flex items-center justify-between gap-3 rounded-2xl border border-emerald-100 bg-white p-3 text-sm shadow-sm dark:border-emerald-900/50 dark:bg-slate-900 sm:p-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="shrink-0 rounded-full bg-emerald-50 p-2 dark:bg-emerald-950/40">
+                <UserPlus size={18} className="text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-medium text-stone-800 dark:text-stone-100 truncate">{t('welcome.addChildNudgeTitle')}</p>
+                <p className="text-stone-500 dark:text-stone-400 text-xs truncate">{t('welcome.addChildNudgeDescription')}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={onManageChildren}
+                className="rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 transition-colors"
+              >
+                {t('welcome.addChildNudgeCta')}
+              </button>
+              <button
+                type="button"
+                onClick={dismissAddChildNudge}
+                className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 dark:hover:bg-slate-800"
+                aria-label={t('welcome.addChildNudgeDismiss')}
+              >
+                <X size={14} />
+              </button>
+            </div>
           </div>
         )}
 
@@ -950,12 +998,27 @@ ${requirementsText}`;
 
       {/* Task Picker Modal */}
       {taskPickerContent && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in" onClick={() => setTaskPickerContent(null)}>
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-black/5 animate-in zoom-in-95 duration-200 max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="task-picker-title"
+          onClick={() => setTaskPickerContent(null)}
+        >
+          <div
+            ref={taskPickerRef}
+            tabIndex={-1}
+            className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-black/5 animate-in zoom-in-95 duration-200 max-h-[80vh] overflow-hidden flex flex-col outline-none"
+            onClick={e => e.stopPropagation()}
+          >
             <div className="p-6 border-b border-black/5">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-serif italic">{t('chat.linkToTask')}</h3>
-                <button onClick={() => setTaskPickerContent(null)} className="p-2 hover:bg-stone-100 rounded-full text-stone-400 transition-colors">
+                <h3 id="task-picker-title" className="text-lg font-serif italic">{t('chat.linkToTask')}</h3>
+                <button
+                  onClick={() => setTaskPickerContent(null)}
+                  className="p-2 hover:bg-stone-100 rounded-full text-stone-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200"
+                  aria-label={t('common.close')}
+                >
                   <X size={18} />
                 </button>
               </div>
@@ -1001,6 +1064,14 @@ ${requirementsText}`;
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={showClearChatConfirm}
+        message={t('chat.clearChatConfirm')}
+        confirmLabel={t('chat.clearChat')}
+        onConfirm={confirmClearChat}
+        onCancel={() => setShowClearChatConfirm(false)}
+      />
     </div>
   );
 }

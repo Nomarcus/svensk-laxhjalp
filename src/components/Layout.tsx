@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, MessageSquare, Calendar, BookOpen, User as UserIcon, ChevronDown, Settings, Info, Library, Crown, Download, Users, X, Menu, Moon, Sun, Mail, Shield, FileText, Share2, BarChart3, CheckSquare, GraduationCap } from 'lucide-react';
+import { LogOut, BookOpen, User as UserIcon, ChevronDown, Settings, Crown, Download, Users, X, Menu, Moon, Sun, Mail, Shield, FileText, Share2, BarChart3, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { logout, User } from '../firebase';
 import { cn } from '../utils/cn';
@@ -7,6 +7,9 @@ import type { AppTab, Child, SubscriptionTier } from '../types';
 import { WORKSPACE_TEACHER_ID, isGeneralWorkspaceId } from '../constants/workspaces';
 import { childDisplayName } from '../utils/childDisplay';
 import LanguageSwitcher from './LanguageSwitcher';
+import NavButton from './layout/NavButton';
+import { NAV_ITEMS } from './layout/navItems';
+import { useDialogA11y } from '../hooks/useDialogA11y';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -46,6 +49,15 @@ export default function Layout({
   const { t, i18n } = useTranslation();
   const [showChildSelect, setShowChildSelect] = React.useState(false);
   const [showMobileMenu, setShowMobileMenu] = React.useState(false);
+  const closeMobileMenu = React.useCallback(() => setShowMobileMenu(false), []);
+  const mobileMenuRef = useDialogA11y<HTMLDivElement>(showMobileMenu, closeMobileMenu);
+  const [shareNotice, setShareNotice] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!shareNotice) return;
+    const timer = window.setTimeout(() => setShareNotice(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [shareNotice]);
   const selectedChild = childrenList.find(c => c.id === selectedChildId);
   const pickerChildren = childrenList.filter((c) => c.id !== WORKSPACE_TEACHER_ID);
   const hidePlannerNav = Boolean(selectedChildId && isGeneralWorkspaceId(selectedChildId));
@@ -75,7 +87,7 @@ export default function Layout({
         await navigator.share(shareData);
       } else {
         await navigator.clipboard.writeText(window.location.origin);
-        alert(t('library.copiedToClipboard'));
+        setShareNotice(t('library.copiedToClipboard'));
       }
     } catch (err) {
       console.error('Error sharing app:', err);
@@ -168,74 +180,53 @@ export default function Layout({
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
-          {(
-            [
-              { id: 'chat' as const, icon: <MessageSquare size={20} />, label: t('nav.aiAssistant') },
-              ...(hidePlannerNav ? [] : [{ id: 'planner' as const, icon: <Calendar size={20} />, label: t('nav.planner') }]),
-              { id: 'corrector' as const, icon: <CheckSquare size={20} />, label: t('nav.corrector') },
-              { id: 'library' as const, icon: <Library size={20} />, label: t('nav.library') },
-              { id: 'info' as const, icon: <Info size={20} />, label: t('nav.info') },
-            ] as const
-          ).map((item) => (
-            <button
+          {NAV_ITEMS.filter((item) => item.id !== 'planner' || !hidePlannerNav).map((item) => (
+            <NavButton
               key={item.id}
+              variant="sidebar"
+              layoutId="sidebar-active-pill"
+              active={activeTab === item.id}
               onClick={() => setActiveTab(item.id)}
-              className={cn(
-                "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
-                activeTab === item.id
-                  ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-medium shadow-sm"
-                  : "text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800"
-              )}
-            >
-              {item.icon}
-              <span>{item.label}</span>
-            </button>
+              icon={<item.Icon size={20} />}
+              label={t(item.labelKey)}
+            />
           ))}
-          <button
+          <NavButton
+            variant="sidebar"
+            layoutId="sidebar-active-pill"
+            active={activeTab === 'subscription'}
             onClick={() => setActiveTab('subscription')}
-            className={cn(
-              "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
-              activeTab === 'subscription'
-                ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-medium shadow-sm"
-                : "text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800"
-            )}
-          >
-            <Crown size={20} />
-            <span>{t('nav.subscription')}</span>
-            <span className={cn(
-              "ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider",
-              subscriptionTier === 'free'
-                ? "bg-stone-100 dark:bg-slate-800 text-stone-500 dark:text-stone-400"
-                : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
-            )}>
-              {subscriptionTier === 'free' ? t('subscription.free') : t('subscription.memberBadge')}
-            </span>
-          </button>
-          <button
+            icon={<Crown size={20} />}
+            label={t('nav.subscription')}
+            trailing={
+              <span className={cn(
+                "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider",
+                subscriptionTier === 'free'
+                  ? "bg-stone-100 dark:bg-slate-800 text-stone-500 dark:text-stone-400"
+                  : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
+              )}>
+                {subscriptionTier === 'free' ? t('subscription.free') : t('subscription.memberBadge')}
+              </span>
+            }
+          />
+          <NavButton
+            variant="sidebar"
+            layoutId="sidebar-active-pill"
+            active={activeTab === 'contact'}
             onClick={() => setActiveTab('contact')}
-            className={cn(
-              "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
-              activeTab === 'contact'
-                ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-medium shadow-sm"
-                : "text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800"
-            )}
-          >
-            <Mail size={20} />
-            <span>{t('nav.contact')}</span>
-          </button>
+            icon={<Mail size={20} />}
+            label={t('nav.contact')}
+          />
           {showAdminNav && (
-            <button
+            <NavButton
+              variant="sidebar"
+              layoutId="sidebar-active-pill"
+              tone="admin"
+              active={activeTab === 'admin'}
               onClick={() => setActiveTab('admin')}
-              className={cn(
-                "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 border border-dashed border-stone-200 dark:border-stone-600",
-                activeTab === 'admin'
-                  ? "bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 font-medium shadow-sm"
-                  : "text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800"
-              )}
-            >
-              <BarChart3 size={20} />
-              <span>{t('nav.admin')}</span>
-            </button>
+              icon={<BarChart3 size={20} />}
+              label={t('nav.admin')}
+            />
           )}
         </nav>
 
@@ -309,7 +300,10 @@ export default function Layout({
       </aside>
 
       {/* Mobile Top Bar */}
-      <header className="md:hidden flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-900 border-b border-black/5 dark:border-white/5 shrink-0 safe-area-top">
+      <header
+        inert={showMobileMenu || undefined}
+        className="md:hidden flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-900 border-b border-black/5 dark:border-white/5 shrink-0 safe-area-top"
+      >
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 bg-emerald-600 rounded-lg flex items-center justify-center text-white">
             <BookOpen size={16} />
@@ -328,7 +322,8 @@ export default function Layout({
           )}
           <button
             onClick={() => setShowMobileMenu(true)}
-            className="p-2 text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+            className="p-2 text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-slate-800 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 dark:focus-visible:ring-emerald-800"
+            aria-label={t('nav.menu')}
           >
             <Menu size={20} />
           </button>
@@ -336,7 +331,7 @@ export default function Layout({
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      <main inert={showMobileMenu || undefined} className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {i18n.language === 'ar' && (
           <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-2 flex items-center gap-2 text-amber-800 dark:text-amber-200 text-sm shrink-0">
             <span>⚠️</span>
@@ -347,47 +342,45 @@ export default function Layout({
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden flex items-center bg-white dark:bg-slate-900 border-t border-black/5 dark:border-white/5 shrink-0 safe-area-bottom">
-        {(
-          [
-            { id: 'chat' as const, icon: <MessageSquare size={20} />, label: t('nav.aiHelp') },
-            ...(hidePlannerNav ? [] : [{ id: 'planner' as const, icon: <Calendar size={20} />, label: t('nav.plannerShort') }]),
-            { id: 'corrector' as const, icon: <CheckSquare size={20} />, label: t('nav.correctorShort') },
-            { id: 'library' as const, icon: <Library size={20} />, label: t('nav.libraryShort') },
-          ] as const
-        ).map((item) => (
-          <button
+      <nav
+        inert={showMobileMenu || undefined}
+        className="md:hidden flex items-center bg-white dark:bg-slate-900 border-t border-black/5 dark:border-white/5 shrink-0 safe-area-bottom"
+      >
+        {NAV_ITEMS.filter((item) => item.inBottomBar && (item.id !== 'planner' || !hidePlannerNav)).map((item) => (
+          <NavButton
             key={item.id}
+            variant="bottom"
+            active={activeTab === item.id}
             onClick={() => handleTabChange(item.id)}
-            className={cn(
-              "flex-1 flex flex-col items-center gap-0.5 py-2 pt-3 transition-colors",
-              activeTab === item.id ? "text-emerald-600 dark:text-emerald-400" : "text-stone-400 dark:text-stone-500"
-            )}
-          >
-            {item.icon}
-            <span className="text-[10px] font-medium">{item.label}</span>
-          </button>
+            icon={<item.Icon size={20} />}
+            label={t(item.shortLabelKey)}
+          />
         ))}
-        <button
+        <NavButton
+          variant="bottom"
+          active={activeTab === 'info' || activeTab === 'subscription' || activeTab === 'contact' || activeTab === 'teacher'}
           onClick={() => setShowMobileMenu(true)}
-          className={cn(
-            "flex-1 flex flex-col items-center gap-0.5 py-2 pt-3 transition-colors",
-            (activeTab === 'info' || activeTab === 'subscription' || activeTab === 'contact' || activeTab === 'teacher') ? "text-emerald-600 dark:text-emerald-400" : "text-stone-400 dark:text-stone-500"
-          )}
-        >
-          <Menu size={20} />
-          <span className="text-[10px] font-medium">{t('nav.more')}</span>
-        </button>
+          icon={<Menu size={20} />}
+          label={t('nav.more')}
+        />
       </nav>
 
       {/* Mobile Slide-in Menu */}
       {showMobileMenu && (
-        <div className="md:hidden fixed inset-0 z-50 flex">
+        <div className="md:hidden fixed inset-0 z-50 flex" role="dialog" aria-modal="true" aria-labelledby="mobile-menu-title">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowMobileMenu(false)} />
-          <div className="relative ml-auto w-[300px] max-w-[85vw] self-stretch min-h-0 max-h-dvh bg-white dark:bg-slate-900 flex flex-col shadow-xl animate-in slide-in-from-right duration-200">
+          <div
+            ref={mobileMenuRef}
+            tabIndex={-1}
+            className="relative ml-auto w-[300px] max-w-[85vw] self-stretch min-h-0 max-h-dvh bg-white dark:bg-slate-900 flex flex-col shadow-xl animate-in slide-in-from-right duration-200 outline-none"
+          >
             <div className="flex shrink-0 items-center justify-between p-4 border-b border-black/5 dark:border-white/5">
-              <h2 className="font-serif italic text-lg">{t('nav.menu')}</h2>
-              <button onClick={() => setShowMobileMenu(false)} className="p-2 hover:bg-stone-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+              <h2 id="mobile-menu-title" className="font-serif italic text-lg">{t('nav.menu')}</h2>
+              <button
+                onClick={() => setShowMobileMenu(false)}
+                className="p-2 hover:bg-stone-100 dark:hover:bg-slate-800 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 dark:focus-visible:ring-emerald-800"
+                aria-label={t('common.close')}
+              >
                 <X size={20} className="text-stone-400" />
               </button>
             </div>
@@ -435,55 +428,50 @@ export default function Layout({
               </div>
 
               <div className="p-4 space-y-1 pb-6">
-              <button
+              <NavButton
+                variant="drawer"
+                layoutId="drawer-active-pill"
+                active={activeTab === 'info'}
                 onClick={() => handleTabChange('info')}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all text-sm",
-                  activeTab === 'info' ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-medium" : "text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800"
-                )}
-              >
-                <Info size={18} />
-                <span>{t('nav.info')}</span>
-              </button>
-              <button
+                icon={<Info size={18} />}
+                label={t('nav.info')}
+              />
+              <NavButton
+                variant="drawer"
+                layoutId="drawer-active-pill"
+                active={activeTab === 'subscription'}
                 onClick={() => handleTabChange('subscription')}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all text-sm",
-                  activeTab === 'subscription' ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-medium" : "text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800"
-                )}
-              >
-                <Crown size={18} />
-                <span>{t('nav.subscription')}</span>
-                <span className={cn(
-                  "ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
-                  subscriptionTier === 'free'
-                    ? "bg-stone-100 dark:bg-slate-800 text-stone-500 dark:text-stone-400"
-                    : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
-                )}>
-                  {subscriptionTier === 'free' ? t('subscription.free') : t('subscription.memberBadge')}
-                </span>
-              </button>
-              <button
+                icon={<Crown size={18} />}
+                label={t('nav.subscription')}
+                trailing={
+                  <span className={cn(
+                    "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
+                    subscriptionTier === 'free'
+                      ? "bg-stone-100 dark:bg-slate-800 text-stone-500 dark:text-stone-400"
+                      : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
+                  )}>
+                    {subscriptionTier === 'free' ? t('subscription.free') : t('subscription.memberBadge')}
+                  </span>
+                }
+              />
+              <NavButton
+                variant="drawer"
+                layoutId="drawer-active-pill"
+                active={activeTab === 'contact'}
                 onClick={() => handleTabChange('contact')}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all text-sm",
-                  activeTab === 'contact' ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-medium" : "text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800"
-                )}
-              >
-                <Mail size={18} />
-                <span>{t('nav.contact')}</span>
-              </button>
+                icon={<Mail size={18} />}
+                label={t('nav.contact')}
+              />
               {showAdminNav && (
-                <button
+                <NavButton
+                  variant="drawer"
+                  layoutId="drawer-active-pill"
+                  tone="admin"
+                  active={activeTab === 'admin'}
                   onClick={() => handleTabChange('admin')}
-                  className={cn(
-                    "w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all text-sm border border-dashed border-stone-200 dark:border-stone-600",
-                    activeTab === 'admin' ? "bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 font-medium" : "text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-slate-800"
-                  )}
-                >
-                  <BarChart3 size={18} />
-                  <span>{t('nav.admin')}</span>
-                </button>
+                  icon={<BarChart3 size={18} />}
+                  label={t('nav.admin')}
+                />
               )}
               {onShowInstallGuide && (
                 <button
@@ -555,6 +543,16 @@ export default function Layout({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {shareNotice && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[400] bg-stone-900 dark:bg-slate-100 text-white dark:text-stone-900 text-sm px-4 py-2.5 rounded-full shadow-xl animate-in fade-in slide-in-from-bottom-2"
+        >
+          {shareNotice}
         </div>
       )}
     </div>

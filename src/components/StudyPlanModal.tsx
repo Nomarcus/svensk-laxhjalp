@@ -1,5 +1,6 @@
 import { X, Printer, Loader2, Sparkles } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { useDialogA11y } from '../hooks/useDialogA11y';
 
 interface StudyPlanModalProps {
   content: string | null;
@@ -8,6 +9,8 @@ interface StudyPlanModalProps {
 }
 
 export default function StudyPlanModal({ content, loading, onClose }: StudyPlanModalProps) {
+  const containerRef = useDialogA11y<HTMLDivElement>(true, onClose);
+
   const handlePrint = () => {
     if (!content) return;
     const printWindow = window.open('', '_blank');
@@ -30,29 +33,39 @@ export default function StudyPlanModal({ content, loading, onClose }: StudyPlanM
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="study-plan-title"
+      onClick={onClose}
+    >
       <div
-        className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[80vh] flex flex-col"
+        ref={containerRef}
+        tabIndex={-1}
+        className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[80vh] flex flex-col outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-6 border-b border-black/5">
           <div className="flex items-center gap-2">
             <Sparkles size={20} className="text-emerald-600" />
-            <h2 className="text-lg font-bold text-stone-800">Smart studieplan</h2>
+            <h2 id="study-plan-title" className="text-lg font-bold text-stone-800">Smart studieplan</h2>
           </div>
           <div className="flex items-center gap-2">
             {content && (
               <button
                 onClick={handlePrint}
-                className="p-2 text-stone-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-colors"
+                className="p-2 text-stone-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-200"
                 title="Skriv ut"
+                aria-label="Skriv ut"
               >
                 <Printer size={18} />
               </button>
             )}
             <button
               onClick={onClose}
-              className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-xl transition-colors"
+              className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-300"
+              aria-label="Stäng"
             >
               <X size={18} />
             </button>
