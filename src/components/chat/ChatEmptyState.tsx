@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Bot } from 'lucide-react';
+import { BookOpenCheck, Camera, CalendarCheck, HeartHandshake } from 'lucide-react';
 
 interface ChatEmptyStateProps {
   childName: string;
@@ -19,14 +19,31 @@ export default function ChatEmptyState({ childName, onSendStarter }: ChatEmptySt
 
   return (
     <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto py-12">
-      <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 mb-6">
-        <Bot size={32} />
+      <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600 mb-5 shadow-sm ring-1 ring-emerald-200/70">
+        <HeartHandshake size={32} />
       </div>
+      <p className="text-xs uppercase tracking-[0.24em] text-emerald-700 font-semibold mb-2">
+        {t('chatEmpty.kicker')}
+      </p>
       <h2 className="text-2xl font-serif italic mb-2">{t('chatEmpty.helpWith', { name: childName })}</h2>
-      <p className="text-stone-500 mb-4">
+      <p className="text-stone-500 mb-5">
         {t('chatEmpty.description', { name: childName })}
       </p>
-      <p className="text-stone-400 text-sm mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full mb-7 text-left">
+        <div className="rounded-2xl bg-white border border-black/5 p-3 shadow-sm">
+          <BookOpenCheck size={18} className="text-emerald-600 mb-2" />
+          <p className="text-xs font-medium text-stone-700">{t('chatEmpty.cardExplain')}</p>
+        </div>
+        <div className="rounded-2xl bg-white border border-black/5 p-3 shadow-sm">
+          <Camera size={18} className="text-emerald-600 mb-2" />
+          <p className="text-xs font-medium text-stone-700">{t('chatEmpty.cardPhoto')}</p>
+        </div>
+        <div className="rounded-2xl bg-white border border-black/5 p-3 shadow-sm">
+          <CalendarCheck size={18} className="text-emerald-600 mb-2" />
+          <p className="text-xs font-medium text-stone-700">{t('chatEmpty.cardPlan')}</p>
+        </div>
+      </div>
+      <p className="text-stone-400 text-sm mb-4">
         {t('chatEmpty.tryClicking')}
       </p>
       <div className="flex flex-wrap justify-center gap-2">

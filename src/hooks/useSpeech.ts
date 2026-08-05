@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { requestPremiumTts } from '../services/geminiService';
-import { listeningPreview, stripMarkdownForListen } from '../utils/listeningPreview';
+import { PREMIUM_TTS_SAFE_CHAR_LIMIT, listeningText, stripMarkdownForListen } from '../utils/listeningPreview';
 import { bumpUsageRefresh } from '../utils/usageRefresh';
 
 const LANG_MAP: Record<string, string> = {
@@ -193,26 +193,33 @@ export function useSpeech() {
       chunksRef.current = [];
       playbackKindRef.current = null;
 
-      const preview = listeningPreview(text);
-      if (!preview.trim()) {
+      const readableText = listeningText(text);
+      if (!readableText.trim()) {
         setTtsNotice(t('chat.listenNothingToRead'));
         return;
       }
 
-      const chunks = splitIntoChunks(preview);
+      const chunks = splitIntoChunks(readableText);
       if (chunks.length === 0) {
         setTtsNotice(t('chat.listenNothingToRead'));
         return;
       }
 
+      // Premium-TTS på servern har en säker teckengräns. För längre svar använder vi
+      // webbläsarens röst direkt så uppläsningen fortsätter genom hela texten.
+      if (readableText.length > PREMIUM_TTS_SAFE_CHAR_LIMIT) {
+        speakBrowser(readableText, lang);
+        return;
+      }
+
       // Om servern redan sagt "inte konfigurerad" i denna session — hoppa över onödig round-trip.
       if (premiumUnavailableForSession) {
-        speakBrowser(preview, lang);
+        speakBrowser(readableText, lang);
         return;
       }
 
       try {
-        const resp = await requestPremiumTts(preview, lang);
+        const resp = await requestPremiumTts(readableText, lang);
         if (resp.ok) {
           const blob = await resp.blob();
           bumpUsageRefresh();
@@ -246,7 +253,7 @@ export function useSpeech() {
           };
           audio.onerror = () => {
             cleanupAi();
-            speakBrowser(preview, lang);
+            speakBrowser(readableText, lang);
           };
 
           await audio.play();
@@ -255,7 +262,7 @@ export function useSpeech() {
 
         if (resp.status === 403) {
           setTtsNotice(t('chat.aiVoiceDailyUsed'));
-          speakBrowser(preview, lang);
+          speakBrowser(readableText, lang);
           return;
         }
 
@@ -264,9 +271,9 @@ export function useSpeech() {
           premiumUnavailableForSession = true;
         }
 
-        speakBrowser(preview, lang);
+        speakBrowser(readableText, lang);
       } catch {
-        speakBrowser(preview, lang);
+        speakBrowser(readableText, lang);
       }
     },
     [cleanupAi, clearTtsNotice, speakBrowser, t]
