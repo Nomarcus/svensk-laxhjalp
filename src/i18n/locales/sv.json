@@ -157,7 +157,7 @@
     "slide4Desc": "Pedagogiska bilder som gör det enklare att förstå svåra koncept."
   },
   "chat": {
-    "chatWith": "Chatt med {{name}}",
+    "chatWith": "Läxguide för {{name}}",
     "activeSession": "Aktiv session",
     "simpleSwedish": "Enkel svenska",
     "simpleSwedishTooltip": "Enkel svenska — svar skrivs med enkla ord och korta meningar",
@@ -256,22 +256,34 @@
     "resume": "Fortsätt",
     "nextChunk": "Nästa",
     "chunkProgress": "Stycke {{current}} av {{total}}",
-    "listenHint": "Läser upp en kort inledning (premium Google-röst) så ni kommer igång — inte hela svaret. Vid fel används webbläsarens röst.",
+    "listenHint": "Läser upp hela svaret. Långa svar läses med webbläsarens röst så texten inte bryts.",
     "listenNothingToRead": "Inget att läsa upp i det här svaret.",
     "aiVoiceDailyUsed": "Vi använder webbläsarens röst istället.",
     "noSpeechInBrowser": "Webbläsaren har ingen inbyggd uppläsning här, och AI-rösten för idag är förbrukad.",
     "dismissVoiceNotice": "Stäng",
-    "imageActionExtraInstruction": "Extra instruktion från användaren"
+    "imageActionExtraInstruction": "Extra instruktion från användaren",
+    "learningGuide": "Tryggt stöd för vuxna hemma",
+    "imageStepPhoto": "Bild vald",
+    "imageStepChoose": "Välj hjälp",
+    "imageStepSend": "Skicka",
+    "imageActionRecommendation": "Osäker? Välj Förklara enkelt — då får du en lugn start.",
+    "nextStepTitle": "Nästa steg",
+    "nextStepHint": "Läs svaret tillsammans, prova en uppgift och spara till planeringen om ni vill fortsätta senare.",
+    "moreSupport": "Mer stöd"
   },
   "chatEmpty": {
     "helpWith": "Hjälp {{name}} med läxan",
-    "description": "Skriv en fråga eller ta ett foto på läxan så förklarar jag hur du kan hjälpa {{name}}. Du får pedagogiska tips anpassade efter svensk skola — inga färdiga svar, bara stöd för dig som förälder.",
+    "description": "Ett lugnt stöd för dig som vill hjälpa {{name}} hemma. Skriv en fråga eller fota läxan så får du en tydlig förklaring, tips på hur du kan prata med barnet och koppling till svensk skola.",
     "tryClicking": "Prova att klicka på ett förslag nedan:",
     "starter1": "Förklara fotosyntesen enkelt",
     "starter2": "Hjälp med multiplikationstabellen",
     "starter3": "Hur skriver man en bra berättelse?",
     "starter4": "Vad är ett verb?",
-    "starter5": "Berätta om rymden"
+    "starter5": "Berätta om rymden",
+    "kicker": "Föräldrahjälpen",
+    "cardExplain": "Förklarar steg för steg",
+    "cardPhoto": "Läser bilder på läxan",
+    "cardPlan": "Hjälper dig planera veckan"
   },
   "corrector": {
     "title": "Rätta läxan",
