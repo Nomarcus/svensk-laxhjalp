@@ -50,13 +50,14 @@ function trimHistoryForRequest(
 }
 import ChatHeader from './chat/ChatHeader';
 import ChatMessage from './chat/ChatMessage';
-import ChatInput from './chat/ChatInput';
+import ChatInput, { type HomeworkImageActionId } from './chat/ChatInput';
 import ChatEmptyState from './chat/ChatEmptyState';
 import { useSpeech } from '../hooks/useSpeech';
 import FreeTierUsageBar from './FreeTierUsageBar';
 import { bumpUsageRefresh } from '../utils/usageRefresh';
 
 const CHAT_MAX_IMAGES = 5;
+
 const FIRESTORE_IMAGE_SOFT_LIMIT_BYTES = 1024 * 1024;
 
 // Firestore rules count `string.size()` in UTF-8 bytes. Keep each saved AI
@@ -130,6 +131,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [images, setImages] = useState<string[]>([]);
+  const [selectedImageActionId, setSelectedImageActionId] = useState<HomeworkImageActionId | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [generatingImageId, setGeneratingImageId] = useState<string | null>(null);
   const generatingImageLockRef = useRef(false);
@@ -214,7 +216,12 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
 
   useEffect(() => {
     setStickyImageContext(null);
+    setSelectedImageActionId(null);
   }, [activeSessionId]);
+
+  useEffect(() => {
+    if (images.length === 0) setSelectedImageActionId(null);
+  }, [images.length]);
 
   useEffect(() => {
     if (!auth.currentUser || !childId) return;
@@ -530,7 +537,13 @@ ${requirementsText}`;
     opts?: { imageOverride?: ImageOverride; forceCoachMode?: boolean },
   ) => {
     if (typeof e !== 'string') e.preventDefault();
-    const messageText = typeof e === 'string' ? e : input.trim();
+    const typedText = typeof e === 'string' ? e : input.trim();
+    const imageActionId = typeof e === 'string' ? null : selectedImageActionId;
+    const imageActionPrompt = imageActionId ? t(`chat.imageActionPrompts.${imageActionId}`) : '';
+    const imageActionDisplayText = imageActionId ? t(`chat.imageActions.${imageActionId}`) : '';
+    const messageText = imageActionId
+      ? `${imageActionPrompt}${typedText.trim() ? `\n\n${t('chat.imageActionExtraInstruction')}: ${typedText.trim()}` : ''}`
+      : typedText;
     const override = opts?.imageOverride;
     const usingOverride = Boolean(override?.payload?.length);
     const effectiveCoachMode = opts?.forceCoachMode ?? coachMode;
@@ -542,14 +555,21 @@ ${requirementsText}`;
 
     if ((!messageText.trim() && !imagePayload.length) || loading || !auth.currentUser || !childId || !activeSessionId) return;
 
-    if (typeof e !== 'string') setInput('');
+    if (typeof e !== 'string') {
+      setInput('');
+      setSelectedImageActionId(null);
+    }
     if (!usingOverride) setImages([]);
 
     setLoading(true);
     setError(null);
     setStreamingModelText('');
 
-    const visibleText = displayText || messageText || t('chat.analyzeImage');
+    const visibleText = displayText || (
+      imageActionId
+        ? `${imageActionDisplayText}${typedText.trim() ? ` — ${typedText.trim()}` : ''}`
+        : messageText || t('chat.analyzeImage')
+    );
 
     try {
       const messagesRef = collection(db, 'users', ownerId, 'children', childId, 'chatSessions', activeSessionId, 'messages');
@@ -888,6 +908,9 @@ ${requirementsText}`;
         maxImages={CHAT_MAX_IMAGES}
         loading={loading}
         onSubmit={sendMessage}
+        selectedImageActionId={selectedImageActionId}
+        onImageActionSelect={setSelectedImageActionId}
+        onClearImageAction={() => setSelectedImageActionId(null)}
         coachMode={coachMode}
       />
 
