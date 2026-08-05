@@ -172,13 +172,14 @@ export default function PrivacyPolicy({ onBack }: PrivacyPolicyProps) {
               icon={<Trash2 size={18} />}
               title="Radering av konto och data"
             >
-              <p>Du kan när som helst begära att vi raderar ditt konto och all tillhörande data genom att:</p>
-              <ol className="list-decimal pl-5 space-y-1">
-                <li>Kontakta oss via e-post eller kontaktformuläret i appen.</li>
-                <li>Vi raderar alla dina data från Firebase inom 30 dagar.</li>
-                <li>Du får en bekräftelse när raderingen är genomförd.</li>
-              </ol>
+              <p>
+                Du kan när som helst radera ditt konto och all tillhörande data direkt i appen: gå till{' '}
+                <strong>Prenumeration</strong> och välj <strong>"Radera mitt konto"</strong> längst ner på sidan.
+                Raderingen sker omedelbart och tar automatiskt bort dina barn, chattar, rättningar, sparad
+                planering och eventuell prenumeration.
+              </p>
               <p className="text-sm text-stone-500 dark:text-stone-400 mt-2">
+                Du kan även kontakta oss via e-post eller kontaktformuläret om du behöver hjälp med raderingen.
                 Observera att radering av ditt konto är permanent och kan inte ångras.
               </p>
             </Section>

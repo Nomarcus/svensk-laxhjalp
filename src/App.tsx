@@ -1,14 +1,11 @@
-import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { auth, onAuthStateChanged, getRedirectResult, User, db, OperationType, handleFirestoreError } from './firebase';
 import { doc, setDoc, serverTimestamp, collection, onSnapshot, query, orderBy, collectionGroup, where, limit } from 'firebase/firestore';
 import Auth from './components/Auth';
 import Layout from './components/Layout';
 import Chat from './components/Chat';
-import Planner from './components/Planner';
-import HomeworkCorrector from './components/HomeworkCorrector';
 import Info from './components/Info';
-import Library from './components/Library';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import ChildManager from './components/ChildManager';
 import { Loader2 } from 'lucide-react';
@@ -20,16 +17,10 @@ import InstallPrompt, { InstallGuide } from './components/InstallPrompt';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import Subscription from './components/Subscription';
 import Contact from './components/Contact';
-import Admin from './components/Admin';
 import { shouldShowAdminNav } from './utils/adminClient';
 import CookieConsent from './components/CookieConsent';
 import Terms from './components/Terms';
 import { useTheme } from './hooks/useTheme';
-import LaxhjalpForaldrarLanding from './components/LaxhjalpForaldrarLanding';
-import LaxhjalpLarareLanding from './components/LaxhjalpLarareLanding';
-import AiLaxhjalpLanding from './components/AiLaxhjalpLanding';
-import MatteLanding from './components/MatteLanding';
-import OnlineLanding from './components/OnlineLanding';
 import {
   AI_LAXHJALP_PATH,
   LANDING_PATHS,
@@ -37,8 +28,30 @@ import {
   LAXHJALP_LARARE_PATH,
   LAXHJALP_MATTE_PATH,
   LAXHJALP_ONLINE_PATH,
+  PRIVACY_PATH,
+  TERMS_PATH,
   normalizePathname,
 } from './routes';
+
+// Code-split heavy, non-default-tab feature areas and the SEO landing pages
+// (only ever shown to logged-out visitors) out of the main bundle.
+const Planner = lazy(() => import('./components/Planner'));
+const HomeworkCorrector = lazy(() => import('./components/HomeworkCorrector'));
+const Library = lazy(() => import('./components/Library'));
+const Admin = lazy(() => import('./components/Admin'));
+const LaxhjalpForaldrarLanding = lazy(() => import('./components/LaxhjalpForaldrarLanding'));
+const LaxhjalpLarareLanding = lazy(() => import('./components/LaxhjalpLarareLanding'));
+const AiLaxhjalpLanding = lazy(() => import('./components/AiLaxhjalpLanding'));
+const MatteLanding = lazy(() => import('./components/MatteLanding'));
+const OnlineLanding = lazy(() => import('./components/OnlineLanding'));
+
+function PageLoader() {
+  return (
+    <div className="min-h-screen app-soft-bg dark:bg-slate-950 flex items-center justify-center">
+      <div className="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
 import {
   applyAiLaxhjalpSeo,
   applyHomeSeo,
@@ -398,77 +411,105 @@ export default function App() {
     );
   }
 
-  if (showPrivacy) {
-    return <PrivacyPolicy onBack={() => setShowPrivacy(false)} />;
+  if (showPrivacy || routePath === PRIVACY_PATH) {
+    return (
+      <PrivacyPolicy
+        onBack={() => {
+          setShowPrivacy(false);
+          if (routePath === PRIVACY_PATH) goToPath('/');
+        }}
+      />
+    );
   }
 
-  if (showTerms) {
-    return <Terms onBack={() => setShowTerms(false)} />;
+  if (showTerms || routePath === TERMS_PATH) {
+    return (
+      <Terms
+        onBack={() => {
+          setShowTerms(false);
+          if (routePath === TERMS_PATH) goToPath('/');
+        }}
+      />
+    );
   }
 
   if (!user && routePath === LAXHJALP_FORALDRAR_PATH) {
     return (
-      <LaxhjalpForaldrarLanding
-        onGetStarted={() => goToPath('/')}
-        onShowPrivacy={() => setShowPrivacy(true)}
-        onShowTerms={() => setShowTerms(true)}
-        dark={dark}
-        onToggleDark={toggleDark}
-      />
+      <Suspense fallback={<PageLoader />}>
+        <LaxhjalpForaldrarLanding
+          onGetStarted={() => goToPath('/')}
+          onShowPrivacy={() => setShowPrivacy(true)}
+          onShowTerms={() => setShowTerms(true)}
+          dark={dark}
+          onToggleDark={toggleDark}
+        />
+      </Suspense>
     );
   }
 
   if (!user && routePath === LAXHJALP_LARARE_PATH) {
     return (
-      <LaxhjalpLarareLanding
-        onGetStarted={() => goToPath('/')}
-        onShowPrivacy={() => setShowPrivacy(true)}
-        onShowTerms={() => setShowTerms(true)}
-        dark={dark}
-        onToggleDark={toggleDark}
-      />
+      <Suspense fallback={<PageLoader />}>
+        <LaxhjalpLarareLanding
+          onGetStarted={() => goToPath('/')}
+          onShowPrivacy={() => setShowPrivacy(true)}
+          onShowTerms={() => setShowTerms(true)}
+          dark={dark}
+          onToggleDark={toggleDark}
+        />
+      </Suspense>
     );
   }
 
   if (!user && routePath === AI_LAXHJALP_PATH) {
     return (
-      <AiLaxhjalpLanding
-        onGetStarted={() => goToPath('/')}
-        onShowPrivacy={() => setShowPrivacy(true)}
-        onShowTerms={() => setShowTerms(true)}
-        dark={dark}
-        onToggleDark={toggleDark}
-      />
+      <Suspense fallback={<PageLoader />}>
+        <AiLaxhjalpLanding
+          onGetStarted={() => goToPath('/')}
+          onShowPrivacy={() => setShowPrivacy(true)}
+          onShowTerms={() => setShowTerms(true)}
+          dark={dark}
+          onToggleDark={toggleDark}
+        />
+      </Suspense>
     );
   }
 
   if (!user && routePath === LAXHJALP_MATTE_PATH) {
     return (
-      <MatteLanding
-        onGetStarted={() => goToPath('/')}
-        onShowPrivacy={() => setShowPrivacy(true)}
-        onShowTerms={() => setShowTerms(true)}
-        dark={dark}
-        onToggleDark={toggleDark}
-      />
+      <Suspense fallback={<PageLoader />}>
+        <MatteLanding
+          onGetStarted={() => goToPath('/')}
+          onShowPrivacy={() => setShowPrivacy(true)}
+          onShowTerms={() => setShowTerms(true)}
+          dark={dark}
+          onToggleDark={toggleDark}
+        />
+      </Suspense>
     );
   }
 
   if (!user && routePath === LAXHJALP_ONLINE_PATH) {
     return (
-      <OnlineLanding
-        onGetStarted={() => goToPath('/')}
-        onShowPrivacy={() => setShowPrivacy(true)}
-        onShowTerms={() => setShowTerms(true)}
-        dark={dark}
-        onToggleDark={toggleDark}
-      />
+      <Suspense fallback={<PageLoader />}>
+        <OnlineLanding
+          onGetStarted={() => goToPath('/')}
+          onShowPrivacy={() => setShowPrivacy(true)}
+          onShowTerms={() => setShowTerms(true)}
+          dark={dark}
+          onToggleDark={toggleDark}
+        />
+      </Suspense>
     );
   }
 
   if (!user) {
     if (new URLSearchParams(window.location.search).get('admin') === '1') {
-      return <Admin standalone />;
+      return (
+        <Suspense fallback={<PageLoader />}>
+          <Admin standalone />
+        </Suspense>
+      );
     }
     return (
       <Auth
@@ -500,6 +541,7 @@ export default function App() {
         onToggleDark={toggleDark}
         showAdminNav={shouldShowAdminNav(user.uid, user.email)}
       >
+        <Suspense fallback={<PageLoader />}>
         {activeTab === 'contact' ? (
           <Contact />
         ) : activeTab === 'subscription' ? (
@@ -587,6 +629,7 @@ export default function App() {
             )}
           </>
         )}
+        </Suspense>
       </Layout>
 
       {showChildManager && (

@@ -562,6 +562,16 @@
     "supportCompanyBody": "Föräldrahjälpen is run as a business and helps Swedish parents with their children’s homework. If you’d like to give extra support beyond a subscription, you’re welcome to Swish any amount you like.",
     "swishComingSoon": "Coming soon",
     "swishNumberNote": "Swish number will be added shortly",
+    "manageSubscription": "Manage subscription",
+    "portalLoading": "Opening...",
+    "portalError": "Could not open the subscription portal. Please try again.",
+    "dangerZoneTitle": "Delete account",
+    "dangerZoneBody": "This permanently deletes your account, all children, chats, corrections and saved planning. This cannot be undone.",
+    "deleteAccountButton": "Delete my account",
+    "deleteAccountConfirm": "Are you absolutely sure? Your account and all data will be permanently deleted and cannot be restored.",
+    "deleteAccountConfirmCta": "Yes, delete everything",
+    "deleteAccountInProgress": "Deleting...",
+    "deleteAccountError": "Could not delete the account. Please try again or contact us.",
     "stripeAnonymous": "Sign in to subscribe. Create an account or sign in with email.",
     "stripeEmailRequired": "A subscription needs an account with email so the purchase is linked to the right user.",
     "stripeDisabled": "Payments are under construction – the service is completely free right now.",
@@ -813,6 +823,7 @@
     "cancel": "Cancel",
     "delete": "Delete",
     "back": "Back",
-    "user": "User"
+    "user": "User",
+    "offlineNotice": "You're offline. Some features may be unavailable until the connection returns."
   }
 }

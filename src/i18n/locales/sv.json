@@ -568,6 +568,16 @@
     "supportCompanyBody": "Föräldrahjälpen drivs av ett företag och hjälper svenska föräldrar med barnens läxor. Vill du ge ett extra stöd utöver abonnemanget går det bra att swisha en valfri summa.",
     "swishComingSoon": "Kommer snart",
     "swishNumberNote": "Swish-nummer läggs till inom kort",
+    "manageSubscription": "Hantera prenumeration",
+    "portalLoading": "Öppnar...",
+    "portalError": "Kunde inte öppna abonnemangsportalen. Försök igen.",
+    "dangerZoneTitle": "Radera konto",
+    "dangerZoneBody": "Detta raderar permanent ditt konto, alla barn, chattar, rättningar och sparad planering. Går inte att ångra.",
+    "deleteAccountButton": "Radera mitt konto",
+    "deleteAccountConfirm": "Är du helt säker? Ditt konto och all data raderas permanent och kan inte återställas.",
+    "deleteAccountConfirmCta": "Ja, radera allt",
+    "deleteAccountInProgress": "Raderar...",
+    "deleteAccountError": "Kunde inte radera kontot. Försök igen eller kontakta oss.",
     "stripeAnonymous": "Betalning kräver inloggning. Skapa konto eller logga in med e-post för att kunna abonnera.",
     "stripeEmailRequired": "Abonnemang kräver ett konto med e-post så köpet kopplas till rätt användare.",
     "stripeDisabled": "Betalningar är under uppbyggnad – tjänsten är helt gratis just nu.",
@@ -819,6 +829,7 @@
     "cancel": "Avbryt",
     "delete": "Ta bort",
     "back": "Tillbaka",
-    "user": "Användare"
+    "user": "Användare",
+    "offlineNotice": "Du är offline. Vissa funktioner kan vara otillgängliga tills anslutningen återkommer."
   }
 }

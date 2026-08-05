@@ -13,6 +13,7 @@ import { aiRouter } from './routes/ai';
 import { ttsRouter } from './routes/tts';
 import { billingRouter, stripeWebhookHandler } from './routes/billing';
 import { adminRouter } from './routes/admin';
+import { accountRouter } from './routes/account';
 
 const app = express();
 app.set('trust proxy', true);
@@ -113,6 +114,7 @@ app.use('/api', limiter);
 app.use('/api', authMiddleware);
 app.use('/api', uidLimiter);
 app.use('/api', billingRouter);           // After auth, before subscription check
+app.use('/api', accountRouter);           // Self-service account deletion
 app.use('/api', adminRouter);             // Sole-owner analytics (requires ADMIN_UID)
 app.use('/api', subscriptionMiddleware);  // After billing, before AI routes
 app.use('/api', ttsRouter);
