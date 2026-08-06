@@ -30,7 +30,7 @@ export default function ChatHeader({
 }: ChatHeaderProps) {
   const { t } = useTranslation();
   return (
-    <div className="px-4 py-3 md:px-8 md:py-4 bg-white dark:bg-slate-900 border-b border-black/5 dark:border-white/5 flex items-center justify-between">
+    <div className="px-4 py-3 md:px-8 md:py-4 bg-white dark:bg-slate-900 border-b border-black/5 dark:border-white/5 flex items-center justify-between safe-area-top">
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/50 rounded-xl flex items-center justify-center text-emerald-600 dark:text-emerald-400">
           <BookOpenCheck size={18} />
@@ -52,7 +52,7 @@ export default function ChatHeader({
               </select>
             )}
           </div>
-          <p className="text-[10px] text-stone-500 uppercase tracking-wider">{t('chat.learningGuide')}</p>
+          <p className="hidden sm:block text-[10px] text-stone-500 uppercase tracking-wider">{t('chat.learningGuide')}</p>
         </div>
       </div>
       <div className="flex items-center gap-2 flex-wrap justify-end">

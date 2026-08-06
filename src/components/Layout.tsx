@@ -301,36 +301,41 @@ export default function Layout({
         </div>
       </aside>
 
-      {/* Mobile Top Bar */}
-      <header
-        inert={showMobileMenu || undefined}
-        className="md:hidden flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-900 border-b border-black/5 dark:border-white/5 shrink-0 safe-area-top"
-      >
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-emerald-600 rounded-lg flex items-center justify-center text-white">
-            <BookOpen size={16} />
+      {/* Mobile Top Bar — hidden on the Chat tab: ChatHeader already shows the current
+          child's name, and the bottom-nav "Mer" button opens the same drawer (incl. the
+          child switcher), so this row is redundant there and only costs vertical space
+          on the tightest mobile screen. */}
+      {activeTab !== 'chat' && (
+        <header
+          inert={showMobileMenu || undefined}
+          className="md:hidden flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-900 border-b border-black/5 dark:border-white/5 shrink-0 safe-area-top"
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-emerald-600 rounded-lg flex items-center justify-center text-white">
+              <BookOpen size={16} />
+            </div>
+            <span className="font-serif italic text-lg">{t('app.name')}</span>
           </div>
-          <span className="font-serif italic text-lg">{t('app.name')}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {(selectedChild || activeTab === 'teacher') && (
+          <div className="flex items-center gap-2">
+            {(selectedChild || activeTab === 'teacher') && (
+              <button
+                onClick={() => setShowMobileMenu(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-50 dark:bg-slate-800 rounded-full text-sm border border-black/5 dark:border-white/5"
+              >
+                <UserIcon size={14} className="text-emerald-600 dark:text-emerald-400" />
+                <span className="font-medium max-w-[100px] truncate">{headerChildTitle}</span>
+              </button>
+            )}
             <button
               onClick={() => setShowMobileMenu(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-50 dark:bg-slate-800 rounded-full text-sm border border-black/5 dark:border-white/5"
+              className="p-2 text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-slate-800 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 dark:focus-visible:ring-emerald-800"
+              aria-label={t('nav.menu')}
             >
-              <UserIcon size={14} className="text-emerald-600 dark:text-emerald-400" />
-              <span className="font-medium max-w-[100px] truncate">{headerChildTitle}</span>
+              <Menu size={20} />
             </button>
-          )}
-          <button
-            onClick={() => setShowMobileMenu(true)}
-            className="p-2 text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-slate-800 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 dark:focus-visible:ring-emerald-800"
-            aria-label={t('nav.menu')}
-          >
-            <Menu size={20} />
-          </button>
-        </div>
-      </header>
+          </div>
+        </header>
+      )}
 
       {/* Main Content */}
       <main inert={showMobileMenu || undefined} className="flex-1 flex flex-col min-h-0 overflow-hidden">
