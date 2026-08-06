@@ -68,9 +68,9 @@ workflows:
 
     publishing:
       app_store_connect:
+        # Uses the integration named under "integrations" above —
+        # no need to repeat the name here.
         auth: integration
-        # Same integration name as above.
-        integration: foraldrahjalpen_appstore
         submit_to_testflight: true
         # Flip to true only once you're ready for Apple to auto-review
         # every build; keep false while you're still iterating.
