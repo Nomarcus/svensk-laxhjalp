@@ -54,6 +54,8 @@ Build outputs are created under `android/app/build/outputs/`.
 
 The project is also set up for iOS using Capacitor (`ios/` folder). Building and signing requires **macOS with Xcode** — none of this can be done from a Linux/CI-only environment.
 
+**No Mac?** See [`docs/APP_STORE_SUBMISSION.md`](docs/APP_STORE_SUBMISSION.md) for a full step-by-step path using [Codemagic](https://codemagic.io) (cloud CI that builds/signs/uploads the iOS app for you — a `codemagic.yaml` is already set up in the repo root) plus [`docs/APP_STORE_LISTING.md`](docs/APP_STORE_LISTING.md) for ready-to-paste App Store Connect listing text.
+
 ### Local iOS development (on a Mac)
 
 1. Install CocoaPods once: `sudo gem install cocoapods` (or `brew install cocoapods`).
