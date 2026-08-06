@@ -994,6 +994,7 @@ ${requirementsText}`;
         onImageActionSelect={setSelectedImageActionId}
         onClearImageAction={() => setSelectedImageActionId(null)}
         coachMode={coachMode}
+        hasMessages={displayMessages.length > 0}
       />
 
       {/* Task Picker Modal */}

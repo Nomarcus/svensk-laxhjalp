@@ -30,6 +30,7 @@ interface ChatInputProps {
   onImageActionSelect?: (actionId: HomeworkImageActionId) => void;
   onClearImageAction?: () => void;
   coachMode?: boolean;
+  hasMessages?: boolean;
 }
 
 const SpeechRecognitionAPI = typeof window !== 'undefined'
@@ -46,7 +47,7 @@ const homeworkImageActions = [
 
 export type HomeworkImageActionId = typeof homeworkImageActions[number]['id'];
 
-export default function ChatInput({ input, setInput, images, setImages, maxImages = 5, loading, onSubmit, selectedImageActionId, onImageActionSelect, onClearImageAction, coachMode = false }: ChatInputProps) {
+export default function ChatInput({ input, setInput, images, setImages, maxImages = 5, loading, onSubmit, selectedImageActionId, onImageActionSelect, onClearImageAction, coachMode = false, hasMessages = false }: ChatInputProps) {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -324,9 +325,11 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
             {t('chat.multiImageHint', { max: maxImages })}
           </p>
         )}
-        <p className="text-[11px] text-center text-emerald-700/80 dark:text-emerald-300/80 mt-2 font-medium">
-          {t('chat.parentReassurance', { defaultValue: 'Du behöver inte kunna allt själv — börja med en bild eller en enkel fråga.' })}
-        </p>
+        {!hasMessages && (
+          <p className="text-[11px] text-center text-emerald-700/80 dark:text-emerald-300/80 mt-2 font-medium">
+            {t('chat.parentReassurance', { defaultValue: 'Du behöver inte kunna allt själv — börja med en bild eller en enkel fråga.' })}
+          </p>
+        )}
         <p className="text-[10px] text-center text-stone-400 mt-1 uppercase tracking-widest">
           {t('chat.aiDisclaimer')}
         </p>
