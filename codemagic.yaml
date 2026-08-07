@@ -28,7 +28,11 @@ workflows:
       cocoapods: default
     triggering:
       events:
+        - push
         - tag
+      branch_patterns:
+        - pattern: "master"
+          include: true
       tag_patterns:
         - pattern: "ios-*"
           include: true
