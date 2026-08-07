@@ -23,7 +23,7 @@ workflows:
         BUNDLE_ID: "se.foraldrahjalpen.app"
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
-      node: 20.11.0
+      node: 20.19.0
       xcode: latest
       cocoapods: default
     triggering:
@@ -39,7 +39,11 @@ workflows:
       cancel_previous_builds: true
     scripts:
       - name: Install npm dependencies
-        script: npm ci
+        script: |
+          npm config set fetch-retries 5
+          npm config set fetch-retry-mintimeout 20000
+          npm config set fetch-retry-maxtimeout 120000
+          npm ci
 
       - name: Build web assets
         script: npm run build
