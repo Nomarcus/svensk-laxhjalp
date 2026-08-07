@@ -4,6 +4,7 @@ import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import {
   initializeAuth,
   browserLocalPersistence,
+  browserPopupRedirectResolver,
   GoogleAuthProvider,
   signInWithPopup,
   signInWithRedirect,
@@ -42,9 +43,10 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
+const isNativePlatform = Capacitor.isNativePlatform();
 const productionWebHosts = new Set(['foraldrahjalpen.se', 'www.foraldrahjalpen.se']);
 const isProductionWeb =
-  !Capacitor.isNativePlatform() &&
+  !isNativePlatform &&
   typeof window !== 'undefined' &&
   productionWebHosts.has(window.location.hostname);
 
@@ -62,11 +64,20 @@ export const db = initializeFirestore(
     localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
   },
 );
-export const auth = initializeAuth(app, {
-  // IndexedDB persistence can stall indefinitely inside a Capacitor WKWebView.
-  // localStorage-backed persistence is stable on iOS and still keeps sessions.
-  persistence: browserLocalPersistence,
-});
+export const auth = initializeAuth(
+  app,
+  isNativePlatform
+    ? {
+        // IndexedDB persistence can stall indefinitely inside a Capacitor WKWebView.
+        // localStorage-backed persistence is stable on iOS and still keeps sessions.
+        persistence: browserLocalPersistence,
+      }
+    : {
+        persistence: browserLocalPersistence,
+        // initializeAuth does not install popup/redirect support automatically.
+        popupRedirectResolver: browserPopupRedirectResolver,
+      },
+);
 export const googleProvider = new GoogleAuthProvider();
 
 function getAuthErrorCode(err: unknown): string {
@@ -86,7 +97,7 @@ function isMobileWebBrowser(): boolean {
 
 function canUseSameOriginRedirect(): boolean {
   return (
-    !Capacitor.isNativePlatform() &&
+    !isNativePlatform &&
     typeof window !== 'undefined' &&
     runtimeFirebaseConfig.authDomain === window.location.hostname
   );
@@ -106,17 +117,17 @@ async function getNativeGoogleCredential() {
 
 /** Use native Google auth in Capacitor and same-origin redirect on mobile web. */
 export const signInWithGoogle = async () => {
-  if (Capacitor.isNativePlatform()) {
+  if (isNativePlatform) {
     const credential = await getNativeGoogleCredential();
     return signInWithCredential(auth, credential);
   }
 
   if (isMobileWebBrowser() && canUseSameOriginRedirect()) {
-    return signInWithRedirect(auth, googleProvider);
+    return signInWithRedirect(auth, googleProvider, browserPopupRedirectResolver);
   }
 
   try {
-    return await signInWithPopup(auth, googleProvider);
+    return await signInWithPopup(auth, googleProvider, browserPopupRedirectResolver);
   } catch (e) {
     const code = getAuthErrorCode(e);
     if (
@@ -126,13 +137,17 @@ export const signInWithGoogle = async () => {
     ) {
       throw e;
     }
-    return signInWithRedirect(auth, googleProvider);
+    return signInWithRedirect(auth, googleProvider, browserPopupRedirectResolver);
   }
 };
 
-export { getRedirectResult };
+export const getGoogleRedirectResult = () =>
+  isNativePlatform
+    ? Promise.resolve(null)
+    : getRedirectResult(auth, browserPopupRedirectResolver);
+
 export const logout = async () => {
-  if (Capacitor.isNativePlatform()) {
+  if (isNativePlatform) {
     await FirebaseAuthentication.signOut().catch(() => undefined);
   }
   return signOut(auth);
@@ -156,14 +171,14 @@ export const linkGuestWithGoogle = async () => {
   if (!user || !user.isAnonymous) {
     return signInWithGoogle();
   }
-  if (Capacitor.isNativePlatform()) {
+  if (isNativePlatform) {
     const credential = await getNativeGoogleCredential();
     return linkWithCredential(user, credential);
   }
   if (isMobileWebBrowser() && canUseSameOriginRedirect()) {
-    return linkWithRedirect(user, googleProvider);
+    return linkWithRedirect(user, googleProvider, browserPopupRedirectResolver);
   }
-  return linkWithPopup(user, googleProvider);
+  return linkWithPopup(user, googleProvider, browserPopupRedirectResolver);
 };
 
 export const linkGuestWithEmail = async (email: string, password: string, displayName?: string) => {
