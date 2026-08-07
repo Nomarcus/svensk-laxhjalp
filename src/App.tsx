@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
-import { auth, onAuthStateChanged, getRedirectResult, User, db, OperationType, handleFirestoreError } from './firebase';
+import { auth, onAuthStateChanged, getGoogleRedirectResult, User, db, OperationType, handleFirestoreError } from './firebase';
 import { doc, setDoc, serverTimestamp, collection, onSnapshot, query, orderBy, collectionGroup, where, limit } from 'firebase/firestore';
 import Auth from './components/Auth';
 import Layout from './components/Layout';
@@ -132,7 +132,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    void getRedirectResult(auth).catch((error: unknown) => {
+    void getGoogleRedirectResult().catch((error: unknown) => {
       const code =
         error && typeof error === 'object' && 'code' in error
           ? String((error as { code?: unknown }).code ?? '')
