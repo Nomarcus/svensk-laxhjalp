@@ -44,7 +44,11 @@ export const db = initializeFirestore(
     localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
   },
 );
-export const auth = initializeAuth(app, {\n  // IndexedDB persistence can stall indefinitely inside a Capacitor WKWebView.\n  // localStorage-backed persistence is stable on iOS and still keeps sessions.\n  persistence: browserLocalPersistence,\n});
+export const auth = initializeAuth(app, {
+  // IndexedDB persistence can stall indefinitely inside a Capacitor WKWebView.
+  // localStorage-backed persistence is stable on iOS and still keeps sessions.
+  persistence: browserLocalPersistence,
+});
 export const googleProvider = new GoogleAuthProvider();
 
 function getAuthErrorCode(err: unknown): string {
