@@ -1,10 +1,13 @@
 import { initializeApp } from 'firebase/app';
+import { Capacitor } from '@capacitor/core';
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import {
   initializeAuth,
   browserLocalPersistence,
   GoogleAuthProvider,
   signInWithPopup,
   signInWithRedirect,
+  signInWithCredential,
   linkWithPopup,
   linkWithCredential,
   EmailAuthProvider,
@@ -59,8 +62,25 @@ function getAuthErrorCode(err: unknown): string {
   return '';
 }
 
-/** Popup first; redirect fallback when popup is blocked or fails (CSP, COOP, embedded WebViews, etc.). */
+async function getNativeGoogleCredential() {
+  const result = await FirebaseAuthentication.signInWithGoogle({ skipNativeAuth: true });
+  const idToken = result.credential?.idToken ?? null;
+  const accessToken = result.credential?.accessToken ?? null;
+  if (!idToken && !accessToken) {
+    const error = new Error('Google-inloggningen gav ingen giltig autentiseringsuppgift.');
+    Object.assign(error, { code: 'auth/credential-unavailable' });
+    throw error;
+  }
+  return GoogleAuthProvider.credential(idToken, accessToken);
+}
+
+/** Use the native Google account picker on iOS; keep the popup/redirect flow for web. */
 export const signInWithGoogle = async () => {
+  if (Capacitor.isNativePlatform()) {
+    const credential = await getNativeGoogleCredential();
+    return signInWithCredential(auth, credential);
+  }
+
   try {
     return await signInWithPopup(auth, googleProvider);
   } catch (e) {
@@ -73,7 +93,12 @@ export const signInWithGoogle = async () => {
 };
 
 export { getRedirectResult };
-export const logout = () => signOut(auth);
+export const logout = async () => {
+  if (Capacitor.isNativePlatform()) {
+    await FirebaseAuthentication.signOut().catch(() => undefined);
+  }
+  return signOut(auth);
+};
 
 export const signUpWithEmail = async (email: string, password: string, displayName?: string) => {
   const result = await createUserWithEmailAndPassword(auth, email, password);
@@ -92,6 +117,10 @@ export const linkGuestWithGoogle = async () => {
   const user = auth.currentUser;
   if (!user || !user.isAnonymous) {
     return signInWithGoogle();
+  }
+  if (Capacitor.isNativePlatform()) {
+    const credential = await getNativeGoogleCredential();
+    return linkWithCredential(user, credential);
   }
   return linkWithPopup(user, googleProvider);
 };
