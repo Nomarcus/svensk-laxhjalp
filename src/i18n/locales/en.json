@@ -77,6 +77,9 @@
     "accountExistsDifferentProvider": "This account already exists with another sign-in method. Sign in with that method first.",
     "networkRequestFailed": "Network error reaching the sign-in service. Check your connection and try again.",
     "internalError": "Sign-in failed (internal error). Refresh the page, try another browser, or use email sign-in.",
+    "webStorageUnsupported": "The browser blocked sign-in storage. Open the site directly in Safari and try again.",
+    "credentialUnavailable": "Google sign-in did not return a valid credential. Try again.",
+    "configurationNotFound": "Google sign-in is not fully configured for this website.",
     "generic": "Something went wrong. Try again."
   },
   "landing": {

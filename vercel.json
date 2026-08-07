@@ -11,6 +11,12 @@
       "maxDuration": 60
     }
   },
+  "rewrites": [
+    {
+      "source": "/__/auth/:path*",
+      "destination": "https://lead-agent-489101.firebaseapp.com/__/auth/:path*"
+    }
+  ],
   "headers": [
     {
       "source": "/assets/(.*)",
@@ -19,7 +25,7 @@
       ]
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!__/auth/).*)",
       "headers": [
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "X-Frame-Options", "value": "DENY" },
