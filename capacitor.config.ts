@@ -5,6 +5,10 @@ const config: CapacitorConfig = {
   appName: 'Föräldrahjälpen',
   webDir: 'dist',
   plugins: {
+    FirebaseAuthentication: {
+      skipNativeAuth: true,
+      providers: ['google.com'],
+    },
     // Route fetch/XMLHttpRequest through URLSession on iOS. This avoids
     // WebView CORS failures ("Load Failed") when calling the Cloud Run API.
     CapacitorHttp: {
