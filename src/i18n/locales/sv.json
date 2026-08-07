@@ -77,6 +77,9 @@
     "accountExistsDifferentProvider": "Kontot finns redan med en annan inloggningsmetod. Logga in med rätt metod först.",
     "networkRequestFailed": "Nätverksfel mot inloggningstjänsten. Kontrollera uppkoppling och försök igen.",
     "internalError": "Inloggningen misslyckades (internt fel). Uppdatera sidan, prova annan webbläsare eller använd e-postinloggning.",
+    "webStorageUnsupported": "Webbläsaren blockerade inloggningen. Öppna sidan direkt i Safari och försök igen.",
+    "credentialUnavailable": "Google-inloggningen gav ingen giltig inloggningsuppgift. Försök igen.",
+    "configurationNotFound": "Google-inloggningen är inte färdigkonfigurerad för den här webbplatsen.",
     "generic": "Något gick fel. Försök igen."
   },
   "landing": {

@@ -9,6 +9,7 @@ import {
   signInWithRedirect,
   signInWithCredential,
   linkWithPopup,
+  linkWithRedirect,
   linkWithCredential,
   EmailAuthProvider,
   getRedirectResult,
@@ -41,7 +42,20 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
-const app = initializeApp(firebaseConfig);
+const productionWebHosts = new Set(['foraldrahjalpen.se', 'www.foraldrahjalpen.se']);
+const isProductionWeb =
+  !Capacitor.isNativePlatform() &&
+  typeof window !== 'undefined' &&
+  productionWebHosts.has(window.location.hostname);
+
+// Firebase's redirect helper must share the app's origin on browsers that
+// block third-party storage (notably iOS Safari). Vercel transparently proxies
+// /__/auth/* to Firebase Hosting for these production hosts.
+const runtimeFirebaseConfig = isProductionWeb
+  ? { ...firebaseConfig, authDomain: window.location.hostname }
+  : firebaseConfig;
+
+const app = initializeApp(runtimeFirebaseConfig);
 export const db = initializeFirestore(
   app,
   {
@@ -62,6 +76,22 @@ function getAuthErrorCode(err: unknown): string {
   return '';
 }
 
+function isMobileWebBrowser(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return (
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
+}
+
+function canUseSameOriginRedirect(): boolean {
+  return (
+    !Capacitor.isNativePlatform() &&
+    typeof window !== 'undefined' &&
+    runtimeFirebaseConfig.authDomain === window.location.hostname
+  );
+}
+
 async function getNativeGoogleCredential() {
   const result = await FirebaseAuthentication.signInWithGoogle({ skipNativeAuth: true });
   const idToken = result.credential?.idToken ?? null;
@@ -74,21 +104,29 @@ async function getNativeGoogleCredential() {
   return GoogleAuthProvider.credential(idToken, accessToken);
 }
 
-/** Use the native Google account picker on iOS; keep the popup/redirect flow for web. */
+/** Use native Google auth in Capacitor and same-origin redirect on mobile web. */
 export const signInWithGoogle = async () => {
   if (Capacitor.isNativePlatform()) {
     const credential = await getNativeGoogleCredential();
     return signInWithCredential(auth, credential);
   }
 
+  if (isMobileWebBrowser() && canUseSameOriginRedirect()) {
+    return signInWithRedirect(auth, googleProvider);
+  }
+
   try {
     return await signInWithPopup(auth, googleProvider);
   } catch (e) {
     const code = getAuthErrorCode(e);
-    if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+    if (
+      !canUseSameOriginRedirect() ||
+      code === 'auth/popup-closed-by-user' ||
+      code === 'auth/cancelled-popup-request'
+    ) {
       throw e;
     }
-    await signInWithRedirect(auth, googleProvider);
+    return signInWithRedirect(auth, googleProvider);
   }
 };
 
@@ -121,6 +159,9 @@ export const linkGuestWithGoogle = async () => {
   if (Capacitor.isNativePlatform()) {
     const credential = await getNativeGoogleCredential();
     return linkWithCredential(user, credential);
+  }
+  if (isMobileWebBrowser() && canUseSameOriginRedirect()) {
+    return linkWithRedirect(user, googleProvider);
   }
   return linkWithPopup(user, googleProvider);
 };

@@ -78,6 +78,7 @@ export default function App() {
   const [showChildManager, setShowChildManager] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [redirectAuthError, setRedirectAuthError] = useState<unknown>(null);
   const [plannerPrefill, setPlannerPrefill] = useState<{
     subject: string;
     description: string;
@@ -131,7 +132,14 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    void getRedirectResult(auth).catch(() => {});
+    void getRedirectResult(auth).catch((error: unknown) => {
+      const code =
+        error && typeof error === 'object' && 'code' in error
+          ? String((error as { code?: unknown }).code ?? '')
+          : '';
+      console.error('[auth] Google redirect failed', { code });
+      setRedirectAuthError(error);
+    });
   }, []);
 
   useEffect(() => {
@@ -490,6 +498,7 @@ export default function App() {
         onToggleDark={toggleDark}
         onShowPrivacy={() => setShowPrivacy(true)}
         onShowTerms={() => setShowTerms(true)}
+        redirectError={redirectAuthError}
       />
     );
   }

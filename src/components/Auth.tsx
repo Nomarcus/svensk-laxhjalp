@@ -9,6 +9,7 @@ interface AuthProps {
   onShowTerms?: () => void;
   dark?: boolean;
   onToggleDark?: () => void;
+  redirectError?: unknown;
 }
 
 type AuthView = 'main' | 'email-login' | 'email-signup' | 'reset-password';
@@ -110,7 +111,7 @@ function AppSlideshow() {
   );
 }
 
-export default function Auth({ onShowPrivacy, onShowTerms, dark, onToggleDark }: AuthProps) {
+export default function Auth({ onShowPrivacy, onShowTerms, dark, onToggleDark, redirectError }: AuthProps) {
   const { t, i18n } = useTranslation();
   const [view, setView] = useState<AuthView>('main');
   const [email, setEmail] = useState('');
@@ -135,8 +136,12 @@ export default function Auth({ onShowPrivacy, onShowTerms, dark, onToggleDark }:
     setView(v);
   };
 
-  const handleError = (err: any) => {
-    const code = err?.code || '';
+  const handleError = (err: unknown) => {
+    const code =
+      err && typeof err === 'object' && 'code' in err
+        ? String((err as { code?: unknown }).code ?? '')
+        : '';
+    console.error('[auth] Sign-in failed', { code });
     const map: Record<string, string> = {
       'auth/email-already-in-use': t('authErrors.emailInUse'),
       'auth/invalid-email': t('authErrors.invalidEmail'),
@@ -153,9 +158,16 @@ export default function Auth({ onShowPrivacy, onShowTerms, dark, onToggleDark }:
       'auth/network-request-failed': t('authErrors.networkRequestFailed'),
       'auth/internal-error': t('authErrors.internalError'),
       'auth/cancelled-popup-request': t('authErrors.popupClosed'),
+      'auth/web-storage-unsupported': t('authErrors.webStorageUnsupported'),
+      'auth/credential-unavailable': t('authErrors.credentialUnavailable'),
+      'auth/configuration-not-found': t('authErrors.configurationNotFound'),
     };
     setError(map[code] || t('authErrors.generic'));
   };
+
+  useEffect(() => {
+    if (redirectError) handleError(redirectError);
+  }, [redirectError, i18n.language]);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
