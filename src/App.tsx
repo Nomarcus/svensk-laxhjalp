@@ -176,7 +176,15 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
+    // Never leave the native app on the startup spinner indefinitely if the
+    // embedded WebView delays Firebase's first auth-state callback.
+    const authStartupTimeout = window.setTimeout(() => {
+      setUser(auth.currentUser);
+      setLoading(false);
+    }, 6000);
+
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      window.clearTimeout(authStartupTimeout);
       userDocUnsubRef.current?.();
       userDocUnsubRef.current = null;
 
@@ -237,6 +245,7 @@ export default function App() {
     });
 
     return () => {
+      window.clearTimeout(authStartupTimeout);
       unsubscribeAuth();
       userDocUnsubRef.current?.();
       userDocUnsubRef.current = null;
