@@ -46,6 +46,9 @@ workflows:
           npm config set fetch-retry-maxtimeout 120000
           npm ci
 
+      - name: Type-check app
+        script: npm run lint
+
       - name: Build web assets
         script: npm run build
 
