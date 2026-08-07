@@ -22,6 +22,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>Kameran används för att fota läxor så AI:n kan hjälpa till att förklara eller rätta dem.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
