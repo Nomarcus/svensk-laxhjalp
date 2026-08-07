@@ -9,6 +9,9 @@ workflows:
       # Must match exactly, including capitalization.
       app_store_connect: "Codemagic"
     environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: se.foraldrahjalpen.app
       groups:
         # Codemagic → your app → Environment variables → create a group
         # named "firebase_web" (or change the name below) holding any
@@ -48,9 +51,6 @@ workflows:
       - name: Set up automatic code signing
         script: |
           keychain initialize
-          app-store-connect fetch-signing-files "$BUNDLE_ID" \
-            --type IOS_APP_STORE \
-            --create
           keychain add-certificates
           xcode-project use-profiles
 
