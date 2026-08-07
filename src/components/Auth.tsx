@@ -328,7 +328,7 @@ export default function Auth({ onShowPrivacy, onShowTerms, dark, onToggleDark }:
       <div className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-emerald-200/30 dark:bg-emerald-500/10 blur-3xl" />
       <div className="pointer-events-none absolute top-1/3 -left-24 h-72 w-72 rounded-full bg-blue-200/20 dark:bg-blue-500/10 blur-3xl" />
       {/* Hero section with login */}
-      <div className="relative flex flex-col lg:flex-row min-h-screen">
+      <div className="relative landing-hero-grid min-h-screen">
         <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
           {onToggleDark && (
             <button
@@ -349,9 +349,9 @@ export default function Auth({ onShowPrivacy, onShowTerms, dark, onToggleDark }:
             {t('language.betaNotice')}
           </div>
         )}
-        {/* Left side: Marketing hero (shown after the login card on mobile) */}
-        <div className="order-2 lg:order-1 flex-1 lg:w-1/2 flex flex-col justify-center p-6 md:p-10 lg:p-14 xl:p-20">
-          <div className="max-w-lg mx-auto w-full">
+        {/* Brand + headline: shown first on every breakpoint */}
+        <div className="landing-hero-brand flex flex-col justify-center p-6 md:p-10 lg:p-14 xl:p-20 lg:pb-0">
+          <div className="max-w-lg mx-auto w-full lg:mx-0">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-11 h-11 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-200">
                 <BookOpen size={22} />
@@ -359,53 +359,14 @@ export default function Auth({ onShowPrivacy, onShowTerms, dark, onToggleDark }:
               <span className="text-lg font-serif italic text-stone-900 dark:text-stone-100 drop-shadow-[0_2px_6px_rgba(15,23,42,0.12)]">{t('app.fullName')}</span>
             </div>
 
-            <h1 className="text-4xl md:text-5xl font-serif italic text-stone-900 dark:text-stone-100 mb-6 leading-tight drop-shadow-[0_4px_14px_rgba(15,23,42,0.18)]">
+            <h1 className="text-4xl md:text-5xl font-serif italic text-stone-900 dark:text-stone-100 leading-tight drop-shadow-[0_4px_14px_rgba(15,23,42,0.18)]">
               {t('landing.heroTitle')}
             </h1>
-            <div className="mb-6 rounded-2xl border border-emerald-200/80 dark:border-emerald-800/60 bg-emerald-50/80 dark:bg-emerald-950/40 px-4 py-3 shadow-[0_12px_26px_-20px_rgba(5,150,105,0.5)]">
-              <div className="mb-1 flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
-                <FileText size={16} />
-                <span className="text-sm font-semibold">{t('landing.missionTitle')}</span>
-              </div>
-              <p className="text-sm leading-relaxed text-emerald-900/90 dark:text-emerald-100/90">
-                {t('landing.missionText')}
-              </p>
-            </div>
-
-            {/* Trust badges */}
-            <div className="flex flex-wrap gap-3 mb-8">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50/85 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 rounded-full text-sm font-medium border border-emerald-100 dark:border-emerald-800/50 shadow-[0_8px_20px_-14px_rgba(5,150,105,0.45)]">
-                <CheckCircle size={14} /> {t('landing.freeToStart')}
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50/85 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium border border-blue-100 dark:border-blue-800/50 shadow-[0_8px_20px_-14px_rgba(37,99,235,0.45)]">
-                <GraduationCap size={14} /> {t('landing.linkedToLgr22')}
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50/85 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 rounded-full text-sm font-medium border border-amber-100 dark:border-amber-800/50 shadow-[0_8px_20px_-14px_rgba(217,119,6,0.45)]">
-                <Shield size={14} /> {t('landing.safeAndSecure')}
-              </span>
-            </div>
-
-            {/* Feature list */}
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { icon: <MessageSquare size={16} />, text: t('landing.featureAiHelp') },
-                { icon: <Camera size={16} />, text: t('landing.featurePhoto') },
-                { icon: <Calendar size={16} />, text: t('landing.featurePlanner') },
-                { icon: <Users size={16} />, text: t('landing.featureShare') },
-                { icon: <Sparkles size={16} />, text: t('landing.featureIllustrations') },
-                { icon: <Library size={16} />, text: t('landing.featureLibrary') },
-              ].map((f, i) => (
-                <div key={i} className="flex items-center gap-2 text-sm text-stone-600 dark:text-stone-300">
-                  <span className="text-emerald-600 dark:text-emerald-400">{f.icon}</span>
-                  {f.text}
-                </div>
-              ))}
-            </div>
           </div>
         </div>
 
-        {/* Right side: Login card (shown first on mobile so login is immediately visible) */}
-        <div className="order-1 lg:order-2 flex-1 lg:w-1/2 flex items-center justify-center p-6 md:p-10 lg:p-14 xl:p-20 bg-gradient-to-br from-white/70 via-white/40 to-emerald-50/40 dark:from-slate-900/80 dark:via-slate-900/50 dark:to-emerald-950/30">
+        {/* Login card: shown right after the headline, before the story/badges/features */}
+        <div className="landing-hero-login flex items-center justify-center p-6 md:p-10 lg:p-14 xl:p-20 bg-gradient-to-br from-white/70 via-white/40 to-emerald-50/40 dark:from-slate-900/80 dark:via-slate-900/50 dark:to-emerald-950/30">
           <div className="w-full max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm rounded-[32px] p-10 surface-card-strong text-center relative overflow-hidden dark:border dark:border-white/10">
             <div className="absolute top-0 left-0 w-full h-2 bg-emerald-600" />
 
@@ -449,6 +410,51 @@ export default function Auth({ onShowPrivacy, onShowTerms, dark, onToggleDark }:
                 {onShowPrivacy && <button onClick={onShowPrivacy} className="underline hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">{t('auth.privacyPolicy')}</button>}.
               </p>
             )}
+          </div>
+        </div>
+
+        {/* Story + badges + features: shown after the login card */}
+        <div className="landing-hero-story flex flex-col justify-center p-6 md:p-10 lg:p-14 xl:p-20 lg:pt-0">
+          <div className="max-w-lg mx-auto w-full lg:mx-0">
+            <div className="mb-6 rounded-2xl border border-emerald-200/80 dark:border-emerald-800/60 bg-emerald-50/80 dark:bg-emerald-950/40 px-4 py-3 shadow-[0_12px_26px_-20px_rgba(5,150,105,0.5)]">
+              <div className="mb-1 flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+                <FileText size={16} />
+                <span className="text-sm font-semibold">{t('landing.missionTitle')}</span>
+              </div>
+              <p className="text-sm leading-relaxed text-emerald-900/90 dark:text-emerald-100/90">
+                {t('landing.missionText')}
+              </p>
+            </div>
+
+            {/* Trust badges */}
+            <div className="flex flex-wrap gap-3 mb-8">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50/85 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 rounded-full text-sm font-medium border border-emerald-100 dark:border-emerald-800/50 shadow-[0_8px_20px_-14px_rgba(5,150,105,0.45)]">
+                <CheckCircle size={14} /> {t('landing.freeToStart')}
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50/85 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium border border-blue-100 dark:border-blue-800/50 shadow-[0_8px_20px_-14px_rgba(37,99,235,0.45)]">
+                <GraduationCap size={14} /> {t('landing.linkedToLgr22')}
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50/85 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 rounded-full text-sm font-medium border border-amber-100 dark:border-amber-800/50 shadow-[0_8px_20px_-14px_rgba(217,119,6,0.45)]">
+                <Shield size={14} /> {t('landing.safeAndSecure')}
+              </span>
+            </div>
+
+            {/* Feature list */}
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { icon: <MessageSquare size={16} />, text: t('landing.featureAiHelp') },
+                { icon: <Camera size={16} />, text: t('landing.featurePhoto') },
+                { icon: <Calendar size={16} />, text: t('landing.featurePlanner') },
+                { icon: <Users size={16} />, text: t('landing.featureShare') },
+                { icon: <Sparkles size={16} />, text: t('landing.featureIllustrations') },
+                { icon: <Library size={16} />, text: t('landing.featureLibrary') },
+              ].map((f, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm text-stone-600 dark:text-stone-300">
+                  <span className="text-emerald-600 dark:text-emerald-400">{f.icon}</span>
+                  {f.text}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

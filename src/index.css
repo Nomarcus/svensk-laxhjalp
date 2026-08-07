@@ -98,6 +98,35 @@
   border: 1px solid rgba(15, 23, 42, 0.08);
 }
 
+/* Landing page hero: brand+title, then login, then story/badges/features on
+   mobile; brand+story stacked in a left column with login on the right on
+   desktop. */
+.landing-hero-grid {
+  display: grid;
+  grid-template-areas: 'brand' 'login' 'story';
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 1024px) {
+  .landing-hero-grid {
+    grid-template-areas: 'brand login' 'story login';
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+  }
+}
+
+.landing-hero-brand {
+  grid-area: brand;
+}
+
+.landing-hero-login {
+  grid-area: login;
+}
+
+.landing-hero-story {
+  grid-area: story;
+}
+
 /* KaTeX (markdown-matte) — läsbar i mörkt läge */
 .dark .katex {
   color: rgb(231 229 228);
