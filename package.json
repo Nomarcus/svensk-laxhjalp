@@ -56,7 +56,8 @@
     "remark-math": "^6.0.0",
     "tailwind-merge": "^3.5.0",
     "tsx": "^4.21.0",
-    "vite": "^6.2.0"
+    "vite": "^6.2.0",
+    "@capacitor-firebase/authentication": "^8.3.0"
   },
   "engines": {
     "node": "20.x"
