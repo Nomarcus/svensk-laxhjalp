@@ -349,8 +349,8 @@ export default function Auth({ onShowPrivacy, onShowTerms, dark, onToggleDark }:
             {t('language.betaNotice')}
           </div>
         )}
-        {/* Left side: Marketing hero */}
-        <div className="flex-1 lg:w-1/2 flex flex-col justify-center p-6 md:p-10 lg:p-14 xl:p-20">
+        {/* Left side: Marketing hero (shown after the login card on mobile) */}
+        <div className="order-2 lg:order-1 flex-1 lg:w-1/2 flex flex-col justify-center p-6 md:p-10 lg:p-14 xl:p-20">
           <div className="max-w-lg mx-auto w-full">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-11 h-11 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-200">
@@ -404,8 +404,8 @@ export default function Auth({ onShowPrivacy, onShowTerms, dark, onToggleDark }:
           </div>
         </div>
 
-        {/* Right side: Login card */}
-        <div className="flex-1 lg:w-1/2 flex items-center justify-center p-6 md:p-10 lg:p-14 xl:p-20 bg-gradient-to-br from-white/70 via-white/40 to-emerald-50/40 dark:from-slate-900/80 dark:via-slate-900/50 dark:to-emerald-950/30">
+        {/* Right side: Login card (shown first on mobile so login is immediately visible) */}
+        <div className="order-1 lg:order-2 flex-1 lg:w-1/2 flex items-center justify-center p-6 md:p-10 lg:p-14 xl:p-20 bg-gradient-to-br from-white/70 via-white/40 to-emerald-50/40 dark:from-slate-900/80 dark:via-slate-900/50 dark:to-emerald-950/30">
           <div className="w-full max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm rounded-[32px] p-10 surface-card-strong text-center relative overflow-hidden dark:border dark:border-white/10">
             <div className="absolute top-0 left-0 w-full h-2 bg-emerald-600" />
 
