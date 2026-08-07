@@ -85,7 +85,8 @@ workflows:
         # Uses the integration named under "integrations" above —
         # no need to repeat the name here.
         auth: integration
-        submit_to_testflight: true
+        # Uploads remain available to the internal TestFlight group without beta review.
+        submit_to_testflight: false
         # Flip to true only once you're ready for Apple to auto-review
         # every build; keep false while you're still iterating.
         submit_to_app_store: false
