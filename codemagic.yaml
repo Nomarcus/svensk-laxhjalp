@@ -7,7 +7,7 @@ workflows:
       # Name of the "App Store Connect" integration you create under
       # Codemagic → Teams → Integrations → Apple Developer Portal.
       # Must match exactly, including capitalization.
-      app_store_connect: "foraldrahjalpen_appstore"
+      app_store_connect: "Codemagic"
     environment:
       groups:
         # Codemagic → your app → Environment variables → create a group
