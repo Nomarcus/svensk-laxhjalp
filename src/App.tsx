@@ -137,7 +137,7 @@ export default function App() {
         error && typeof error === 'object' && 'code' in error
           ? String((error as { code?: unknown }).code ?? '')
           : '';
-      console.error('[auth] Google redirect failed', { code });
+      console.error(`[auth] Google redirect failed: ${code || 'unknown'}`);
       setRedirectAuthError(error);
     });
   }, []);

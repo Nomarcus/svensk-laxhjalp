@@ -141,7 +141,7 @@ export default function Auth({ onShowPrivacy, onShowTerms, dark, onToggleDark, r
       err && typeof err === 'object' && 'code' in err
         ? String((err as { code?: unknown }).code ?? '')
         : '';
-    console.error('[auth] Sign-in failed', { code });
+    console.error(`[auth] Sign-in failed: ${code || 'unknown'}`);
     const map: Record<string, string> = {
       'auth/email-already-in-use': t('authErrors.emailInUse'),
       'auth/invalid-email': t('authErrors.invalidEmail'),
