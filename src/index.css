@@ -16,6 +16,14 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+.landing-hero-grid {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 1.5rem);
+}
+
+.landing-hero-grid > .absolute.top-4.right-4 {
+  top: calc(env(safe-area-inset-top, 0px) + 1rem);
+}
+
 /* Dark mode base */
 .dark {
   color-scheme: dark;
