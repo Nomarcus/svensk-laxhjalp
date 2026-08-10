@@ -38,6 +38,7 @@
   "auth": {
     "getStarted": "Kom igång",
     "createFreeAccount": "Skapa ett gratis konto och börja hjälpa ditt barn med läxorna idag.",
+    "loginApple": "Logga in med Apple",
     "loginGoogle": "Logga in med Google",
     "loginEmail": "Logga in med e-post",
     "loginGuest": "Testa anonym inloggning",
@@ -609,12 +610,6 @@
     "cancel": "Avbryt",
     "addChild": "Lägg till barn",
     "done": "Klar"
-  },
-  "cookie": {
-    "title": "Cookies & integritet",
-    "description": "Vi använder endast nödvändiga cookies för inloggning via Firebase. Inga spårningscookies eller tredjepartscookies används. Genom att fortsätta godkänner du detta.",
-    "accept": "Jag förstår",
-    "close": "Stäng"
   },
   "install": {
     "title": "Installera appen",

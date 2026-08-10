@@ -18,7 +18,6 @@ import PrivacyPolicy from './components/PrivacyPolicy';
 import Subscription from './components/Subscription';
 import Contact from './components/Contact';
 import { shouldShowAdminNav } from './utils/adminClient';
-import CookieConsent from './components/CookieConsent';
 import Terms from './components/Terms';
 import { useTheme } from './hooks/useTheme';
 import {
@@ -620,7 +619,6 @@ export default function App() {
 
       <InstallPrompt />
       {showInstallGuide && <InstallGuide onClose={() => setShowInstallGuide(false)} />}
-      <CookieConsent />
     </ErrorBoundary>
   );
 }
