@@ -76,7 +76,11 @@ workflows:
         script: |
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME"
+            --scheme "$XCODE_SCHEME" || {
+              echo "xcode-project build-ipa failed. Printing Xcode logs:"
+              find /tmp/xcodebuild_logs -type f -name "*.log" -maxdepth 2 -print -exec cat {} \;
+              exit 1
+            }
 
     artifacts:
       - build/ios/ipa/*.ipa
