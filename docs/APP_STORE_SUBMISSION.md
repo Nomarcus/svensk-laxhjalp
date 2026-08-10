@@ -1,5 +1,30 @@
 # App Store-inlämning — steg för steg
 
+> **STOPP före nästa inlämning:** Testa Apple-inloggningen i den deployade
+> webbappen och i TestFlight. Skicka inte in appen igen förrän båda flödena
+> öppnar Apple och slutför inloggningen utan `auth/operation-not-allowed`.
+
+## Apple-inloggning: obligatorisk konfiguration och releasekontroll
+
+Koden använder Firebase-providern `OAuthProvider('apple.com')` på webben och
+native Sign in with Apple i Capacitor. Apple-capabilityn i Developer Portal är
+inte tillräcklig för webbflödet. I **Firebase Console → Authentication →
+Sign-in method → Apple** måste Apple vara aktiverat och konfigurerat med rätt
+Service ID, Apple Team ID, Key ID och privat nyckel. Lägg även både
+`foraldrahjalpen.se` och `www.foraldrahjalpen.se` under Firebase Auths
+**Authorized domains**, och registrera Firebase callback-URL:en för projektet
+hos Apple.
+
+Releasekontroll:
+
+1. Bygg och deploya webbversionen efter konfigurationsändringen.
+2. Öppna ett privat webbläsarfönster på den deployade domänen.
+3. Klicka **Logga in med Apple** och verifiera att flödet går vidare till
+   `appleid.apple.com` (inte Google) och återvänder som inloggad.
+4. Upprepa i en TestFlight-build på en fysisk iPhone.
+5. Kontrollera konsolen: varken `auth/operation-not-allowed` eller ett
+   OAuth-redirectfel får förekomma innan App Store-inlämning.
+
 Den här guiden är uppdelad i vad som redan är klart i koden, och vad **du** måste
 göra själv (Apple kräver ditt eget Apple-ID, betalkort och juridiska godkännanden
 — det finns inget sätt att automatisera bort de stegen). Jag har försökt göra

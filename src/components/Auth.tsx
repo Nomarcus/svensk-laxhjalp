@@ -136,12 +136,12 @@ export default function Auth({ onShowPrivacy, onShowTerms, dark, onToggleDark, r
     setView(v);
   };
 
-  const handleError = (err: unknown) => {
+  const handleError = (err: unknown, provider?: 'Apple' | 'Google') => {
     const code =
       err && typeof err === 'object' && 'code' in err
         ? String((err as { code?: unknown }).code ?? '')
         : '';
-    console.error(`[auth] Sign-in failed: ${code || 'unknown'}`);
+    console.error(`[auth] ${provider ? `${provider} sign-in` : 'Sign-in'} failed: ${code || 'unknown'}`);
     const map: Record<string, string> = {
       'auth/email-already-in-use': t('authErrors.emailInUse'),
       'auth/invalid-email': t('authErrors.invalidEmail'),
@@ -227,7 +227,7 @@ export default function Auth({ onShowPrivacy, onShowTerms, dark, onToggleDark, r
         await signInWithGoogle();
       }
     } catch (err) {
-      handleError(err);
+      handleError(err, 'Google');
     } finally {
       setLoading(false);
     }
@@ -240,7 +240,7 @@ export default function Auth({ onShowPrivacy, onShowTerms, dark, onToggleDark, r
       if (auth.currentUser?.isAnonymous) await linkGuestWithApple();
       else await signInWithApple();
     } catch (err) {
-      handleError(err);
+      handleError(err, 'Apple');
     } finally {
       setLoading(false);
     }
