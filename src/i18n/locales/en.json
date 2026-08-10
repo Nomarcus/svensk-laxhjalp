@@ -38,6 +38,7 @@
   "auth": {
     "getStarted": "Get Started",
     "createFreeAccount": "Create a free account and start helping your child with homework today.",
+    "loginApple": "Sign in with Apple",
     "loginGoogle": "Sign in with Google",
     "loginEmail": "Sign in with email",
     "loginGuest": "Try anonymous sign in",
@@ -603,12 +604,6 @@
     "cancel": "Cancel",
     "addChild": "Add child",
     "done": "Done"
-  },
-  "cookie": {
-    "title": "Cookies & Privacy",
-    "description": "We only use necessary cookies for Firebase login. No tracking or third-party cookies are used. By continuing you accept this.",
-    "accept": "I understand",
-    "close": "Close"
   },
   "install": {
     "title": "Install App",

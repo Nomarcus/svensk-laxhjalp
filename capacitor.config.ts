@@ -7,7 +7,7 @@ const config: CapacitorConfig = {
   plugins: {
     FirebaseAuthentication: {
       skipNativeAuth: true,
-      providers: ['google.com'],
+      providers: ['apple.com', 'google.com'],
     },
     // Route fetch/XMLHttpRequest through URLSession on iOS. This avoids
     // WebView CORS failures ("Load Failed") when calling the Cloud Run API.

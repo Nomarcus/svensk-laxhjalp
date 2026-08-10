@@ -6,6 +6,7 @@ import {
   browserLocalPersistence,
   browserPopupRedirectResolver,
   GoogleAuthProvider,
+  OAuthProvider,
   signInWithPopup,
   signInWithRedirect,
   signInWithCredential,
@@ -79,6 +80,9 @@ export const auth = initializeAuth(
       },
 );
 export const googleProvider = new GoogleAuthProvider();
+export const appleProvider = new OAuthProvider('apple.com');
+appleProvider.addScope('email');
+appleProvider.addScope('name');
 
 function getAuthErrorCode(err: unknown): string {
   if (err && typeof err === 'object' && 'code' in err && typeof (err as { code: unknown }).code === 'string') {
@@ -114,6 +118,38 @@ async function getNativeGoogleCredential() {
   }
   return GoogleAuthProvider.credential(idToken, accessToken);
 }
+
+async function getNativeAppleCredential() {
+  const result = await FirebaseAuthentication.signInWithApple({ skipNativeAuth: true });
+  const idToken = result.credential?.idToken ?? null;
+  const rawNonce = result.credential?.nonce ?? null;
+  if (!idToken || !rawNonce) {
+    const error = new Error('Apple-inloggningen gav ingen giltig autentiseringsuppgift.');
+    Object.assign(error, { code: 'auth/credential-unavailable' });
+    throw error;
+  }
+  return appleProvider.credential({ idToken, rawNonce });
+}
+
+/** Use native Sign in with Apple in Capacitor and Firebase OAuth on the web. */
+export const signInWithApple = async () => {
+  if (isNativePlatform) {
+    const credential = await getNativeAppleCredential();
+    return signInWithCredential(auth, credential);
+  }
+  if (isMobileWebBrowser() && canUseSameOriginRedirect()) {
+    return signInWithRedirect(auth, appleProvider, browserPopupRedirectResolver);
+  }
+  try {
+    return await signInWithPopup(auth, appleProvider, browserPopupRedirectResolver);
+  } catch (e) {
+    const code = getAuthErrorCode(e);
+    if (!canUseSameOriginRedirect() || code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+      throw e;
+    }
+    return signInWithRedirect(auth, appleProvider, browserPopupRedirectResolver);
+  }
+};
 
 /** Use native Google auth in Capacitor and same-origin redirect on mobile web. */
 export const signInWithGoogle = async () => {
@@ -179,6 +215,19 @@ export const linkGuestWithGoogle = async () => {
     return linkWithRedirect(user, googleProvider, browserPopupRedirectResolver);
   }
   return linkWithPopup(user, googleProvider, browserPopupRedirectResolver);
+};
+
+export const linkGuestWithApple = async () => {
+  const user = auth.currentUser;
+  if (!user || !user.isAnonymous) return signInWithApple();
+  if (isNativePlatform) {
+    const credential = await getNativeAppleCredential();
+    return linkWithCredential(user, credential);
+  }
+  if (isMobileWebBrowser() && canUseSameOriginRedirect()) {
+    return linkWithRedirect(user, appleProvider, browserPopupRedirectResolver);
+  }
+  return linkWithPopup(user, appleProvider, browserPopupRedirectResolver);
 };
 
 export const linkGuestWithEmail = async (email: string, password: string, displayName?: string) => {
