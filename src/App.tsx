@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
-import { auth, onAuthStateChanged, getGoogleRedirectResult, User, db, OperationType, handleFirestoreError } from './firebase';
+import { auth, onAuthStateChanged, getAuthRedirectResult, User, db, OperationType, handleFirestoreError } from './firebase';
 import { doc, setDoc, serverTimestamp, collection, onSnapshot, query, orderBy, collectionGroup, where, limit } from 'firebase/firestore';
 import Auth from './components/Auth';
 import Layout from './components/Layout';
@@ -131,12 +131,15 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    void getGoogleRedirectResult().catch((error: unknown) => {
+    // getRedirectResult completes redirects for every Firebase OAuth provider.
+    // Do not label Apple failures as Google failures: that obscures provider
+    // configuration errors such as auth/operation-not-allowed.
+    void getAuthRedirectResult().catch((error: unknown) => {
       const code =
         error && typeof error === 'object' && 'code' in error
           ? String((error as { code?: unknown }).code ?? '')
           : '';
-      console.error(`[auth] Google redirect failed: ${code || 'unknown'}`);
+      console.error(`[auth] OAuth redirect failed: ${code || 'unknown'}`);
       setRedirectAuthError(error);
     });
   }, []);

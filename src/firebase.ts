@@ -177,7 +177,8 @@ export const signInWithGoogle = async () => {
   }
 };
 
-export const getGoogleRedirectResult = () =>
+/** Complete a pending Firebase web redirect, regardless of which OAuth provider started it. */
+export const getAuthRedirectResult = () =>
   isNativePlatform
     ? Promise.resolve(null)
     : getRedirectResult(auth, browserPopupRedirectResolver);
