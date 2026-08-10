@@ -1,4 +1,73 @@
 workflows:
+  android-google-play:
+    name: Android — build Google Play AAB
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      groups:
+        - firebase_web
+        - google_play
+      vars:
+        PACKAGE_NAME: "se.foraldrahjalpen.app"
+      node: 20.19.0
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: "android-*"
+          include: true
+      cancel_previous_builds: true
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          npm config set fetch-retries 5
+          npm config set fetch-retry-mintimeout 20000
+          npm config set fetch-retry-maxtimeout 120000
+          npm ci
+
+      - name: Type-check app
+        script: npm run lint
+
+      - name: Build web assets
+        script: npm run build
+
+      - name: Sync Capacitor Android platform
+        script: npx cap sync android
+
+      - name: Restore Android keystore
+        script: |
+          set -e
+          if [ -z "$CM_KEYSTORE" ] || [ -z "$CM_KEYSTORE_PASSWORD" ] || [ -z "$CM_KEY_ALIAS" ] || [ -z "$CM_KEY_PASSWORD" ]; then
+            echo "Android signing is not configured. Add CM_KEYSTORE, CM_KEYSTORE_PASSWORD, CM_KEY_ALIAS and CM_KEY_PASSWORD to the Codemagic group google_play."
+            exit 1
+          fi
+          echo "$CM_KEYSTORE" | base64 --decode > "$CM_BUILD_DIR/android/app/release.keystore"
+          cat > "$CM_BUILD_DIR/android/keystore.properties" <<EOF
+          storeFile=app/release.keystore
+          storePassword=$CM_KEYSTORE_PASSWORD
+          keyAlias=$CM_KEY_ALIAS
+          keyPassword=$CM_KEY_PASSWORD
+          EOF
+
+      - name: Build Android App Bundle
+        script: |
+          cd android
+          chmod +x ./gradlew
+          ./gradlew bundleRelease
+
+    artifacts:
+      - android/app/build/outputs/**/*.aab
+      - android/app/build/outputs/**/*.apk
+      - android/app/build/outputs/**/mapping.txt
+
+    publishing:
+      email:
+        recipients:
+          - nomarcus@hotmail.com
+        notify:
+          success: true
+          failure: true
+
   ios-testflight:
     name: iOS — build and upload to TestFlight
     max_build_duration: 60
