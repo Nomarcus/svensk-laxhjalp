@@ -189,7 +189,7 @@
 }
 
 .capacitor-native .landing-hero-brand {
-  padding-top: calc(env(safe-area-inset-top, 0px) + 2.25rem) !important;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 1.5rem) !important;
 }
 
 @media (max-width: 429px) {
