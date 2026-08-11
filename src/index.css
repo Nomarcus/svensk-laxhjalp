@@ -142,7 +142,7 @@
 
 @media (max-width: 1023px) {
   .landing-hero-brand {
-    padding-top: calc(env(safe-area-inset-top, 0px) + 5.25rem) !important;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 4.5rem) !important;
     padding-bottom: 1.25rem !important;
     text-align: center;
   }
