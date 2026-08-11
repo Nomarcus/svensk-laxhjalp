@@ -113,13 +113,18 @@
   display: grid;
   grid-template-areas: 'brand' 'login' 'story';
   grid-template-columns: 1fr;
+  align-content: start;
 }
 
 @media (min-width: 1024px) {
   .landing-hero-grid {
     grid-template-areas: 'brand login' 'story login';
     grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    align-content: center;
     align-items: center;
+    column-gap: clamp(1rem, 2vw, 2.5rem);
+    row-gap: clamp(1.75rem, 4vh, 3rem);
   }
 }
 
@@ -133,6 +138,26 @@
 
 .landing-hero-story {
   grid-area: story;
+}
+
+@media (max-width: 1023px) {
+  .landing-hero-brand {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 6rem) !important;
+  }
+
+  .landing-hero-story {
+    padding-top: 0 !important;
+  }
+
+  .landing-hero-story .flex.flex-wrap {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 429px) {
+  .landing-hero-story .grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* KaTeX (markdown-matte) — läsbar i mörkt läge */
