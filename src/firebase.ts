@@ -46,15 +46,20 @@ import firebaseConfig from '../firebase-applet-config.json';
 
 const isNativePlatform = Capacitor.isNativePlatform();
 const productionWebHosts = new Set(['foraldrahjalpen.se', 'www.foraldrahjalpen.se']);
+const isMobileWeb =
+  !isNativePlatform &&
+  typeof navigator !== 'undefined' &&
+  (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
 const isProductionWeb =
   !isNativePlatform &&
   typeof window !== 'undefined' &&
   productionWebHosts.has(window.location.hostname);
 
-// Firebase's redirect helper must share the app's origin on browsers that
-// block third-party storage (notably iOS Safari). Vercel transparently proxies
-// /__/auth/* to Firebase Hosting for these production hosts.
-const runtimeFirebaseConfig = isProductionWeb
+// Firebase's redirect helper only needs to share the app's origin on mobile
+// browsers that block third-party storage. Desktop web should keep Firebase's
+// default authDomain so popup auth uses the standard Firebase redirect URI.
+const runtimeFirebaseConfig = isProductionWeb && isMobileWeb
   ? { ...firebaseConfig, authDomain: window.location.hostname }
   : firebaseConfig;
 
@@ -92,11 +97,7 @@ function getAuthErrorCode(err: unknown): string {
 }
 
 function isMobileWebBrowser(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  return (
-    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-  );
+  return isMobileWeb;
 }
 
 function canUseSameOriginRedirect(): boolean {
