@@ -188,6 +188,10 @@
   }
 }
 
+.capacitor-native .landing-hero-brand {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 2.25rem) !important;
+}
+
 @media (max-width: 429px) {
   .landing-hero-story .grid {
     grid-template-columns: 1fr;
