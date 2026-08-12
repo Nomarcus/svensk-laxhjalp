@@ -179,6 +179,7 @@
     "toAnalyzeHomework": "för att analysera läxan",
     "analyzeImage": "Analysera denna bild.",
     "imageActionsTitle": "Vad vill du göra med bilden?",
+    "imageActionRecommendation": "Välj en snabb åtgärd eller skriv en egen fråga innan du skickar.",
     "imageActionsHint": "Välj vad du vill göra, lägg till egen text vid behov och tryck sedan på skicka.",
     "imageActions": {
       "explainSimple": "Förklara enkelt",

@@ -179,6 +179,7 @@
     "toAnalyzeHomework": "to analyze the homework",
     "analyzeImage": "Analyze this image.",
     "imageActionsTitle": "What would you like to do with the image?",
+    "imageActionRecommendation": "Choose a quick action or write your own question before sending.",
     "imageActionsHint": "Choose what you want to do, add your own text if needed, then press send.",
     "imageActions": {
       "explainSimple": "Explain simply",

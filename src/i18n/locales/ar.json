@@ -102,6 +102,7 @@
     "toAnalyzeHomework": "لتحليل الواجب",
     "analyzeImage": "حلل هذه الصورة.",
     "imageActionsTitle": "ماذا تريد أن تفعل بالصورة؟",
+    "imageActionRecommendation": "اختر إجراءً سريعًا أو اكتب سؤالك قبل الإرسال.",
     "imageActionsHint": "اختر ما تريد فعله، وأضف نصك إذا احتجت، ثم اضغط إرسال.",
     "imageActions": {
       "explainSimple": "اشرح ببساطة",
