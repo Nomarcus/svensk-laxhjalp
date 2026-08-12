@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { useTranslation } from 'react-i18next';
 import {
   Send,
@@ -36,6 +37,7 @@ interface ChatInputProps {
 const SpeechRecognitionAPI = typeof window !== 'undefined'
   ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
   : null;
+const canUseSpeechRecognition = Boolean(SpeechRecognitionAPI) && !Capacitor.isNativePlatform();
 
 const homeworkImageActions = [
   { id: 'explainSimple', icon: Sparkles },
@@ -59,7 +61,7 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
   useEffect(() => { inputRef.current = input; }, [input]);
 
   useEffect(() => {
-    if (!SpeechRecognitionAPI) return;
+    if (!canUseSpeechRecognition) return;
     const recognition = new SpeechRecognitionAPI();
     recognition.lang = 'sv-SE';
     recognition.continuous = false;
@@ -252,7 +254,7 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
           >
             <ImageIcon size={20} />
           </button>
-          {SpeechRecognitionAPI && (
+          {canUseSpeechRecognition && (
             <button
               type="button"
               onClick={toggleListening}
