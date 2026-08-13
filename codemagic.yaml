@@ -9,6 +9,7 @@ workflows:
       vars:
         PACKAGE_NAME: "se.foraldrahjalpen.app"
       node: 20.19.0
+      java: 21
     triggering:
       events:
         - tag
