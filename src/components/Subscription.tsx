@@ -2,14 +2,12 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Timestamp } from 'firebase/firestore';
 import {
-  Heart,
   MessageCircle,
   Image,
   Palette,
   BookOpen,
   Sparkles,
   FileText,
-  CreditCard,
   CheckCircle2,
   Star,
   Trash2,
@@ -166,7 +164,7 @@ export default function Subscription({ subscription }: SubscriptionProps) {
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-black/5 dark:border-white/5">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
-                <CreditCard size={22} />
+                <Clock size={22} />
               </div>
               <div>
                 <h3 className="font-medium text-lg dark:text-stone-100">{t('subscription.paymentTitle')}</h3>
@@ -180,25 +178,6 @@ export default function Subscription({ subscription }: SubscriptionProps) {
           </div>
         )}
 
-        <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-900/20 dark:to-emerald-900/10 rounded-2xl p-6 shadow-sm border border-emerald-200/50 dark:border-emerald-800/30">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm">
-              <Heart size={24} />
-            </div>
-            <div>
-              <h3 className="font-medium text-lg text-emerald-900 dark:text-emerald-300">{t('subscription.supportTitle')}</h3>
-              <p className="text-sm text-emerald-700/70 dark:text-emerald-400/70">{t('subscription.supportSubtitle')}</p>
-            </div>
-          </div>
-          <p className="text-sm text-emerald-800/80 dark:text-emerald-300/80 leading-relaxed mb-4">
-            {t('subscription.supportCompanyBody')}
-          </p>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 text-center">
-            <p className="text-sm text-stone-500 dark:text-stone-400 mb-1">{t('subscription.swishLabel')}</p>
-            <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400 tracking-wider">{t('subscription.swishComingSoon')}</p>
-            <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">{t('subscription.swishNumberNote')}</p>
-          </div>
-        </div>
 
         <div className="rounded-2xl border border-red-200 dark:border-red-900/40 bg-red-50/60 dark:bg-red-950/20 p-6">
           <h3 className="font-medium text-red-900 dark:text-red-300 mb-1">{t('subscription.dangerZoneTitle')}</h3>
