@@ -15,7 +15,7 @@ const TEACHER_FAQ = [
   },
   {
     q: 'Kostar det något?',
-    a: 'Du kan prova gratis. Är du nöjd och vill stödja vidare utveckling finns ett frivilligt abonnemang på 49 kr/mån — ingen bindningstid.',
+    a: 'Du kan prova gratis. Det finns inga aktiva köp eller prenumerationer i appen just nu.',
   },
 ];
 
@@ -209,7 +209,7 @@ export default function LaxhjalpLarareLanding({
               <div>
                 <dt className="font-medium text-stone-900 dark:text-stone-100">Kostar det något?</dt>
                 <dd className="mt-1">
-                  Du kan prova gratis. Är du nöjd och vill stödja vidare utveckling finns ett frivilligt abonnemang på 49 kr/mån — ingen bindningstid.
+                  Du kan prova gratis. Det finns inga aktiva köp eller prenumerationer i appen just nu.
                 </dd>
               </div>
             </dl>
