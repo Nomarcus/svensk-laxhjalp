@@ -5,7 +5,6 @@ workflows:
     instance_type: mac_mini_m2
     environment:
       groups:
-        - firebase_web
         - google_play
       vars:
         PACKAGE_NAME: "se.foraldrahjalpen.app"
