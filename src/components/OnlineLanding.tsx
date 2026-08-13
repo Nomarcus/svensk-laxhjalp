@@ -15,7 +15,7 @@ interface Props {
 const FAQ: { q: string; a: string }[] = [
   {
     q: 'Är läxhjälp online gratis?',
-    a: 'Ja, på Föräldrahjälpen är det gratis att börja — 5 AI-svar och 2 bildanalyser per dag. Vill du ha obegränsad läxhjälp online kostar full version 49 kr/mån och du kan säga upp när som helst.',
+    a: 'Ja, på Föräldrahjälpen är det gratis att börja. Det finns inga aktiva köp eller prenumerationer i appen just nu.',
   },
   {
     q: 'Behöver jag installera en app?',
@@ -127,8 +127,7 @@ export default function OnlineLanding({
           </h1>
           <p className="text-lg text-stone-600 dark:text-stone-300 leading-relaxed">
             Söker du <strong className="font-medium text-stone-800 dark:text-stone-200">läxhjälp online</strong>? Föräldrahjälpen fungerar direkt i webbläsaren —
-            ingen app att ladda ner, inget krångel. Fota läxan, ställ en fråga och få en förklaring kopplad till Lgr22. Gratis att börja, 49 kr/mån för obegränsad
-            användning.
+            ingen app att ladda ner, inget krångel. Fota läxan, ställ en fråga och få en förklaring kopplad till Lgr22. Gratis att börja.
           </p>
         </header>
 
@@ -151,8 +150,8 @@ export default function OnlineLanding({
             </h2>
             <p>
               Läxhjälp på nätet har flera fördelar jämfört med bokade lektioner hemma eller hos privatlärare: du får hjälp precis när frågan dyker upp — vid
-              middagsbordet, på bussen hem från träningen, eller kvällen innan provet. Ingen väntan, ingen bokning. Du betalar bara för den hjälp du faktiskt
-              använder.
+              middagsbordet, på bussen hem från träningen, eller kvällen innan provet. Ingen väntan och ingen bokning. Alla funktioner är gratis att använda
+              just nu.
             </p>
           </section>
 
