@@ -43,7 +43,7 @@ workflows:
           fi
           echo "$CM_KEYSTORE" | base64 --decode > "$CM_BUILD_DIR/android/app/release.keystore"
           cat > "$CM_BUILD_DIR/android/keystore.properties" <<EOF
-          storeFile=app/release.keystore
+          storeFile=release.keystore
           storePassword=$CM_KEYSTORE_PASSWORD
           keyAlias=$CM_KEY_ALIAS
           keyPassword=$CM_KEY_PASSWORD
