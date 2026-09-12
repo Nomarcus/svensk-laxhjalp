@@ -23,6 +23,7 @@ import { compressImage } from '../utils/image';
 import { isLikelyImageFile } from '../utils/imageUpload';
 import { cn } from '../utils/cn';
 import { isRequirementsList } from '../utils/detectRequirementsList';
+import { extractAnswerSummary } from '../utils/answerSummary';
 import { isGeneralWorkspaceId } from '../constants/workspaces';
 import { useDialogA11y } from '../hooks/useDialogA11y';
 import ConfirmDialog from './ui/ConfirmDialog';
@@ -326,6 +327,8 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   const lastDisplayMessage = displayMessages[displayMessages.length - 1];
   const focusedAnswer = lastDisplayMessage?.role === 'model' ? lastDisplayMessage : null;
   const focusedAnswerId = focusedAnswer?.id ?? null;
+  /** Svaret + barnförklaringen lyfts högst upp i fokusvyn. null = okänd struktur → visa allt som vanligt. */
+  const focusSummary = focusedAnswer ? extractAnswerSummary(focusedAnswer.content) : null;
 
   const dismissOnboardingTips = () => {
     localStorage.setItem('homework-chat-onboarding-seen', 'true');
@@ -737,7 +740,7 @@ ${requirementsText}`;
   }, [taskContext, activeSessionId, loading, onTaskContextUsed]);
 
   /** Renderar ett meddelande. Delas av meddelandelistan och fokusläget. */
-  const renderMessage = (msg: Message, idx: number) => {
+  const renderMessage = (msg: Message, idx: number, collapsibleBody = false) => {
     const lastMessageIndex = displayMessages.length - 1;
     // Check if the user message before this AI response had an image
     const prevMsg = idx > 0 ? displayMessages[idx - 1] : null;
@@ -755,6 +758,7 @@ ${requirementsText}`;
       <ChatMessage
         key={msg.id}
         msg={msg}
+        collapsibleBody={collapsibleBody}
         generatingImageId={generatingImageId}
         savedMessageIds={savedMessageIds}
         onShare={handleShare}
@@ -1091,7 +1095,43 @@ ${requirementsText}`;
                   )}
                 </div>
               ) : focusedAnswer ? (
-                renderMessage(focusedAnswer, displayMessages.length - 1)
+                <>
+                  {focusSummary && (
+                    <div className="rounded-3xl border-2 border-emerald-200 dark:border-emerald-800/60 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+                      {focusSummary.answers.length > 0 && (
+                        <div className="p-4 md:p-5">
+                          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+                            {t('chat.summaryAnswer')}
+                          </div>
+                          <ul className="space-y-1.5">
+                            {focusSummary.answers.map((answer, i) => (
+                              <li
+                                key={i}
+                                className="text-lg md:text-xl font-semibold text-stone-900 dark:text-stone-50 break-words"
+                              >
+                                {focusSummary.answers.length > 1 && (
+                                  <span className="mr-2 text-stone-400 dark:text-stone-500">{i + 1}.</span>
+                                )}
+                                {answer}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {focusSummary.childExplanation && (
+                        <div className="border-t border-emerald-100 p-4 dark:border-emerald-900/50 md:p-5 bg-emerald-50/60 dark:bg-emerald-950/20">
+                          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+                            {t('chat.summaryChildExplanation')}
+                          </div>
+                          <p className="text-[15px] leading-relaxed text-stone-800 dark:text-stone-100">
+                            {focusSummary.childExplanation}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {renderMessage(focusedAnswer, displayMessages.length - 1, Boolean(focusSummary))}
+                </>
               ) : !error ? (
                 <p className="text-sm text-stone-400 italic text-center py-12">{t('chat.focusEmpty')}</p>
               ) : null}

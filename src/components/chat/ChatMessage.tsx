@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine, X, Volume2, Square, Pause, Play, SkipForward, Calculator, ListOrdered, Flag, Trash2, HeartHandshake, Baby } from 'lucide-react';
+import { User, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine, X, Volume2, Square, Pause, Play, SkipForward, Calculator, ListOrdered, Flag, Trash2, HeartHandshake, Baby, ChevronDown } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -35,6 +35,9 @@ interface ChatMessageProps {
   hasImage?: boolean;
   creatingAutoTask?: boolean;
   isRequirementsList?: boolean;
+  /** Fäll ihop svarstexten bakom en knapp. Används i fokusläget där en
+   *  sammanfattning visas ovanför — knapparna under svaret berörs inte. */
+  collapsibleBody?: boolean;
   speechState?: {
     isSpeaking: boolean;
     isPaused: boolean;
@@ -72,11 +75,14 @@ export default function ChatMessage({
   hasImage,
   creatingAutoTask,
   isRequirementsList,
+  collapsibleBody,
   speechState,
   speechSupported,
 }: ChatMessageProps) {
   const { t } = useTranslation();
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+  const [bodyExpanded, setBodyExpanded] = useState(false);
+  const bodyVisible = !collapsibleBody || bodyExpanded;
 
   const detectMathType = (content: string): string | null => {
     const text = content.toLowerCase();
@@ -193,14 +199,27 @@ export default function ChatMessage({
               </div>
             </div>
           )}
-          <div className="markdown-body prose prose-stone prose-sm max-w-none [&_.katex-display]:overflow-x-auto">
-            <ReactMarkdown
-              remarkPlugins={[remarkMath]}
-              rehypePlugins={[[rehypeKatex, { strict: false, throwOnError: false }]]}
+          {bodyVisible && (
+            <div className="markdown-body prose prose-stone prose-sm max-w-none [&_.katex-display]:overflow-x-auto">
+              <ReactMarkdown
+                remarkPlugins={[remarkMath]}
+                rehypePlugins={[[rehypeKatex, { strict: false, throwOnError: false }]]}
+              >
+                {msg.content}
+              </ReactMarkdown>
+            </div>
+          )}
+          {collapsibleBody && (
+            <button
+              type="button"
+              onClick={() => setBodyExpanded((v) => !v)}
+              aria-expanded={bodyExpanded}
+              className="flex w-full items-center justify-between gap-2 text-sm font-medium text-stone-600 dark:text-stone-300 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors"
             >
-              {msg.content}
-            </ReactMarkdown>
-          </div>
+              <span>{bodyExpanded ? t('chat.hideWalkthrough') : t('chat.showWalkthrough')}</span>
+              <ChevronDown size={18} className={cn('transition-transform shrink-0', bodyExpanded && 'rotate-180')} />
+            </button>
+          )}
           {msg.role === 'model' && (
             <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity">
               <button

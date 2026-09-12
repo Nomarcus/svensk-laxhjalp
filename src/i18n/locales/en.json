@@ -279,7 +279,11 @@
     "focusTitle": "Answer",
     "focusClose": "Close",
     "focusCloseHint": "Close (Esc)",
-    "focusEmpty": "No answer to show yet."
+    "focusEmpty": "No answer to show yet.",
+    "summaryAnswer": "Answer",
+    "summaryChildExplanation": "How to explain it to your child",
+    "showWalkthrough": "Show full walkthrough",
+    "hideWalkthrough": "Hide walkthrough"
   },
   "chatEmpty": {
     "helpWith": "Help {{name}} with homework",
