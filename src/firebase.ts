@@ -318,6 +318,28 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(minimal));
 }
 
+/**
+ * Samma loggning som handleFirestoreError, men kastar inte.
+ *
+ * onSnapshot-callbacken körs utanför Reacts renderfas, så ett kast därifrån
+ * fångas varken av error boundaries eller av anroparens try/catch — det blir
+ * ett obehandlat fel i konsolen medan användaren blir kvar på en tom vy utan
+ * att förstå varför. Lyssnare ska därför använda den här och själva visa felet.
+ * Returnerar felkoden så anroparen kan skilja t.ex. permission-denied från
+ * tillfälliga nätverksfel.
+ */
+export function reportFirestoreError(
+  error: unknown,
+  operationType: OperationType,
+  path: string | null,
+): string {
+  const code = typeof error === 'object' && error !== null && 'code' in error
+    ? String((error as { code?: unknown }).code ?? 'unknown')
+    : 'unknown';
+  console.error('Firestore Error:', JSON.stringify({ code, operationType, path }));
+  return code;
+}
+
 export {
   collection,
   doc,

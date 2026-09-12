@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image as ImageIcon, Loader2, Bot, X, Calculator, BookOpen, Languages, Beaker, Globe, Book, Check, Sparkles, UserPlus } from 'lucide-react';
-import { db, auth, OperationType, handleFirestoreError } from '../firebase';
+import { db, auth, OperationType, handleFirestoreError, reportFirestoreError } from '../firebase';
 import {
   collection,
   addDoc,
@@ -24,6 +24,7 @@ import { isLikelyImageFile } from '../utils/imageUpload';
 import { cn } from '../utils/cn';
 import { isRequirementsList } from '../utils/detectRequirementsList';
 import { extractAnswerSummary } from '../utils/answerSummary';
+import { markdownToPlainText, truncateForShare } from '../utils/plainText';
 import { isGeneralWorkspaceId } from '../constants/workspaces';
 import { useDialogA11y } from '../hooks/useDialogA11y';
 import ConfirmDialog from './ui/ConfirmDialog';
@@ -263,11 +264,14 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
           void createNewSession();
         }
       },
-      (err) => handleFirestoreError(err, OperationType.GET, 'chatSessions'),
+      (err) => {
+        const code = reportFirestoreError(err, OperationType.GET, 'chatSessions');
+        setError(code === 'permission-denied' ? t('chat.loadDenied') : t('chat.loadFailed'));
+      },
     );
 
     return () => unsubscribe();
-  }, [childId, ownerId, createNewSession]);
+  }, [childId, ownerId, createNewSession, t]);
 
   useEffect(() => {
     if (!auth.currentUser || !childId || !activeSessionId) return;
@@ -294,11 +298,14 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
         oldestMsgCursorRef.current = snapshot.docs.length ? snapshot.docs[snapshot.docs.length - 1]! : null;
         setHasMoreOlder(snapshot.docs.length === 50);
       },
-      (err) => handleFirestoreError(err, OperationType.GET, 'messages'),
+      (err) => {
+        const code = reportFirestoreError(err, OperationType.GET, 'messages');
+        setError(code === 'permission-denied' ? t('chat.loadDenied') : t('chat.loadFailed'));
+      },
     );
 
     return () => unsubscribe();
-  }, [childId, activeSessionId, ownerId]);
+  }, [childId, activeSessionId, ownerId, t]);
 
   const loadOlderMessages = async () => {
     if (!auth.currentUser || !childId || !activeSessionId || !oldestMsgCursorRef.current || loadingOlder) return;
@@ -547,12 +554,9 @@ ${requirementsText}`;
 
   const handleShare = async (message: Message) => {
     try {
-      const plain = message.content
-        .replace(/[`*_>#-]/g, ' ')
-        .replace(/\n+/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .slice(0, 320);
+      // Delade tidigare bara de första 320 tecknen, vilket i praktiken var
+      // rubriken och halva första meningen — mottagaren fick aldrig svaret.
+      const plain = truncateForShare(markdownToPlainText(message.content));
       const shareText = `${t('chat.shareIntro')}\n\n${plain}`;
       if (navigator.share) {
         await navigator.share({ title: t('chat.printTitle'), text: shareText, url: window.location.href });

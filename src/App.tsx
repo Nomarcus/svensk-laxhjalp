@@ -582,7 +582,7 @@ export default function App() {
                 }
               />
             ) : activeTab === 'planner' ? (
-              <Planner childId={selectedChildId!} ownerId={selectedChild?.ownerId || user.uid} prefill={plannerPrefill} onPrefillUsed={() => setPlannerPrefill(null)} onOpenAiForTask={(taskId, subject, description, imageUrls) => {
+              <Planner childId={selectedChildId!} ownerId={selectedChild?.ownerId || user.uid} childGrade={selectedChild?.grade} prefill={plannerPrefill} onPrefillUsed={() => setPlannerPrefill(null)} onOpenAiForTask={(taskId, subject, description, imageUrls) => {
                 setChatFromTask({
                   taskId,
                   subject,

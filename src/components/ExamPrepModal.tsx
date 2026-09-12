@@ -1,6 +1,7 @@
-import { X, Printer, Loader2, GraduationCap, BookmarkPlus, RefreshCcw } from 'lucide-react';
+import { X, Printer, Loader2, GraduationCap, BookmarkPlus, Check, RefreshCcw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useDialogA11y } from '../hooks/useDialogA11y';
+import { markdownToPlainText } from '../utils/plainText';
 
 interface ExamPrepModalProps {
   content: string | null;
@@ -8,17 +9,28 @@ interface ExamPrepModalProps {
   loading: boolean;
   onClose: () => void;
   onSave?: () => void;
+  /** Visar bekräftelse i stället för spara-knappen när paketet redan ligger i biblioteket. */
+  saved?: boolean;
   onRegenerate?: () => void;
 }
 
-export default function ExamPrepModal({ content, subject, loading, onClose, onSave, onRegenerate }: ExamPrepModalProps) {
+const escapeHtml = (text: string) =>
+  text.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] as string);
+
+export default function ExamPrepModal({ content, subject, loading, onClose, onSave, saved, onRegenerate }: ExamPrepModalProps) {
   const containerRef = useDialogA11y<HTMLDivElement>(true, onClose);
 
   const handlePrint = () => {
     if (!content) return;
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
-    printWindow.document.write(`<!DOCTYPE html><html lang="sv"><head><meta charset="utf-8"><title>Provförberedelse — ${subject}</title><style>
+    // Utskriften dumpade tidigare rå markdown, så pappret fick "## Nyckelbegrepp"
+    // och "**Svar:**" rakt av. Avformaterar och escapar i stället.
+    const printable = escapeHtml(markdownToPlainText(content))
+      .split(/\n{2,}/)
+      .map((para) => `<p>${para.replace(/\n/g, '<br>')}</p>`)
+      .join('');
+    printWindow.document.write(`<!DOCTYPE html><html lang="sv"><head><meta charset="utf-8"><title>Provförberedelse — ${escapeHtml(subject)}</title><style>
       body { font-family: Georgia, serif; max-width: 700px; margin: 40px auto; padding: 20px; color: #1a1a1a; line-height: 1.7; }
       h1 { font-size: 18px; color: #7c3aed; border-bottom: 2px solid #7c3aed; padding-bottom: 8px; }
       h2, h3 { color: #333; margin-top: 20px; }
@@ -27,8 +39,8 @@ export default function ExamPrepModal({ content, subject, loading, onClose, onSa
       .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #ddd; font-size: 12px; color: #999; text-align: center; }
       @media print { body { margin: 20px; } }
     </style></head><body>
-      <h1>Provförberedelse — ${subject}</h1>
-      <div>${content.replace(/\n/g, '<br>')}</div>
+      <h1>Provförberedelse — ${escapeHtml(subject)}</h1>
+      <div>${printable}</div>
       <div class="footer">Genererad av Föräldrahjälpen — ${new Date().toLocaleDateString('sv-SE')}</div>
     </body></html>`);
     printWindow.document.close();
@@ -69,11 +81,12 @@ export default function ExamPrepModal({ content, subject, loading, onClose, onSa
             {content && onSave && (
               <button
                 onClick={onSave}
-                className="p-2 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200"
-                title="Spara i bibliotek"
-                aria-label="Spara i bibliotek"
+                disabled={saved}
+                className="p-2 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors disabled:text-emerald-600 disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200"
+                title={saved ? 'Sparad i biblioteket' : 'Spara i bibliotek'}
+                aria-label={saved ? 'Sparad i biblioteket' : 'Spara i bibliotek'}
               >
-                <BookmarkPlus size={18} />
+                {saved ? <Check size={18} /> : <BookmarkPlus size={18} />}
               </button>
             )}
             {content && (

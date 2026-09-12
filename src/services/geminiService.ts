@@ -192,6 +192,95 @@ export interface AutoTaskData {
   minutesPerDay: number;
 }
 
+const WEEKDAYS = ['måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag', 'söndag'];
+
+/**
+ * Ämnesgissning som reservplan när modellen inte gav användbar JSON. Bättre än
+ * "Allmänt", som gör den skapade uppgiften omöjlig att hitta i planeraren.
+ */
+const SUBJECT_HINTS: Array<[string, RegExp]> = [
+  ['Matematik', /\b(matematik|matte|bråk|multiplikation|division|subtraktion|addition|ekvation|geometri|procent|tallinj)/i],
+  ['Svenska', /\b(svenska|stavning|grammatik|substantiv|verb|adjektiv|läsförståelse|uppsats|berättelse)/i],
+  ['Engelska', /\b(engelska|english|glosor\s*(på|i)?\s*engelska|irregular verbs)/i],
+  ['NO', /\b(biologi|fysik|kemi|naturkunskap|fotosyntes|ekosystem|atom|molekyl|kretslopp)\b/i],
+  ['SO', /\b(historia|geografi|samhällskunskap|religion|vikingatiden|medeltiden|demokrati|kommun)\b/i],
+];
+
+function guessSubject(text: string): string {
+  for (const [subject, re] of SUBJECT_HINTS) {
+    if (re.test(text)) return subject;
+  }
+  return 'Läxa';
+}
+
+/**
+ * Plockar ut första balanserade {...} ur en text. Modellen svarar genom samma
+ * systemprompt som allt annat, alltså med rubriker och brödtext runt omkring —
+ * att bara skala bort kodstaket räckte inte, så JSON.parse kastade i praktiken
+ * varje gång och varje foto-uppgift hamnade på "Allmänt / Läxa från foto".
+ */
+function extractJsonObject(text: string): unknown {
+  const start = text.indexOf('{');
+  if (start === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (escaped) {
+      escaped = false;
+    } else if (ch === '\\') {
+      escaped = true;
+    } else if (ch === '"') {
+      inString = !inString;
+    } else if (!inString) {
+      if (ch === '{') depth++;
+      else if (ch === '}' && --depth === 0) {
+        try {
+          return JSON.parse(text.slice(start, i + 1));
+        } catch {
+          return null;
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function asTrimmedString(value: unknown, max: number): string {
+  return typeof value === 'string' ? value.trim().slice(0, max) : '';
+}
+
+/**
+ * Modellen svarar fritt, så varje fält kan saknas eller ha fel typ. Allt
+ * normaliseras här i stället för hos anroparen — planeraren räknar med
+ * veckodagar på svenska och ett heltal minuter.
+ */
+function coerceTaskData(raw: unknown, aiExplanation: string): AutoTaskData {
+  const obj = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+
+  const normalizeDay = (value: unknown): string | null => {
+    const day = asTrimmedString(value, 20).toLowerCase();
+    return WEEKDAYS.find((d) => day.startsWith(d.slice(0, 3))) ?? null;
+  };
+
+  const workDays = Array.isArray(obj.suggestedWorkDays)
+    ? [...new Set(obj.suggestedWorkDays.map(normalizeDay).filter((d): d is string => d !== null))].slice(0, 5)
+    : [];
+
+  const minutes = Number(obj.minutesPerDay);
+  const minutesPerDay = Number.isFinite(minutes) ? Math.min(60, Math.max(10, Math.round(minutes))) : 15;
+
+  return {
+    subject: asTrimmedString(obj.subject, 60) || guessSubject(aiExplanation),
+    description: asTrimmedString(obj.description, 120) || 'Läxa från foto',
+    suggestedWorkDays: workDays,
+    suggestedDueDay: normalizeDay(obj.suggestedDueDay) ?? 'fredag',
+    minutesPerDay,
+  };
+}
+
 export async function analyzeHomeworkForTask(
   aiExplanation: string
 ): Promise<AutoTaskData> {
@@ -202,17 +291,13 @@ export async function analyzeHomeworkForTask(
 - "suggestedDueDay": inlämningsdag (t.ex. "fredag")
 - "minutesPerDay": uppskattade minuter per dag (heltal, 10-60)
 
-Svara BARA med JSON, inget annat. Ingen markdown, inga kodfält.
+Detta är ett maskinanrop, inte en fråga från en förälder. Hoppa över rubriker,
+förklaringar och pedagogiska tips. Svara med enbart JSON-objektet.
 
 AI-analys av läxan: ${aiExplanation.slice(0, 800)}`;
 
   const text = await generateHomeworkHelp(prompt, []);
-  try {
-    const cleaned = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
-    return JSON.parse(cleaned);
-  } catch {
-    return { subject: 'Allmänt', description: 'Läxa från foto', suggestedWorkDays: [], suggestedDueDay: 'fredag', minutesPerDay: 15 };
-  }
+  return coerceTaskData(extractJsonObject(text), aiExplanation);
 }
 
 export async function generateExamPrep(

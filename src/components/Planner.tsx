@@ -20,6 +20,8 @@ import { bumpUsageRefresh } from '../utils/usageRefresh';
 interface PlannerProps {
   childId: string;
   ownerId: string;
+  /** Styr språknivå och tillåtna räknemetoder i studieplan och provförberedelse. */
+  childGrade?: string;
   prefill?: { subject: string; description: string; workDays?: string[]; dueDay?: string; minutesPerDay?: number; imageUrl?: string; imageUrls?: string[] } | null;
   onPrefillUsed?: () => void;
   onOpenAiForTask?: (taskId: string, subject: string, description: string, imageUrls?: string[]) => void;
@@ -29,7 +31,7 @@ const PLANNER_WEEK_OPTS = { weekStartsOn: 1 as const, firstWeekContainsDate: 4 a
 
 const DAYS = ['måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag', 'söndag'];
 
-export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOpenAiForTask }: PlannerProps) {
+export default function Planner({ childId, ownerId, childGrade, prefill, onPrefillUsed, onOpenAiForTask }: PlannerProps) {
   const { t } = useTranslation();
   const plannerCameraRef = useRef<HTMLInputElement>(null);
   const editTaskCameraRef = useRef<HTMLInputElement>(null);
@@ -46,6 +48,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
   const [examPrepTask, setExamPrepTask] = useState<Task | null>(null);
   const [examPrepContent, setExamPrepContent] = useState<string | null>(null);
   const [examPrepLoading, setExamPrepLoading] = useState(false);
+  const [examPrepSaved, setExamPrepSaved] = useState(false);
   const [parentStreak, setParentStreak] = useState<ParentStreakDoc | null>(null);
 
   // Form state
@@ -251,13 +254,14 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
           minutesPerDay: t.minutesPerDay,
           completed: t.completed,
           completedDays: t.completedDays,
-        }))
+        })),
+        childGrade,
       );
       setStudyPlanContent(content);
       bumpUsageRefresh();
     } catch (err) {
       console.error('Error generating study plan:', err);
-      setStudyPlanContent('Kunde inte generera studieplan. Försök igen.');
+      setStudyPlanContent(t('planner.studyPlanFailed'));
     } finally {
       setStudyPlanLoading(false);
     }
@@ -287,6 +291,7 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
     setExamPrepTask(task);
     setExamPrepLoading(true);
     setExamPrepContent(null);
+    setExamPrepSaved(false);
     try {
       // Check if we already have cached content
       if (task.examPrepContent && !forceRegenerate) {
@@ -300,7 +305,8 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
         task.description,
         task.aiNotes || [],
         linkedChatContext,
-        getTaskImages(task)
+        getTaskImages(task),
+        childGrade,
       );
       setExamPrepContent(content);
       bumpUsageRefresh();
@@ -310,9 +316,30 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
       });
     } catch (err) {
       console.error('Error generating exam prep:', err);
-      setExamPrepContent('Kunde inte generera provförberedelse. Försök igen.');
+      setExamPrepContent(t('planner.examPrepFailed'));
     } finally {
       setExamPrepLoading(false);
+    }
+  };
+
+  /**
+   * ExamPrepModal har alltid haft en spara-knapp, men den renderades bara om
+   * onSave skickades in — vilket den aldrig gjorde. Studiepaketet gick alltså
+   * inte att få tag på igen när modalen stängdes annat än via provuppgiften.
+   */
+  const saveExamPrepToLibrary = async () => {
+    if (!examPrepTask || !examPrepContent || examPrepSaved) return;
+    try {
+      await addDoc(collection(db, 'users', ownerId, 'children', childId, 'library'), {
+        title: `${t('planner.examPrep')}: ${examPrepTask.subject}`,
+        content: examPrepContent.slice(0, 9999),
+        type: 'text',
+        subject: examPrepTask.subject,
+        createdAt: new Date().toISOString(),
+      });
+      setExamPrepSaved(true);
+    } catch (err) {
+      console.error('Error saving exam prep:', err);
     }
   };
 
@@ -1543,7 +1570,9 @@ export default function Planner({ childId, ownerId, prefill, onPrefillUsed, onOp
           subject={examPrepTask.subject}
           loading={examPrepLoading}
           onRegenerate={() => handleExamPrep(examPrepTask, true)}
-          onClose={() => { setExamPrepTask(null); setExamPrepContent(null); }}
+          onSave={saveExamPrepToLibrary}
+          saved={examPrepSaved}
+          onClose={() => { setExamPrepTask(null); setExamPrepContent(null); setExamPrepSaved(false); }}
         />
       )}
       <ScheduleCalendarModal
