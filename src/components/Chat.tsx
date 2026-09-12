@@ -156,7 +156,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   /** Fokusläge: senaste svaret visas i helskärm så menyer m.m. hamnar bakom. */
   const [focusMode, setFocusMode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const focusScrollRef = useRef<HTMLDivElement>(null);
+  const focusContentRef = useRef<HTMLDivElement>(null);
 
   const dataUrlSizeBytes = (dataUrl: string): number => {
     const i = dataUrl.indexOf(',');
@@ -322,6 +322,11 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
 
   const displayMessages = [...olderMessages, ...messages];
 
+  /** Senaste AI-svaret — det som visas i fokusläget. */
+  const lastDisplayMessage = displayMessages[displayMessages.length - 1];
+  const focusedAnswer = lastDisplayMessage?.role === 'model' ? lastDisplayMessage : null;
+  const focusedAnswerId = focusedAnswer?.id ?? null;
+
   const dismissOnboardingTips = () => {
     localStorage.setItem('homework-chat-onboarding-seen', 'true');
     setShowOnboardingTips(false);
@@ -362,11 +367,13 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
     };
   }, [focusMode]);
 
-  // Följ med i texten medan svaret skrivs i fokusläget.
+  // Ett svar ska läsas uppifrån. Börja alltid överst — när vyn öppnas, när ett
+  // nytt svar börjar genereras, och när det färdiga svaret landar. (Ingen
+  // auto-scroll nedåt: då hamnar man längst ner och måste scrolla upp för att läsa.)
   useEffect(() => {
     if (!focusMode) return;
-    focusScrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [focusMode, streamingModelText, messages, loading]);
+    focusContentRef.current?.scrollTo({ top: 0 });
+  }, [focusMode, focusedAnswerId, loading]);
 
   // Clear lastStreamingText once new messages appear in Firestore
   useEffect(() => {
@@ -729,10 +736,6 @@ ${requirementsText}`;
     }
   }, [taskContext, activeSessionId, loading, onTaskContextUsed]);
 
-  /** Senaste AI-svaret — det som visas i fokusläget. */
-  const lastDisplayMessage = displayMessages[displayMessages.length - 1];
-  const focusedAnswer = lastDisplayMessage?.role === 'model' ? lastDisplayMessage : null;
-
   /** Renderar ett meddelande. Delas av meddelandelistan och fokusläget. */
   const renderMessage = (msg: Message, idx: number) => {
     const lastMessageIndex = displayMessages.length - 1;
@@ -1054,7 +1057,7 @@ ${requirementsText}`;
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 md:p-8">
+          <div ref={focusContentRef} className="flex-1 overflow-y-auto p-4 md:p-8">
             <div className="max-w-3xl mx-auto space-y-6">
               {error && (
                 <div className="p-4 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 rounded-2xl text-red-700 dark:text-red-200 text-sm flex items-center justify-between gap-3">
@@ -1092,7 +1095,6 @@ ${requirementsText}`;
               ) : !error ? (
                 <p className="text-sm text-stone-400 italic text-center py-12">{t('chat.focusEmpty')}</p>
               ) : null}
-              <div ref={focusScrollRef} />
             </div>
           </div>
         </div>
