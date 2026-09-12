@@ -148,7 +148,10 @@ export default function ChatMessage({
       >
         {msg.role === 'user' ? <User size={16} /> : <GraduationCap size={16} />}
       </div>
-      <div className={cn('space-y-2', msg.role === 'user' ? 'items-end' : 'items-start')}>
+      {/* min-w-0 är nödvändigt: en flex-cell krymper annars aldrig under sitt
+          innehålls naturliga bredd, så långa kodspann och formler tvingade hela
+          raden bredare än skärmen och texten klipptes av i båda kanterna. */}
+      <div className={cn('min-w-0 flex-1 space-y-2', msg.role === 'user' ? 'items-end' : 'items-start')}>
         {msg.attachments && msg.attachments.length > 0 && (
           <div className="flex flex-wrap gap-2 justify-end max-w-md">
             {msg.attachments.map((att, i) => (
@@ -183,7 +186,7 @@ export default function ChatMessage({
             </div>
           )}
           {bodyVisible && (
-            <div className="markdown-body prose prose-stone prose-sm max-w-none [&_.katex-display]:overflow-x-auto">
+            <div className="markdown-body prose prose-stone prose-sm max-w-none break-words [overflow-wrap:anywhere] [&_.katex-display]:overflow-x-auto [&_pre]:overflow-x-auto [&_pre]:max-w-full [&_code]:whitespace-pre-wrap [&_pre_code]:whitespace-pre [&_table]:block [&_table]:overflow-x-auto">
               <ReactMarkdown
                 remarkPlugins={[remarkMath]}
                 rehypePlugins={[[rehypeKatex, { strict: false, throwOnError: false }]]}

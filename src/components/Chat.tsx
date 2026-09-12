@@ -922,7 +922,7 @@ ${requirementsText}`;
         <FreeTierUsageBar className="w-full" />
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 space-y-6">
         {error && (
           <div className="max-w-3xl mx-auto mb-4 p-4 bg-red-50 border border-red-100 rounded-2xl text-red-700 text-sm flex items-center justify-between gap-3">
             <span className="min-w-0">{error}</span>
@@ -1038,7 +1038,7 @@ ${requirementsText}`;
             </div>
             {streamingModelText || lastStreamingText ? (
               <div className="bg-white dark:bg-slate-900 border border-black/5 dark:border-white/5 shadow-sm rounded-2xl rounded-tl-none px-4 py-3 max-w-3xl">
-                <div className="markdown-body prose prose-stone prose-sm max-w-none whitespace-pre-wrap dark:prose-invert">
+                <div className="markdown-body prose prose-stone prose-sm max-w-none whitespace-pre-wrap break-words [overflow-wrap:anywhere] dark:prose-invert">
                   {streamingModelText || lastStreamingText}
                 </div>
               </div>
@@ -1092,7 +1092,7 @@ ${requirementsText}`;
             </button>
           </div>
 
-          <div ref={focusContentRef} className="flex-1 overflow-y-auto p-4 md:p-8">
+          <div ref={focusContentRef} className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8">
             <div className="max-w-3xl mx-auto space-y-6">
               {error && (
                 <div className="p-4 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 rounded-2xl text-red-700 dark:text-red-200 text-sm flex items-center justify-between gap-3">
@@ -1119,13 +1119,13 @@ ${requirementsText}`;
                 </div>
               )}
               {loading || lastStreamingText ? (
-                <div className="flex gap-4 mr-auto">
+                <div className="flex gap-4 mr-auto min-w-0">
                   <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white shrink-0">
                     <Bot size={16} />
                   </div>
                   {streamingModelText || lastStreamingText ? (
                     <div className="bg-white dark:bg-slate-900 border border-black/5 dark:border-white/5 shadow-sm rounded-2xl rounded-tl-none px-4 py-3">
-                      <div className="markdown-body prose prose-stone prose-sm max-w-none whitespace-pre-wrap dark:prose-invert">
+                      <div className="markdown-body prose prose-stone prose-sm max-w-none whitespace-pre-wrap break-words [overflow-wrap:anywhere] dark:prose-invert">
                         {streamingModelText || lastStreamingText}
                       </div>
                     </div>
