@@ -281,7 +281,11 @@
     "dismissVoiceNotice": "Stäng",
     "imageActionExtraInstruction": "Extra instruktion från användaren",
     "learningGuide": "Trygg läxhjälp för vuxna hemma",
-    "moreSupport": "Mer stöd"
+    "moreSupport": "Mer stöd",
+    "focusTitle": "Svar",
+    "focusClose": "Stäng",
+    "focusCloseHint": "Stäng (Esc)",
+    "focusEmpty": "Inget svar att visa än."
   },
   "chatEmpty": {
     "helpWith": "Hjälp {{name}} med läxan",

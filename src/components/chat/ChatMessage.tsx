@@ -251,7 +251,7 @@ export default function ChatMessage({
         )}
         {zoomedImage && (
           <div
-            className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 animate-in fade-in"
+            className="fixed inset-0 bg-black/80 z-[80] flex items-center justify-center p-4 animate-in fade-in"
             onClick={() => setZoomedImage(null)}
           >
             <button

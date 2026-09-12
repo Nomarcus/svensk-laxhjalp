@@ -275,7 +275,11 @@
     "dismissVoiceNotice": "Dismiss",
     "imageActionExtraInstruction": "Extra instruction from the user",
     "learningGuide": "Calm support for adults at home",
-    "moreSupport": "More support"
+    "moreSupport": "More support",
+    "focusTitle": "Answer",
+    "focusClose": "Close",
+    "focusCloseHint": "Close (Esc)",
+    "focusEmpty": "No answer to show yet."
   },
   "chatEmpty": {
     "helpWith": "Help {{name}} with homework",

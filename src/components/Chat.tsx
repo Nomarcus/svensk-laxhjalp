@@ -153,7 +153,10 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   const [coachMode, setCoachMode] = useState(() => localStorage.getItem('coach-mode') === 'true');
   const [showOnboardingTips, setShowOnboardingTips] = useState(() => localStorage.getItem('homework-chat-onboarding-seen') !== 'true');
   const [addChildNudgeDismissed, setAddChildNudgeDismissed] = useState(() => localStorage.getItem('add-child-nudge-dismissed') === 'true');
+  /** Fokusläge: senaste svaret visas i helskärm så menyer m.m. hamnar bakom. */
+  const [focusMode, setFocusMode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const focusScrollRef = useRef<HTMLDivElement>(null);
 
   const dataUrlSizeBytes = (dataUrl: string): number => {
     const i = dataUrl.indexOf(',');
@@ -343,6 +346,27 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
+
+  // Esc stänger fokusläget, och sidan bakom ska inte kunna scrollas när det är öppet.
+  useEffect(() => {
+    if (!focusMode) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setFocusMode(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [focusMode]);
+
+  // Följ med i texten medan svaret skrivs i fokusläget.
+  useEffect(() => {
+    if (!focusMode) return;
+    focusScrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [focusMode, streamingModelText, messages, loading]);
 
   // Clear lastStreamingText once new messages appear in Firestore
   useEffect(() => {
@@ -598,6 +622,8 @@ ${requirementsText}`;
     setLoading(true);
     setError(null);
     setStreamingModelText('');
+    // Visa svaret i helskärm direkt så det går att följa medan det skrivs.
+    setFocusMode(true);
 
     const visibleText = displayText || (
       imageActionId
@@ -702,6 +728,112 @@ ${requirementsText}`;
       taskContextProcessed.current = false;
     }
   }, [taskContext, activeSessionId, loading, onTaskContextUsed]);
+
+  /** Senaste AI-svaret — det som visas i fokusläget. */
+  const lastDisplayMessage = displayMessages[displayMessages.length - 1];
+  const focusedAnswer = lastDisplayMessage?.role === 'model' ? lastDisplayMessage : null;
+
+  /** Renderar ett meddelande. Delas av meddelandelistan och fokusläget. */
+  const renderMessage = (msg: Message, idx: number) => {
+    const lastMessageIndex = displayMessages.length - 1;
+    // Check if the user message before this AI response had an image
+    const prevMsg = idx > 0 ? displayMessages[idx - 1] : null;
+    const hasImage = msg.role === 'model' && prevMsg?.role === 'user' && (prevMsg.attachments?.length ?? 0) > 0;
+    const isLatestModel = msg.role === 'model' && idx === lastMessageIndex;
+    const canContinueNextExercise =
+      Boolean(isLatestModel && stickyImageContext?.payload.length && !loading);
+    const showStudyMaterialButton =
+      msg.role === 'model' &&
+      (isRequirementsList(msg.content) || (prevMsg?.role === 'user' && isRequirementsList(prevMsg.content)));
+    const studyMaterialSource =
+      prevMsg?.role === 'user' && isRequirementsList(prevMsg.content) ? prevMsg.content : msg.content;
+
+    return (
+      <ChatMessage
+        key={msg.id}
+        msg={msg}
+        generatingImageId={generatingImageId}
+        savedMessageIds={savedMessageIds}
+        onShare={handleShare}
+        onSaveToLibrary={saveToLibrary}
+        onDeleteOwnMessage={deleteOwnMessage}
+        onGenerateImage={handleGenerateImage}
+        isRequirementsList={showStudyMaterialButton}
+        onCreateStudyMaterial={() => handleCreateStudyMaterial(studyMaterialSource)}
+        onAskCurriculum={(content) => {
+          sendMessage(`Förklara hur det du just berättade om kopplas till den svenska läroplanen (Lgr22). Vilka centrala innehåll och kunskapskrav berörs? Ge konkreta kopplingar så jag som förälder förstår varför mitt barn lär sig detta.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.curriculumLink'));
+        }}
+        onAskFacitShort={(content) => {
+          sendMessage(`Ge ett KORT facit för uppgiften du just förklarade.\n\nVIKTIGT FORMAT:\n- Använd en numrerad lista: 1), 2), 3)\n- En rad per deluppgift\n- Skriv endast slutsvar per del\n- Avsluta med rubriken "Vanliga fel" och 2 korta punkter\n- Skriv inte långa stycken\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeyShort'), { forceCoachMode: false });
+        }}
+        onAskFacitSteps={(content) => {
+          sendMessage(`Ge ett FULLSTÄNDIGT facit steg för steg för uppgiften du just förklarade.\n\nDU MÅSTE SVARA I EXAKT DENNA STRUKTUR:\n## Deluppgift 1\n### Steg 1: Ställ upp\n- Visa uppställningen i ett markdown-kodblock (tre backticks) med monospace, rad för rad så kolumnerna blir tydliga.\n### Steg 2: Räkna\n- Visa mellanled i korta, separata rader.\n### Steg 3: Svar\n- **Svar: ...**\n\n(Upprepa samma struktur för varje deluppgift)\n\nAVSLUTNING:\n## Vanliga fel\n- Punkt 1\n- Punkt 2\n- Punkt 3 (vid behov)\n\nREGLER:\n- Inga långa stycken\n- Inga "-----" eller kompakta engångsrader\n- En rad per steg, tydligt spaltat\n- Vid matte-uppställning: använd alltid markdown-kodblock (tre backticks)\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeySteps'), { forceCoachMode: false });
+        }}
+        onAskFacitParent={(content) => {
+          sendMessage(`Ge ett facit anpassat för föräldern.\n\nFORMAT:\n## Deluppgift 1\n1) Svar: ...\n2) Kort förklaring: ...\n3) Vanligt misstag: ...\n\n(Upprepa för varje deluppgift)\n\nOm det är matte, lägg uppställningen i ett markdown-kodblock (tre backticks) så kolumnerna blir tydliga.\n\nAvsluta med:\n## Vanliga fel\n- 2-3 korta punkter\n\nREGLER:\n- Kort och tydligt\n- Spaltat rad för rad\n- Inga långa stycken\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeyParent'), { forceCoachMode: false });
+        }}
+        onAskFordjupning={(content) => {
+          sendMessage(`Baserat på din förklaring, ge förslag på relaterade ämnen och kopplingar som kan fördjupa mitt barns förståelse. Ge 2-3 konkreta förslag på vad vi kan utforska vidare, med en kort förklaring av hur det kopplar till det vi just pratat om. Skriv det så att jag som förälder kan ta upp det med mitt barn.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.deepDive'));
+        }}
+        onStartFirstExercise={
+          canContinueNextExercise && stickyImageContext
+            ? () =>
+                void sendMessage(
+                  coachMode ? t('chat.firstExercisePromptCoach') : t('chat.firstExercisePrompt'),
+                  t('chat.firstExerciseDisplay'),
+                  { imageOverride: stickyImageContext },
+                )
+            : undefined
+        }
+        onContinueNextExercise={
+          canContinueNextExercise && stickyImageContext
+            ? () =>
+                void sendMessage(
+                  coachMode ? t('chat.nextExercisePromptCoach') : t('chat.nextExercisePrompt'),
+                  t('chat.nextExerciseDisplay'),
+                  { imageOverride: stickyImageContext },
+                )
+            : undefined
+        }
+        speechState={speakingMessageId === msg.id ? {
+          isSpeaking: speech.isSpeaking,
+          isPaused: speech.isPaused,
+          currentChunk: speech.currentChunk,
+          totalChunks: speech.totalChunks,
+          onSpeak: () => { speech.stop(); setSpeakingMessageId(msg.id); void speech.speak(msg.content, i18n.language); },
+          onPause: speech.pause,
+          onResume: speech.resume,
+          onNext: speech.next,
+          onStop: () => { speech.stop(); setSpeakingMessageId(null); },
+        } : {
+          isSpeaking: false,
+          isPaused: false,
+          currentChunk: 0,
+          totalChunks: 0,
+          onSpeak: () => { speech.stop(); setSpeakingMessageId(msg.id); void speech.speak(msg.content, i18n.language); },
+          onPause: speech.pause,
+          onResume: speech.resume,
+          onNext: speech.next,
+          onStop: () => { speech.stop(); setSpeakingMessageId(null); },
+        }}
+        onReadSummary={readSummary}
+        speechSupported={speech.isSupported}
+        onAutoCreateTask={onCreateTaskFromPhoto ? handleAutoCreateTask : undefined}
+        creatingAutoTask={creatingAutoTask}
+        hasImage={hasImage}
+        onAddToPlanner={tasks.length > 0 ? (content) => {
+          setTaskPickerContent(content);
+        } : undefined}
+        onCreateTask={onCreateTask ? (content) => {
+          // Extract a subject from the first line, default to 'Allmänt'
+          const firstLine = content.split('\n')[0].replace(/[#*]/g, '').trim();
+          const subject = firstLine.length > 3 && firstLine.length < 60 ? firstLine : 'Allmänt';
+          const description = content.length > 300 ? content.slice(0, 300) + '...' : content;
+          onCreateTask(subject, description);
+        } : undefined}
+      />
+    );
+  };
 
   return (
     <div
@@ -858,106 +990,7 @@ ${requirementsText}`;
         {displayMessages.length === 0 && !loading ? (
           <ChatEmptyState childName={childName} onSendStarter={sendMessage} />
         ) : (
-          displayMessages.map((msg, idx) => {
-            const lastMessageIndex = displayMessages.length - 1;
-            // Check if the user message before this AI response had an image
-            const prevMsg = idx > 0 ? displayMessages[idx - 1] : null;
-            const hasImage = msg.role === 'model' && prevMsg?.role === 'user' && (prevMsg.attachments?.length ?? 0) > 0;
-            const isLatestModel = msg.role === 'model' && idx === lastMessageIndex;
-            const canContinueNextExercise =
-              Boolean(isLatestModel && stickyImageContext?.payload.length && !loading);
-            const showStudyMaterialButton =
-              msg.role === 'model' &&
-              (isRequirementsList(msg.content) || (prevMsg?.role === 'user' && isRequirementsList(prevMsg.content)));
-            const studyMaterialSource =
-              prevMsg?.role === 'user' && isRequirementsList(prevMsg.content) ? prevMsg.content : msg.content;
-
-            return (
-              <ChatMessage
-                key={msg.id}
-                msg={msg}
-                generatingImageId={generatingImageId}
-                savedMessageIds={savedMessageIds}
-                onShare={handleShare}
-                onSaveToLibrary={saveToLibrary}
-                onDeleteOwnMessage={deleteOwnMessage}
-                onGenerateImage={handleGenerateImage}
-                isRequirementsList={showStudyMaterialButton}
-                onCreateStudyMaterial={() => handleCreateStudyMaterial(studyMaterialSource)}
-                onAskCurriculum={(content) => {
-                  sendMessage(`Förklara hur det du just berättade om kopplas till den svenska läroplanen (Lgr22). Vilka centrala innehåll och kunskapskrav berörs? Ge konkreta kopplingar så jag som förälder förstår varför mitt barn lär sig detta.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.curriculumLink'));
-                }}
-                onAskFacitShort={(content) => {
-                  sendMessage(`Ge ett KORT facit för uppgiften du just förklarade.\n\nVIKTIGT FORMAT:\n- Använd en numrerad lista: 1), 2), 3)\n- En rad per deluppgift\n- Skriv endast slutsvar per del\n- Avsluta med rubriken "Vanliga fel" och 2 korta punkter\n- Skriv inte långa stycken\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeyShort'), { forceCoachMode: false });
-                }}
-                onAskFacitSteps={(content) => {
-                  sendMessage(`Ge ett FULLSTÄNDIGT facit steg för steg för uppgiften du just förklarade.\n\nDU MÅSTE SVARA I EXAKT DENNA STRUKTUR:\n## Deluppgift 1\n### Steg 1: Ställ upp\n- Visa uppställningen i ett markdown-kodblock (tre backticks) med monospace, rad för rad så kolumnerna blir tydliga.\n### Steg 2: Räkna\n- Visa mellanled i korta, separata rader.\n### Steg 3: Svar\n- **Svar: ...**\n\n(Upprepa samma struktur för varje deluppgift)\n\nAVSLUTNING:\n## Vanliga fel\n- Punkt 1\n- Punkt 2\n- Punkt 3 (vid behov)\n\nREGLER:\n- Inga långa stycken\n- Inga "-----" eller kompakta engångsrader\n- En rad per steg, tydligt spaltat\n- Vid matte-uppställning: använd alltid markdown-kodblock (tre backticks)\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeySteps'), { forceCoachMode: false });
-                }}
-                onAskFacitParent={(content) => {
-                  sendMessage(`Ge ett facit anpassat för föräldern.\n\nFORMAT:\n## Deluppgift 1\n1) Svar: ...\n2) Kort förklaring: ...\n3) Vanligt misstag: ...\n\n(Upprepa för varje deluppgift)\n\nOm det är matte, lägg uppställningen i ett markdown-kodblock (tre backticks) så kolumnerna blir tydliga.\n\nAvsluta med:\n## Vanliga fel\n- 2-3 korta punkter\n\nREGLER:\n- Kort och tydligt\n- Spaltat rad för rad\n- Inga långa stycken\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeyParent'), { forceCoachMode: false });
-                }}
-                onAskFordjupning={(content) => {
-                  sendMessage(`Baserat på din förklaring, ge förslag på relaterade ämnen och kopplingar som kan fördjupa mitt barns förståelse. Ge 2-3 konkreta förslag på vad vi kan utforska vidare, med en kort förklaring av hur det kopplar till det vi just pratat om. Skriv det så att jag som förälder kan ta upp det med mitt barn.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.deepDive'));
-                }}
-                onStartFirstExercise={
-                  canContinueNextExercise && stickyImageContext
-                    ? () =>
-                        void sendMessage(
-                          coachMode ? t('chat.firstExercisePromptCoach') : t('chat.firstExercisePrompt'),
-                          t('chat.firstExerciseDisplay'),
-                          { imageOverride: stickyImageContext },
-                        )
-                    : undefined
-                }
-                onContinueNextExercise={
-                  canContinueNextExercise && stickyImageContext
-                    ? () =>
-                        void sendMessage(
-                          coachMode ? t('chat.nextExercisePromptCoach') : t('chat.nextExercisePrompt'),
-                          t('chat.nextExerciseDisplay'),
-                          { imageOverride: stickyImageContext },
-                        )
-                    : undefined
-                }
-                speechState={speakingMessageId === msg.id ? {
-                  isSpeaking: speech.isSpeaking,
-                  isPaused: speech.isPaused,
-                  currentChunk: speech.currentChunk,
-                  totalChunks: speech.totalChunks,
-                  onSpeak: () => { speech.stop(); setSpeakingMessageId(msg.id); void speech.speak(msg.content, i18n.language); },
-                  onPause: speech.pause,
-                  onResume: speech.resume,
-                  onNext: speech.next,
-                  onStop: () => { speech.stop(); setSpeakingMessageId(null); },
-                } : {
-                  isSpeaking: false,
-                  isPaused: false,
-                  currentChunk: 0,
-                  totalChunks: 0,
-                  onSpeak: () => { speech.stop(); setSpeakingMessageId(msg.id); void speech.speak(msg.content, i18n.language); },
-                  onPause: speech.pause,
-                  onResume: speech.resume,
-                  onNext: speech.next,
-                  onStop: () => { speech.stop(); setSpeakingMessageId(null); },
-                }}
-                onReadSummary={readSummary}
-                speechSupported={speech.isSupported}
-                onAutoCreateTask={onCreateTaskFromPhoto ? handleAutoCreateTask : undefined}
-                creatingAutoTask={creatingAutoTask}
-                hasImage={hasImage}
-                onAddToPlanner={tasks.length > 0 ? (content) => {
-                  setTaskPickerContent(content);
-                } : undefined}
-                onCreateTask={onCreateTask ? (content) => {
-                  // Extract a subject from the first line, default to 'Allmänt'
-                  const firstLine = content.split('\n')[0].replace(/[#*]/g, '').trim();
-                  const subject = firstLine.length > 3 && firstLine.length < 60 ? firstLine : 'Allmänt';
-                  const description = content.length > 300 ? content.slice(0, 300) + '...' : content;
-                  onCreateTask(subject, description);
-                } : undefined}
-              />
-            );
-          })
+          displayMessages.map((msg, idx) => renderMessage(msg, idx))
         )}
 
         {(loading || lastStreamingText) && (
@@ -998,9 +1031,76 @@ ${requirementsText}`;
       />
 
       {/* Task Picker Modal */}
+      {/* Fokusläge — senaste svaret i helskärm, menyer hamnar bakom */}
+      {focusMode && (
+        <div className="fixed inset-0 z-[60] bg-stone-50 dark:bg-slate-950 flex flex-col animate-in fade-in duration-150">
+          <div className="shrink-0 flex items-center justify-between gap-3 px-4 md:px-8 py-3 border-b border-black/5 dark:border-white/5 bg-white/90 dark:bg-slate-900/90 backdrop-blur">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white shrink-0">
+                <Bot size={16} />
+              </div>
+              <span className="font-serif italic text-lg text-stone-800 dark:text-stone-100 truncate">
+                {t('chat.focusTitle')}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFocusMode(false)}
+              aria-label={t('chat.focusClose')}
+              title={t('chat.focusCloseHint')}
+              className="p-2.5 rounded-full text-stone-500 hover:text-stone-900 hover:bg-stone-200/70 dark:text-stone-400 dark:hover:text-stone-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+            >
+              <X size={22} />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 md:p-8">
+            <div className="max-w-3xl mx-auto space-y-6">
+              {error && (
+                <div className="p-4 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 rounded-2xl text-red-700 dark:text-red-200 text-sm flex items-center justify-between gap-3">
+                  <span>{error}</span>
+                  <button
+                    type="button"
+                    onClick={() => setError(null)}
+                    className="p-1 shrink-0 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg"
+                    aria-label={t('chat.focusClose')}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              )}
+              {loading || lastStreamingText ? (
+                <div className="flex gap-4 mr-auto">
+                  <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white shrink-0">
+                    <Bot size={16} />
+                  </div>
+                  {streamingModelText || lastStreamingText ? (
+                    <div className="bg-white dark:bg-slate-900 border border-black/5 dark:border-white/5 shadow-sm rounded-2xl rounded-tl-none px-4 py-3">
+                      <div className="markdown-body prose prose-stone prose-sm max-w-none">
+                        {streamingModelText || lastStreamingText}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-white dark:bg-slate-900 border border-black/5 dark:border-white/5 shadow-sm rounded-2xl rounded-tl-none px-4 py-3 flex items-center gap-2">
+                      <Loader2 size={16} className="animate-spin text-emerald-600" />
+                      <span className="text-sm text-stone-500 italic">{t('chat.thinking')}</span>
+                    </div>
+                  )}
+                </div>
+              ) : focusedAnswer ? (
+                renderMessage(focusedAnswer, displayMessages.length - 1)
+              ) : !error ? (
+                <p className="text-sm text-stone-400 italic text-center py-12">{t('chat.focusEmpty')}</p>
+              ) : null}
+              <div ref={focusScrollRef} />
+            </div>
+          </div>
+        </div>
+      )}
+
       {taskPickerContent && (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[70] flex items-center justify-center p-4 animate-in fade-in"
           role="dialog"
           aria-modal="true"
           aria-labelledby="task-picker-title"
