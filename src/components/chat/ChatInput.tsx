@@ -322,11 +322,6 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
             {t('chat.listening')}
           </p>
         )}
-        {!atMax && (
-          <p className="text-[10px] text-center text-stone-400 mt-2">
-            {t('chat.multiImageHint', { max: maxImages })}
-          </p>
-        )}
         {!hasMessages && (
           <p className="text-[11px] text-center text-emerald-700/80 dark:text-emerald-300/80 mt-2 font-medium">
             {t('chat.parentReassurance', { defaultValue: 'Du behöver inte kunna allt själv — börja med en bild eller en enkel fråga.' })}

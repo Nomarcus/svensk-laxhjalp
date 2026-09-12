@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine, X, Volume2, Square, Pause, Play, SkipForward, Calculator, ListOrdered, Flag, Trash2, HeartHandshake, Baby, ChevronDown } from 'lucide-react';
+import { User, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine, X, Volume2, Square, Pause, Play, SkipForward, ListOrdered, Flag, Trash2, HeartHandshake, Baby, ChevronDown } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -83,23 +83,6 @@ export default function ChatMessage({
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [bodyExpanded, setBodyExpanded] = useState(false);
   const bodyVisible = !collapsibleBody || bodyExpanded;
-
-  const detectMathType = (content: string): string | null => {
-    const text = content.toLowerCase();
-    if (!/\d/.test(text)) return null;
-    if (text.includes('bråk')) return t('chat.mathTypeFractions');
-    if (text.includes('procent')) return t('chat.mathTypePercent');
-    if (text.includes('ekvation')) return t('chat.mathTypeEquation');
-    if (text.includes('uppställning') || text.includes('kolumn') || text.includes('ställ upp')) return t('chat.mathTypeColumn');
-    if (text.includes('division')) return t('chat.mathTypeDivision');
-    if (text.includes('multiplikation')) return t('chat.mathTypeMultiplication');
-    return t('chat.mathTypeGeneral');
-  };
-
-  const isPlanningRelevant = (content: string) => {
-    const text = content.toLowerCase();
-    return ['läxa', 'prov', 'inlämning', 'deadline', 'öva', 'träna', 'checklista', 'planering'].some((word) => text.includes(word));
-  };
 
   const extractSectionPreview = (content: string, heading: string) => {
     const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -293,25 +276,6 @@ export default function ChatMessage({
         )}
         {msg.role === 'model' && (
           <>
-            <div className="mt-1 max-w-2xl rounded-2xl border border-emerald-100 bg-emerald-50/80 px-3 py-2 text-xs text-emerald-900 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/25 dark:text-emerald-100">
-              <p className="font-semibold">{t('chat.nextStepTitle')}</p>
-              <p className="mt-0.5">{t('chat.nextStepHint')}</p>
-            </div>
-            {isPlanningRelevant(msg.content) && (onAddToPlanner || onCreateTask) && (
-              <div className="mt-1 max-w-2xl rounded-2xl border border-amber-200 bg-amber-50/90 px-3 py-2 text-xs text-amber-950 shadow-sm dark:border-amber-800/60 dark:bg-amber-950/25 dark:text-amber-100">
-                <p className="font-semibold">{t('chat.planningPromptTitle')}</p>
-                <p className="mt-0.5">{t('chat.planningPromptHint')}</p>
-              </div>
-            )}
-            {/* Etikett, inte en knapp — egen rad ovanför rutnätet. */}
-            {hasImage && detectMathType(msg.content) && (
-              <div className="mt-1">
-                <span className="inline-flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-900/50">
-                  <Calculator size={11} />
-                  {t('chat.detectedMathType')}: {detectMathType(msg.content)}
-                </span>
-              </div>
-            )}
             {/* Rutnät istället för flex-wrap: knappar av olika bredd radbröts
                 godtyckligt och gav ojämna rader med ensamma knappar. */}
             <div className="mt-1 grid max-w-2xl grid-cols-2 gap-2 sm:grid-cols-3 [&>*]:w-full [&>button]:justify-center">
