@@ -303,16 +303,21 @@ export default function ChatMessage({
                 <p className="mt-0.5">{t('chat.planningPromptHint')}</p>
               </div>
             )}
-            <div className="flex flex-wrap gap-2 mt-1">
+            {/* Etikett, inte en knapp — egen rad ovanför rutnätet. */}
             {hasImage && detectMathType(msg.content) && (
-              <span className="inline-flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100">
-                <Calculator size={11} />
-                {t('chat.detectedMathType')}: {detectMathType(msg.content)}
-              </span>
+              <div className="mt-1">
+                <span className="inline-flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-900/50">
+                  <Calculator size={11} />
+                  {t('chat.detectedMathType')}: {detectMathType(msg.content)}
+                </span>
+              </div>
             )}
+            {/* Rutnät istället för flex-wrap: knappar av olika bredd radbröts
+                godtyckligt och gav ojämna rader med ensamma knappar. */}
+            <div className="mt-1 grid max-w-2xl grid-cols-2 gap-2 sm:grid-cols-3 [&>*]:w-full [&>button]:justify-center">
             {speechSupported && speechState && (
               (speechState.isSpeaking || speechState.isPaused) ? (
-                <div className="flex flex-wrap items-center gap-1 rounded-lg border-2 border-stone-400 dark:border-stone-500 bg-stone-50/80 dark:bg-slate-800/80 px-1 py-1">
+                <div className="col-span-2 flex flex-wrap items-center gap-1 rounded-lg border-2 border-stone-400 dark:border-stone-500 bg-stone-50/80 dark:bg-slate-800/80 px-1 py-1 sm:col-span-3">
                   <span className="px-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">{t('chat.readingWholeAnswer')}</span>
                   <div className="h-1.5 w-20 overflow-hidden rounded-full bg-stone-200 dark:bg-slate-700"><div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${speechState.totalChunks ? ((speechState.currentChunk + 1) / speechState.totalChunks) * 100 : 0}%` }} /></div>
                   <button
@@ -417,8 +422,8 @@ export default function ChatMessage({
                 {t('chat.deepDive')}
               </button>
             )}
-            <details className="group/more relative">
-              <summary className={cn(ACTION_BTN, ACTION_FRAME, 'cursor-pointer list-none hover:border-stone-600 dark:hover:border-stone-300 [&::-webkit-details-marker]:hidden')}>
+            <details className="group/more relative col-span-2 sm:col-span-3">
+              <summary className={cn(ACTION_BTN, ACTION_FRAME, 'w-full cursor-pointer list-none justify-center hover:border-stone-600 dark:hover:border-stone-300 [&::-webkit-details-marker]:hidden')}>
                 {t('chat.moreSupport')}
                 <span className="text-[9px] transition-transform group-open/more:rotate-180">⌄</span>
               </summary>
@@ -518,7 +523,7 @@ export default function ChatMessage({
               <button
                 type="button"
                 onClick={() => onCreateStudyMaterial(msg.content)}
-                className={cn(ACTION_BTN, 'border-emerald-700 bg-emerald-50 text-emerald-900 hover:bg-emerald-100 dark:border-emerald-400 dark:bg-emerald-950/50 dark:text-emerald-100 dark:hover:bg-emerald-900/40 font-semibold')}
+                className={cn(ACTION_BTN, 'col-span-2 border-emerald-700 bg-emerald-50 text-emerald-900 hover:bg-emerald-100 dark:border-emerald-400 dark:bg-emerald-950/50 dark:text-emerald-100 dark:hover:bg-emerald-900/40 font-semibold sm:col-span-3')}
               >
                 <GraduationCap size={12} />
                 Skapa komplett läxunderlag
