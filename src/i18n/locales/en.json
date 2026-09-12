@@ -284,7 +284,12 @@
     "summaryChildExplanation": "How to explain it to your child",
     "showWalkthrough": "Show full walkthrough",
     "hideWalkthrough": "Hide walkthrough",
-    "retry": "Try again"
+    "retry": "Try again",
+    "simplerButton": "Simpler",
+    "simplerPrompt": "My child did not understand. Explain the same thing again, but simpler: shorter sentences, everyday words, and one concrete everyday example. Keep the same headings.",
+    "followUpPlaceholder": "Ask a follow-up…",
+    "followUpSend": "Send",
+    "newSessionTitle": "New chat"
   },
   "chatEmpty": {
     "helpWith": "Help {{name}} with homework",

@@ -207,7 +207,12 @@
     "summaryChildExplanation": "كيف تشرحها لطفلك",
     "showWalkthrough": "عرض الشرح الكامل",
     "hideWalkthrough": "إخفاء الشرح",
-    "retry": "حاول مرة أخرى"
+    "retry": "حاول مرة أخرى",
+    "simplerButton": "أبسط",
+    "simplerPrompt": "لم يفهم طفلي. اشرح الأمر نفسه مرة أخرى ولكن بشكل أبسط: جمل أقصر وكلمات يومية ومثال ملموس من الحياة اليومية. احتفظ بالعناوين نفسها.",
+    "followUpPlaceholder": "اسأل سؤالاً آخر…",
+    "followUpSend": "إرسال",
+    "newSessionTitle": "محادثة جديدة"
   },
   "chatEmpty": {
     "helpWith": "ساعد {{name}} في الواجبات",

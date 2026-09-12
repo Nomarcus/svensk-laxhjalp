@@ -290,7 +290,12 @@
     "summaryChildExplanation": "Så förklarar du för barnet",
     "showWalkthrough": "Visa hela genomgången",
     "hideWalkthrough": "Dölj genomgången",
-    "retry": "Försök igen"
+    "retry": "Försök igen",
+    "simplerButton": "Enklare",
+    "simplerPrompt": "Mitt barn förstod inte. Förklara samma sak igen, men enklare: kortare meningar, vardagliga ord, och ett konkret exempel ur vardagen. Behåll samma rubriker.",
+    "followUpPlaceholder": "Fråga vidare om svaret…",
+    "followUpSend": "Skicka",
+    "newSessionTitle": "Ny chatt"
   },
   "chatEmpty": {
     "helpWith": "Hjälp {{name}} med läxan",

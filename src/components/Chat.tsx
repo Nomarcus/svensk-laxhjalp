@@ -156,8 +156,12 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   const [addChildNudgeDismissed, setAddChildNudgeDismissed] = useState(() => localStorage.getItem('add-child-nudge-dismissed') === 'true');
   /** Fokusläge: senaste svaret visas i helskärm så menyer m.m. hamnar bakom. */
   const [focusMode, setFocusMode] = useState(false);
+  const closeFocusMode = useCallback(() => setFocusMode(false), []);
+  /** Följdfråga direkt i fokusvyn — annars är svarsskärmen en återvändsgränd. */
+  const [focusFollowUp, setFocusFollowUp] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const focusContentRef = useRef<HTMLDivElement>(null);
+  const focusDialogRef = useDialogA11y<HTMLDivElement>(focusMode, closeFocusMode);
   /** finally-blocket i sendMessage läser closure-värdet, som alltid var tomt.
    *  Refen speglar det som faktiskt strömmats in. */
   const streamingTextRef = useRef('');
@@ -221,7 +225,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
     try {
       const ref = collection(db, 'users', ownerId, 'children', childId, 'chatSessions');
       const docRef = await addDoc(ref, {
-        title: `Chatt ${new Date().toLocaleDateString()}`,
+        title: t('chat.newSessionTitle'),
         createdAt: serverTimestamp(),
       });
       setStickyImageContext(null);
@@ -329,12 +333,29 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
 
   const displayMessages = [...olderMessages, ...messages];
 
-  /** Senaste AI-svaret — det som visas i fokusläget. */
-  const lastDisplayMessage = displayMessages[displayMessages.length - 1];
-  const focusedAnswer = lastDisplayMessage?.role === 'model' ? lastDisplayMessage : null;
+  /**
+   * Senaste AI-svaret — det som visas i fokusläget. Långa svar delas upp i flera
+   * Firestore-dokument, så svaret är hela den avslutande följden av model-meddelanden.
+   * Tidigare visades bara sista biten, vilket började mitt i ett dokument.
+   */
+  const focusedAnswerRange = (() => {
+    const end = displayMessages.length - 1;
+    if (end < 0 || displayMessages[end]?.role !== 'model') return null;
+    let start = end;
+    while (start > 0 && displayMessages[start - 1]?.role === 'model') start -= 1;
+    return { start, end };
+  })();
+  const focusedAnswers = focusedAnswerRange
+    ? displayMessages.slice(focusedAnswerRange.start, focusedAnswerRange.end + 1)
+    : [];
+  const focusedAnswer = focusedAnswers.length > 0 ? focusedAnswers[focusedAnswers.length - 1] : null;
   const focusedAnswerId = focusedAnswer?.id ?? null;
   /** Svaret + barnförklaringen lyfts högst upp i fokusvyn. null = okänd struktur → visa allt som vanligt. */
-  const focusSummary = focusedAnswer ? extractAnswerSummary(focusedAnswer.content) : null;
+  // Sammanfattningen läses ur hela svaret, inte bara sista delen — annars missas
+  // "Svar:" när svaret delats upp över flera dokument.
+  const focusSummary = focusedAnswers.length > 0
+    ? extractAnswerSummary(focusedAnswers.map((m) => m.content).join('\n\n'))
+    : null;
 
   const dismissOnboardingTips = () => {
     localStorage.setItem('homework-chat-onboarding-seen', 'true');
@@ -361,17 +382,13 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
-  // Esc stänger fokusläget, och sidan bakom ska inte kunna scrollas när det är öppet.
+  // Sidan bakom ska inte kunna scrollas medan fokusvyn är öppen.
+  // Escape och fokushantering sköts av useDialogA11y (se focusDialogRef).
   useEffect(() => {
     if (!focusMode) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setFocusMode(false);
-    };
-    window.addEventListener('keydown', onKeyDown);
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
-      window.removeEventListener('keydown', onKeyDown);
       document.body.style.overflow = previousOverflow;
     };
   }, [focusMode]);
@@ -401,6 +418,19 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   const clearChat = async () => {
     if (!auth.currentUser || !childId || !activeSessionId) return;
     try {
+      // Firestore raderar inte underkollektioner automatiskt. Tidigare togs bara
+      // sessionsdokumentet bort, så meddelandena — inklusive foton på barnets
+      // skolarbete — låg kvar osynliga för alltid.
+      const messagesRef = collection(
+        db, 'users', ownerId, 'children', childId, 'chatSessions', activeSessionId, 'messages',
+      );
+      let remaining = true;
+      while (remaining) {
+        const snap = await getDocs(query(messagesRef, limit(200)));
+        if (snap.empty) break;
+        await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
+        remaining = snap.docs.length === 200;
+      }
       await deleteDoc(doc(db, 'users', ownerId, 'children', childId, 'chatSessions', activeSessionId));
       setStickyImageContext(null);
       setActiveSessionId(null);
@@ -676,6 +706,18 @@ ${requirementsText}`;
           });
         } else {
           handleFirestoreError(err, OperationType.CREATE, 'messages');
+        }
+      }
+
+      // Alla sessioner hette "Chatt <datum>" och blev omöjliga att skilja åt.
+      // Första frågan är en betydligt bättre etikett i historiken.
+      if (displayMessages.length === 0) {
+        const label = visibleText.replace(/\s+/g, ' ').trim().slice(0, 60);
+        if (label) {
+          void updateDoc(
+            doc(db, 'users', ownerId, 'children', childId, 'chatSessions', activeSessionId),
+            { title: label },
+          ).catch(() => { /* etiketten är inte kritisk */ });
         }
       }
 
@@ -1071,7 +1113,14 @@ ${requirementsText}`;
       {/* Task Picker Modal */}
       {/* Fokusläge — senaste svaret i helskärm, menyer hamnar bakom */}
       {focusMode && (
-        <div className="fixed inset-0 z-[60] bg-stone-50 dark:bg-slate-950 flex flex-col animate-in fade-in duration-150">
+        <div
+          ref={focusDialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('chat.focusTitle')}
+          tabIndex={-1}
+          className="fixed inset-0 z-[60] flex flex-col bg-stone-50 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] outline-none animate-in fade-in duration-150 dark:bg-slate-950"
+        >
           <div className="shrink-0 flex items-center justify-between gap-3 px-4 md:px-8 py-3 border-b border-black/5 dark:border-white/5 bg-white/90 dark:bg-slate-900/90 backdrop-blur">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white shrink-0">
@@ -1172,11 +1221,63 @@ ${requirementsText}`;
                       )}
                     </div>
                   )}
-                  {renderMessage(focusedAnswer, displayMessages.length - 1, Boolean(focusSummary))}
+                  {focusedAnswers.map((m, i) =>
+                    renderMessage(
+                      m,
+                      (focusedAnswerRange?.start ?? 0) + i,
+                      // Bara sista delen får fällas ihop — annars döljs knapparna
+                      // som hör till svaret bakom flera separata toggles.
+                      Boolean(focusSummary) && i === focusedAnswers.length - 1,
+                    ),
+                  )}
                 </>
               ) : !error ? (
                 <p className="text-sm text-stone-400 italic text-center py-12">{t('chat.focusEmpty')}</p>
               ) : null}
+            </div>
+          </div>
+
+          {/* Utan detta går det inte att fråga vidare från svarsskärmen — man
+              måste stänga, scrolla och hitta inmatningsfältet igen. */}
+          <div className="shrink-0 border-t border-black/5 bg-white/95 px-4 py-3 backdrop-blur dark:border-white/5 dark:bg-slate-900/95 md:px-8">
+            <div className="mx-auto flex max-w-3xl items-center gap-2">
+              <button
+                type="button"
+                disabled={loading || !focusedAnswer}
+                onClick={() => {
+                  setFocusFollowUp('');
+                  void sendMessage(t('chat.simplerPrompt'), t('chat.simplerButton'));
+                }}
+                className="shrink-0 rounded-xl border-2 border-emerald-600 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-900 transition-colors hover:bg-emerald-100 disabled:opacity-40 dark:border-emerald-400 dark:bg-emerald-950/50 dark:text-emerald-100"
+              >
+                {t('chat.simplerButton')}
+              </button>
+              <form
+                className="flex min-w-0 flex-1 items-center gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const text = focusFollowUp.trim();
+                  if (!text || loading) return;
+                  setFocusFollowUp('');
+                  void sendMessage(text);
+                }}
+              >
+                <input
+                  id="focus-follow-up"
+                  value={focusFollowUp}
+                  onChange={(e) => setFocusFollowUp(e.target.value)}
+                  placeholder={t('chat.followUpPlaceholder')}
+                  disabled={loading}
+                  className="min-w-0 flex-1 rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 outline-none transition-colors placeholder:text-stone-400 focus:border-emerald-600 disabled:opacity-50 dark:border-stone-600 dark:bg-slate-800 dark:text-stone-100"
+                />
+                <button
+                  type="submit"
+                  disabled={loading || !focusFollowUp.trim()}
+                  className="shrink-0 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-40"
+                >
+                  {t('chat.followUpSend')}
+                </button>
+              </form>
             </div>
           </div>
         </div>

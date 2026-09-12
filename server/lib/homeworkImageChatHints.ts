@@ -19,13 +19,3 @@ FLERA UPPGIFTER PÅ SAMMA BILD (COACH-LÄGE):
 - Om alla synliga uppgifter redan är guidade: säg det kort i "🎯 Fråga barnet"-punkten och föreslå nästa sida.
 `;
 
-export const MULTI_EXERCISE_IMAGE_INSTRUCTION_SIMPLE = `
-
-📸 FLERA UPPGIFTER PÅ BILD:
-- Bara EN uppgift per svar. Skriv vilket nummer det är.
-- Efter ditt vanliga slut: skriv **Vad vill du göra nu?**
-- Två rader:
-  ➡️ Nästa uppgift? (Knapp: ungefär "Fortsätt med nästa uppgift")
-  💡 Mer om samma? (Knapp: fördjupning)
-- En uppgift på bilden? Säg det kort. Skriv ändå **Vad vill du göra nu?**
-`;
