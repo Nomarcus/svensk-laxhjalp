@@ -214,14 +214,16 @@ export default function ChatMessage({
               type="button"
               onClick={() => setBodyExpanded((v) => !v)}
               aria-expanded={bodyExpanded}
-              className="flex w-full items-center justify-between gap-2 text-sm font-medium text-stone-600 dark:text-stone-300 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors"
+              className="relative z-10 -mx-2 flex w-[calc(100%+1rem)] items-center justify-between gap-2 rounded-xl px-2 py-2 text-sm font-medium text-stone-600 transition-colors hover:text-emerald-700 active:bg-stone-100 dark:text-stone-300 dark:hover:text-emerald-400 dark:active:bg-slate-700/60"
             >
               <span>{bodyExpanded ? t('chat.hideWalkthrough') : t('chat.showWalkthrough')}</span>
               <ChevronDown size={18} className={cn('transition-transform shrink-0', bodyExpanded && 'rotate-180')} />
             </button>
           )}
           {msg.role === 'model' && (
-            <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity">
+            // pointer-events-none när de är osynliga: utan det fångar de tryck på
+            // touch (där hover aldrig triggas) och stjäl klick från innehållet under.
+            <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 pointer-events-none transition-opacity group-hover/msg:opacity-100 group-hover/msg:pointer-events-auto">
               <button
                 type="button"
                 onClick={() => onShare(msg)}
@@ -247,7 +249,7 @@ export default function ChatMessage({
             </div>
           )}
           {msg.role === 'user' && onDeleteOwnMessage && (
-            <div className="absolute top-2 left-2 opacity-0 group-hover/msg:opacity-100 transition-opacity">
+            <div className="absolute top-2 left-2 opacity-0 pointer-events-none transition-opacity group-hover/msg:opacity-100 group-hover/msg:pointer-events-auto">
               <button
                 type="button"
                 onClick={() => onDeleteOwnMessage(msg.id)}
