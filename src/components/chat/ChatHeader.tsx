@@ -61,7 +61,7 @@ export default function ChatHeader({
           onClick={onToggleCoachMode}
           aria-pressed={coachMode}
           className={cn(
-            "hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all",
+            "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all",
             coachMode
               ? "bg-amber-100 text-amber-800 ring-1 ring-amber-300 shadow-sm"
               : "bg-stone-50 text-stone-400 hover:bg-amber-50 hover:text-amber-700"

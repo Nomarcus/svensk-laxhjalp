@@ -453,6 +453,22 @@ export default function ChatMessage({
                 {creatingAutoTask ? t('chat.creatingTask') : t('chat.createTaskAi')}
               </button>
             )}
+            {/* Spara låg tidigare bara i hover-lagret uppe till höger, vilket aldrig
+                gick att nå på touch. Den hör hemma bland de synliga knapparna. */}
+            <button
+              type="button"
+              onClick={() => onSaveToLibrary(msg)}
+              disabled={savedMessageIds.has(msg.id)}
+              className={cn(
+                ACTION_BTN,
+                savedMessageIds.has(msg.id)
+                  ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:border-emerald-400 dark:bg-emerald-950/40 dark:text-emerald-100'
+                  : cn(ACTION_FRAME, 'hover:border-emerald-600 dark:hover:border-emerald-400'),
+              )}
+            >
+              {savedMessageIds.has(msg.id) ? <Check size={12} /> : <BookmarkPlus size={12} />}
+              {savedMessageIds.has(msg.id) ? t('chat.saved') : t('chat.saveToLibrary')}
+            </button>
             <button
               type="button"
               onClick={() => handlePrint(msg.content)}

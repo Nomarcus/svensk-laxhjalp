@@ -88,7 +88,7 @@ export async function subscriptionMiddleware(
     if (req.path === '/image') {
       res.status(403).json({
         error:
-          'AI-illustrationer ingår i abonnemanget (49 kr/mån). Som gratis användare kan du fortfarande analysera läxfoton i chatten inom dagens kvot.',
+          'AI-illustrationer är inte tillgängliga just nu. Du kan fortfarande analysera läxfoton i chatten inom dagens kvot.',
         upgradeRequired: true,
       });
       return;
@@ -101,7 +101,7 @@ export async function subscriptionMiddleware(
     if (req.path === '/chat' && chatHasImage) {
       if (imageCount >= FREE_IMAGE_LIMIT) {
         res.status(403).json({
-          error: `Du har använt dagens gratis bildanalyser (${FREE_IMAGE_LIMIT}/dag). Med abonnemang (49 kr/mån) får du obegränsat.`,
+          error: `Du har använt dagens bildanalyser (${FREE_IMAGE_LIMIT}/dag). Kvoten nollställs imorgon.`,
           upgradeRequired: true,
           limit: FREE_IMAGE_LIMIT,
           used: imageCount,
@@ -119,7 +119,7 @@ export async function subscriptionMiddleware(
     if (req.path === '/chat') {
       if (chatCount >= FREE_CHAT_LIMIT) {
         res.status(429).json({
-          error: `Du har använt dagens ${FREE_CHAT_LIMIT} gratis AI-svar. Imorgon nollställs kvoten — eller välj abonnemang (49 kr/mån) för obegränsat.`,
+          error: `Du har använt dagens ${FREE_CHAT_LIMIT} AI-svar. Kvoten nollställs imorgon.`,
           upgradeRequired: true,
           limit: FREE_CHAT_LIMIT,
           used: chatCount,

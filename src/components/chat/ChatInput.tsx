@@ -90,7 +90,10 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
   const pushOneDataUrl = async (dataUrl: string) => {
     let finalUrl = dataUrl;
     try {
-      finalUrl = await compressImage(dataUrl);
+      // Kameran och bildväljaren är den väg nästan alla använder. Standardvärdena
+      // (800 px, kvalitet 0,7) ger ~10 pixlar per teckenrad på ett A4-blad, vilket
+      // är för lite för handskriven matte — modellen läser fel siffror.
+      finalUrl = await compressImage(dataUrl, 1280, 1280, 0.75);
     } catch {
       /* raw */
     }

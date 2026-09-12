@@ -19,6 +19,34 @@ const IMAGE_MODEL = process.env.AI_IMAGE_MODEL || 'gemini-2.5-flash-image';
 /** Model used when a chat message includes photos to analyze — separate from TEXT_MODEL
  * so changing AI_TEXT_MODEL doesn't silently leave the (usually pricier) image path untouched. */
 const IMAGE_ANALYSIS_MODEL = process.env.AI_IMAGE_ANALYSIS_MODEL || 'gemini-2.5-flash';
+/** Facit och rättning — svaret används som facit, så det ska inte köras på den billigaste modellen. */
+const PRECISION_MODEL = process.env.AI_PRECISION_MODEL || 'gemini-2.5-flash';
+/** Temperatur per läge. Standard är 1.0, vilket är för slumpmässigt för ett facit. */
+const TEMPERATURE_DEFAULT = Number(process.env.AI_TEMPERATURE) || 0.35;
+const TEMPERATURE_PRECISION = Number(process.env.AI_TEMPERATURE_PRECISION) || 0.15;
+
+const SIMPLE_SWEDISH_DIRECTIVE = `
+LÄTTLÄST SVENSKA — detta överstyr formuleringarna ovan (men inte rubrikerna):
+- Max 8 ord per mening. En tanke per mening. Inga bisatser.
+- Bara vanliga, vardagliga ord. Måste du använda ett skolord: skriv det enkla ordet först och skolordet i parentes.
+- Använd punktlistor i stället för stycken.
+`;
+
+const LANGUAGE_NAMES: Record<string, string> = {
+  en: 'English',
+  ar: 'Arabic',
+};
+
+/** Svaret skrevs alltid på svenska eftersom språkvalet aldrig lästes av servern. */
+function languageDirective(raw?: unknown): string {
+  if (typeof raw !== 'string') return '';
+  const name = LANGUAGE_NAMES[raw.trim().toLowerCase()];
+  if (!name) return '';
+  return `
+SPRÅK: Föräldern använder appen på ${name}. Skriv hela svaret på ${name}.
+Behåll svenska skoltermer (ämnesnamn, "Lgr22", "årskurs") på svenska, och behåll rubrikerna exakt som de står ovan på svenska så appen kan läsa dem.
+`;
+}
 const PROMPT_CACHE_TTL_MS = 60 * 60 * 1000;
 const IMAGE_ANALYSIS_CACHE_TTL_MS = 10 * 60 * 1000;
 /** Hard ceiling on response length — protects against runaway/looping generations. */
@@ -40,21 +68,49 @@ function parseGradeLevel(raw?: unknown): number | null {
   return Number.isFinite(n) && n >= 0 && n <= 12 ? n : null;
 }
 
+/**
+ * Årskursen är den enskilt viktigaste kvalitetsfaktorn i ett svar. Tidigare styrde
+ * den bara tonfallet; nu styr den också läsnivån i texten föräldern läser högt,
+ * vilken notation som får användas och vilka metoder barnet faktiskt kan ha lärt sig.
+ */
 function buildAudienceGuidance(rawGrade?: unknown): string {
   const grade = parseGradeLevel(rawGrade);
   if (grade === null) {
-    return 'Neutral nivå: tydligt men inte barnsligt språk. Undvik överförenkling.';
+    return [
+      'Årskurs okänd. Håll en neutral nivå: tydligt men inte barnsligt språk.',
+      'Under **Så säger du till barnet:** — max 3 korta meningar, vardagliga ord.',
+      'Undvik avancerad notation tills du vet nivån.',
+    ].join('\n- ');
   }
   if (grade <= 3) {
-    return 'Lågstadium: enkel och varm ton, mycket konkreta exempel, lekfull pedagogik.';
+    return [
+      'Lågstadium (åk 1-3). Varm och lekfull ton, mycket konkreta exempel ur vardagen.',
+      'Under **Så säger du till barnet:** — max 2 meningar, högst 8 ord per mening, inga bisatser.',
+      'Notation: bara +, -, enkel × och enklaste bråk. Använd inte ÷, x som obekant eller decimaltal med många siffror.',
+      'Metoder: räkna på fingrar, talraden, hoppa i tiotal, rita. Aldrig algebra eller uppställning med minnessiffra om uppgiften inte redan visar den.',
+    ].join('\n- ');
   }
   if (grade <= 6) {
-    return 'Mellanstadium: tydlig och coachande ton, konkreta exempel, mindre lekfullt.';
+    return [
+      'Mellanstadium (åk 4-6). Tydlig och coachande ton, konkreta exempel, mindre lekfullt.',
+      'Under **Så säger du till barnet:** — max 3 meningar, högst 12 ord per mening.',
+      'Notation: de fyra räknesätten, bråk, decimaltal, procent, enkel geometri. Inte ekvationer med x om uppgiften inte redan gör det.',
+      'Metoder: skolans uppställning, liggande stolen, sambandet mellan bråk-decimal-procent. Lös inte med algebra det som ska lösas med uppställning.',
+    ].join('\n- ');
   }
   if (grade <= 9) {
-    return 'Högstadium: mer mogen ton, rak och respektfull, ämneskorrekt terminologi.';
+    return [
+      'Högstadium (åk 7-9). Mogen, rak och respektfull ton, ämneskorrekt terminologi.',
+      'Under **Så säger du till barnet:** — max 3 meningar, tala med barnet som en ung person, inte som ett litet barn.',
+      'Notation: ekvationer, potenser, Pythagoras sats, funktioner, negativa tal.',
+      'Metoder: algebraisk lösning är i regel rätt nivå. Visa gärna kontrollräkningen.',
+    ].join('\n- ');
   }
-  return 'Gymnasienivå: vuxnare ton, precision och struktur, undvik barnsliga metaforer.';
+  return [
+    'Gymnasienivå. Vuxen ton, precision och struktur, undvik barnsliga metaforer.',
+    'Under **Så säger du till barnet:** — tala till en ungdom; förklara resonemanget, inte bara svaret.',
+    'Notation och metoder: full gymnasienivå, inklusive formell algebra och funktionsanalys.',
+  ].join('\n- ');
 }
 
 function gradeBucket(rawGrade?: unknown): string {
@@ -117,7 +173,16 @@ Om användaren ber om facit:
 - Lägg till "Vanliga fel" med 2-3 punkter.
 - I matte: per deluppgift (Steg 1: Ställ upp, Steg 2: Räkna, Steg 3: Svar) och använd markdown-kodblock (tre backticks) för uppställning.
 
-Vid bildanalys: identifiera ämne + uppgift, förklara stegvis och använd rubrikerna **Till dig som vuxen:**, **Så säger du till barnet:** och **Nästa bästa steg:**.
+Innan du svarar — alltid:
+- Räkna igenom matten baklänges och kontrollera att svaret stämmer och att enheterna är rimliga. Hittar du ett fel, rätta det innan du skriver svaret.
+- Använd bara metoder barnet rimligen har lärt sig i sin årskurs. Behöver du ta en genväg: nämn den kort och visa skolans metod också.
+
+Vid bildanalys:
+- Skriv först av uppgiften exakt som den står — siffror, tecken, enheter — under rubriken **Så här läser jag uppgiften:**. Först därefter löser du den.
+- Är något suddigt, avklippt eller omöjligt att tyda: skriv [oläsligt] på den platsen och säg vad föräldern behöver fota om. Gissa aldrig på en siffra.
+- Identifiera sedan ämne + uppgift, förklara stegvis och använd rubrikerna **Till dig som vuxen:**, **Så säger du till barnet:** och **Nästa bästa steg:**.
+
+Om uppgiften är omöjlig att förstå, eller om det saknas information du behöver (en sida som inte syns, en instruktion som inte är med): säg det rakt ut i stället för att gissa. Det är ett fullgott svar.
 När svaret handlar om läxa, prov, inlämning eller övning: föreslå kort en relevant planering, t.ex. lägg som läxa, öva 10 minuter per dag eller skapa checklista inför provet.
 `;
 
@@ -156,9 +221,13 @@ Regler:
 
 router.post('/chat', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { prompt, history, imageBase64, imageBase64s, childGrade, coachMode } = req.body;
+    const { prompt, history, imageBase64, imageBase64s, childGrade, coachMode, simpleSwedish, language, precision } = req.body;
     const safeChildGrade = typeof childGrade === 'string' ? childGrade.slice(0, 32) : undefined;
     const isCoach = coachMode === true;
+    const isSimple = simpleSwedish === true;
+    // Facit och rättning: svaret visas för barnet som facit, så slumpen ska vara låg
+    // och modellen starkare än den billiga standardmodellen.
+    const isPrecision = precision === true;
 
     const images = validateInlineImages(imageBase64, imageBase64s);
     if (images.ok === false) {
@@ -182,11 +251,23 @@ router.post('/chat', async (req: AuthenticatedRequest, res: Response) => {
     const imageMultiHint = images.parts.length > 0
       ? (isCoach ? MULTI_EXERCISE_IMAGE_INSTRUCTION_COACH : MULTI_EXERCISE_IMAGE_INSTRUCTION)
       : '';
-    const effectiveModel = images.parts.length > 0 ? IMAGE_ANALYSIS_MODEL : TEXT_MODEL;
-    const bucket = `${gradeBucket(safeChildGrade)}|${images.parts.length > 0 ? 'image' : 'text'}|${isCoach ? 'coach' : 'teach'}`;
+    const effectiveModel = isPrecision
+      ? PRECISION_MODEL
+      : images.parts.length > 0
+        ? IMAGE_ANALYSIS_MODEL
+        : TEXT_MODEL;
+    const bucket = [
+      gradeBucket(safeChildGrade),
+      images.parts.length > 0 ? 'image' : 'text',
+      isCoach ? 'coach' : 'teach',
+      isSimple ? 'simple' : 'normal',
+      languageDirective(language) ? `lang:${String(language).slice(0, 5)}` : 'sv',
+    ].join('|');
     const baseInstruction = isCoach ? COACH_SYSTEM_INSTRUCTION : SYSTEM_INSTRUCTION;
     const effectiveSystemInstruction = `${baseInstruction}
 ${imageMultiHint}
+${isSimple ? SIMPLE_SWEDISH_DIRECTIVE : ''}
+${languageDirective(language)}
 
 Anpassning för detta barn:
 - ${audienceGuidance}
@@ -202,7 +283,11 @@ Anpassning för detta barn:
           .update('|')
           .update(p.text)
           .update('|')
-          .update(images.parts.map((p2) => p2.inlineData.data.slice(0, 64)).join('|'))
+          // Hela bilddatan måste med. Med bara de första tecknen blev nyckeln
+          // JPEG-huvudet, som är identiskt för varje bild appen producerar —
+          // två olika läxfoton med samma snabbknapp fick då samma nyckel och
+          // föräldern serverades förra bildens svar.
+          .update(images.parts.map((p2) => p2.inlineData.data).join('|'))
           .digest('hex')
       : null;
     if (cacheKey) {
@@ -227,9 +312,13 @@ Anpassning för detta barn:
           ],
         },
       ],
-      config: cachedContent
-        ? { cachedContent, maxOutputTokens: MAX_OUTPUT_TOKENS_CHAT }
-        : { systemInstruction: effectiveSystemInstruction, maxOutputTokens: MAX_OUTPUT_TOKENS_CHAT },
+      config: {
+        maxOutputTokens: MAX_OUTPUT_TOKENS_CHAT,
+        temperature: isPrecision ? TEMPERATURE_PRECISION : TEMPERATURE_DEFAULT,
+        ...(cachedContent
+          ? { cachedContent }
+          : { systemInstruction: effectiveSystemInstruction }),
+      },
     };
 
     const stream = await ai.models.generateContentStream(requestPayload);

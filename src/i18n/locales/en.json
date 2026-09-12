@@ -283,7 +283,8 @@
     "summaryAnswer": "Answer",
     "summaryChildExplanation": "How to explain it to your child",
     "showWalkthrough": "Show full walkthrough",
-    "hideWalkthrough": "Hide walkthrough"
+    "hideWalkthrough": "Hide walkthrough",
+    "retry": "Try again"
   },
   "chatEmpty": {
     "helpWith": "Help {{name}} with homework",

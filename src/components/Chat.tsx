@@ -158,6 +158,12 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   const [focusMode, setFocusMode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const focusContentRef = useRef<HTMLDivElement>(null);
+  /** finally-blocket i sendMessage läser closure-värdet, som alltid var tomt.
+   *  Refen speglar det som faktiskt strömmats in. */
+  const streamingTextRef = useRef('');
+  /** Senaste skickade meddelandet, så ett misslyckat anrop kan göras om utan att
+   *  föräldern måste fota läxan igen. Nollställs när svaret kommit fram. */
+  const [lastAttempt, setLastAttempt] = useState<(() => void) | null>(null);
 
   const dataUrlSizeBytes = (dataUrl: string): number => {
     const i = dataUrl.indexOf(',');
@@ -602,7 +608,7 @@ ${requirementsText}`;
   const sendMessage = async (
     e: React.FormEvent | string,
     displayText?: string,
-    opts?: { imageOverride?: ImageOverride; forceCoachMode?: boolean },
+    opts?: { imageOverride?: ImageOverride; forceCoachMode?: boolean; precision?: boolean },
   ) => {
     if (typeof e !== 'string') e.preventDefault();
     const typedText = typeof e === 'string' ? e : input.trim();
@@ -632,6 +638,15 @@ ${requirementsText}`;
     setLoading(true);
     setError(null);
     setStreamingModelText('');
+    streamingTextRef.current = '';
+    setLastAttempt(() => () => {
+      void sendMessage(messageText, displayText, {
+        ...opts,
+        imageOverride: imagePayload.length
+          ? { payload: imagePayload, dataUrls: currentDataUrls }
+          : undefined,
+      });
+    });
     // Visa svaret i helskärm direkt så det går att följa medan det skrivs.
     setFocusMode(true);
 
@@ -675,8 +690,12 @@ ${requirementsText}`;
         i18n.language,
         imagePayload.length ? imagePayload : undefined,
         childGrade,
-        (_delta, fullText) => setStreamingModelText(fullText),
+        (_delta, fullText) => {
+          streamingTextRef.current = fullText;
+          setStreamingModelText(fullText);
+        },
         effectiveCoachMode,
+        opts?.precision === true,
       );
 
       // Split long AI responses across multiple messages so each chunk stays
@@ -693,6 +712,7 @@ ${requirementsText}`;
       if (imagePayload.length) {
         setStickyImageContext({ payload: [...imagePayload], dataUrls: [...currentDataUrls] });
       }
+      setLastAttempt(null);
       bumpUsageRefresh();
     } catch (err: any) {
       const msg = err.message || '';
@@ -709,8 +729,8 @@ ${requirementsText}`;
         setError(msg || t('chat.unexpectedError'));
       }
     } finally {
-      if (streamingModelText) {
-        setLastStreamingText(streamingModelText);
+      if (streamingTextRef.current) {
+        setLastStreamingText(streamingTextRef.current);
       }
       setStreamingModelText('');
       setLoading(false);
@@ -771,13 +791,13 @@ ${requirementsText}`;
           sendMessage(`Förklara hur det du just berättade om kopplas till den svenska läroplanen (Lgr22). Vilka centrala innehåll och kunskapskrav berörs? Ge konkreta kopplingar så jag som förälder förstår varför mitt barn lär sig detta.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.curriculumLink'));
         }}
         onAskFacitShort={(content) => {
-          sendMessage(`Ge ett KORT facit för uppgiften du just förklarade.\n\nVIKTIGT FORMAT:\n- Använd en numrerad lista: 1), 2), 3)\n- En rad per deluppgift\n- Skriv endast slutsvar per del\n- Avsluta med rubriken "Vanliga fel" och 2 korta punkter\n- Skriv inte långa stycken\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeyShort'), { forceCoachMode: false });
+          sendMessage(`Ge ett KORT facit för uppgiften du just förklarade.\n\nVIKTIGT FORMAT:\n- Använd en numrerad lista: 1), 2), 3)\n- En rad per deluppgift\n- Skriv endast slutsvar per del\n- Avsluta med rubriken "Vanliga fel" och 2 korta punkter\n- Skriv inte långa stycken\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeyShort'), { forceCoachMode: false, precision: true });
         }}
         onAskFacitSteps={(content) => {
-          sendMessage(`Ge ett FULLSTÄNDIGT facit steg för steg för uppgiften du just förklarade.\n\nDU MÅSTE SVARA I EXAKT DENNA STRUKTUR:\n## Deluppgift 1\n### Steg 1: Ställ upp\n- Visa uppställningen i ett markdown-kodblock (tre backticks) med monospace, rad för rad så kolumnerna blir tydliga.\n### Steg 2: Räkna\n- Visa mellanled i korta, separata rader.\n### Steg 3: Svar\n- **Svar: ...**\n\n(Upprepa samma struktur för varje deluppgift)\n\nAVSLUTNING:\n## Vanliga fel\n- Punkt 1\n- Punkt 2\n- Punkt 3 (vid behov)\n\nREGLER:\n- Inga långa stycken\n- Inga "-----" eller kompakta engångsrader\n- En rad per steg, tydligt spaltat\n- Vid matte-uppställning: använd alltid markdown-kodblock (tre backticks)\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeySteps'), { forceCoachMode: false });
+          sendMessage(`Ge ett FULLSTÄNDIGT facit steg för steg för uppgiften du just förklarade.\n\nDU MÅSTE SVARA I EXAKT DENNA STRUKTUR:\n## Deluppgift 1\n### Steg 1: Ställ upp\n- Visa uppställningen i ett markdown-kodblock (tre backticks) med monospace, rad för rad så kolumnerna blir tydliga.\n### Steg 2: Räkna\n- Visa mellanled i korta, separata rader.\n### Steg 3: Svar\n- **Svar: ...**\n\n(Upprepa samma struktur för varje deluppgift)\n\nAVSLUTNING:\n## Vanliga fel\n- Punkt 1\n- Punkt 2\n- Punkt 3 (vid behov)\n\nREGLER:\n- Inga långa stycken\n- Inga "-----" eller kompakta engångsrader\n- En rad per steg, tydligt spaltat\n- Vid matte-uppställning: använd alltid markdown-kodblock (tre backticks)\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeySteps'), { forceCoachMode: false, precision: true });
         }}
         onAskFacitParent={(content) => {
-          sendMessage(`Ge ett facit anpassat för föräldern.\n\nFORMAT:\n## Deluppgift 1\n1) Svar: ...\n2) Kort förklaring: ...\n3) Vanligt misstag: ...\n\n(Upprepa för varje deluppgift)\n\nOm det är matte, lägg uppställningen i ett markdown-kodblock (tre backticks) så kolumnerna blir tydliga.\n\nAvsluta med:\n## Vanliga fel\n- 2-3 korta punkter\n\nREGLER:\n- Kort och tydligt\n- Spaltat rad för rad\n- Inga långa stycken\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeyParent'), { forceCoachMode: false });
+          sendMessage(`Ge ett facit anpassat för föräldern.\n\nFORMAT:\n## Deluppgift 1\n1) Svar: ...\n2) Kort förklaring: ...\n3) Vanligt misstag: ...\n\n(Upprepa för varje deluppgift)\n\nOm det är matte, lägg uppställningen i ett markdown-kodblock (tre backticks) så kolumnerna blir tydliga.\n\nAvsluta med:\n## Vanliga fel\n- 2-3 korta punkter\n\nREGLER:\n- Kort och tydligt\n- Spaltat rad för rad\n- Inga långa stycken\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeyParent'), { forceCoachMode: false, precision: true });
         }}
         onAskFordjupning={(content) => {
           sendMessage(`Baserat på din förklaring, ge förslag på relaterade ämnen och kopplingar som kan fördjupa mitt barns förståelse. Ge 2-3 konkreta förslag på vad vi kan utforska vidare, med en kort förklaring av hur det kopplar till det vi just pratat om. Skriv det så att jag som förälder kan ta upp det med mitt barn.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.deepDive'));
@@ -904,11 +924,22 @@ ${requirementsText}`;
 
       <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
         {error && (
-          <div className="max-w-3xl mx-auto mb-4 p-4 bg-red-50 border border-red-100 rounded-2xl text-red-700 text-sm flex items-center justify-between">
-            <span>{error}</span>
-            <button onClick={() => setError(null)} className="p-1 hover:bg-red-100 rounded-lg">
-              <X size={16} />
-            </button>
+          <div className="max-w-3xl mx-auto mb-4 p-4 bg-red-50 border border-red-100 rounded-2xl text-red-700 text-sm flex items-center justify-between gap-3">
+            <span className="min-w-0">{error}</span>
+            <div className="flex shrink-0 items-center gap-2">
+            {lastAttempt && (
+              <button
+                type="button"
+                onClick={() => { const again = lastAttempt; setError(null); setLastAttempt(null); again(); }}
+                className="shrink-0 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-100 dark:border-red-900/60 dark:text-red-200 dark:hover:bg-red-900/40"
+              >
+                {t('chat.retry')}
+              </button>
+            )}
+              <button onClick={() => setError(null)} className="p-1 hover:bg-red-100 rounded-lg" aria-label={t('chat.focusClose')}>
+                <X size={16} />
+              </button>
+            </div>
           </div>
         )}
 
@@ -1007,7 +1038,7 @@ ${requirementsText}`;
             </div>
             {streamingModelText || lastStreamingText ? (
               <div className="bg-white dark:bg-slate-900 border border-black/5 dark:border-white/5 shadow-sm rounded-2xl rounded-tl-none px-4 py-3 max-w-3xl">
-                <div className="markdown-body prose prose-stone prose-sm max-w-none">
+                <div className="markdown-body prose prose-stone prose-sm max-w-none whitespace-pre-wrap dark:prose-invert">
                   {streamingModelText || lastStreamingText}
                 </div>
               </div>
@@ -1065,15 +1096,26 @@ ${requirementsText}`;
             <div className="max-w-3xl mx-auto space-y-6">
               {error && (
                 <div className="p-4 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 rounded-2xl text-red-700 dark:text-red-200 text-sm flex items-center justify-between gap-3">
-                  <span>{error}</span>
-                  <button
-                    type="button"
-                    onClick={() => setError(null)}
-                    className="p-1 shrink-0 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg"
-                    aria-label={t('chat.focusClose')}
-                  >
-                    <X size={16} />
-                  </button>
+                  <span className="min-w-0">{error}</span>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {lastAttempt && (
+                      <button
+                        type="button"
+                        onClick={() => { const again = lastAttempt; setError(null); setLastAttempt(null); again(); }}
+                        className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-100 dark:border-red-900/60 dark:text-red-200 dark:hover:bg-red-900/40"
+                      >
+                        {t('chat.retry')}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setError(null)}
+                      className="p-1 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg"
+                      aria-label={t('chat.focusClose')}
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
                 </div>
               )}
               {loading || lastStreamingText ? (
@@ -1083,7 +1125,7 @@ ${requirementsText}`;
                   </div>
                   {streamingModelText || lastStreamingText ? (
                     <div className="bg-white dark:bg-slate-900 border border-black/5 dark:border-white/5 shadow-sm rounded-2xl rounded-tl-none px-4 py-3">
-                      <div className="markdown-body prose prose-stone prose-sm max-w-none">
+                      <div className="markdown-body prose prose-stone prose-sm max-w-none whitespace-pre-wrap dark:prose-invert">
                         {streamingModelText || lastStreamingText}
                       </div>
                     </div>

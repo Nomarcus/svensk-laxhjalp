@@ -289,7 +289,8 @@
     "summaryAnswer": "Svar",
     "summaryChildExplanation": "Så förklarar du för barnet",
     "showWalkthrough": "Visa hela genomgången",
-    "hideWalkthrough": "Dölj genomgången"
+    "hideWalkthrough": "Dölj genomgången",
+    "retry": "Försök igen"
   },
   "chatEmpty": {
     "helpWith": "Hjälp {{name}} med läxan",

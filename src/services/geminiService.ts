@@ -64,11 +64,13 @@ export async function generateHomeworkHelp(
   childGrade?: string,
   onDelta?: (delta: string, fullText: string) => void,
   coachMode?: boolean,
+  /** Facit/rättning: starkare modell och låg temperatur, eftersom svaret används som facit. */
+  precision?: boolean,
 ): Promise<string> {
   const manyRaw = imageBase64s?.filter((x) => typeof x === 'string' && x.length > 0) ?? [];
   const many = manyRaw.map(stripDataUrl);
   const single = imageBase64 ? stripDataUrl(imageBase64) : '';
-  const body: Record<string, unknown> = { prompt, history, simpleSwedish, language, childGrade, coachMode };
+  const body: Record<string, unknown> = { prompt, history, simpleSwedish, language, childGrade, coachMode, precision };
   if (many.length > 0) {
     body.imageBase64s = many;
   } else if (single) {
@@ -89,6 +91,19 @@ export async function generateHomeworkHelp(
     throw new Error(error.error || `HTTP ${response.status}`);
   }
 
+  return readAnswer(response, onDelta);
+}
+
+/**
+ * /api/chat svarar med NDJSON när det strömmar och vanlig JSON vid cacheträff.
+ * Läser båda, och — viktigt — kastar på den `{error}`-rad servern skickar när
+ * något går fel mitt i strömmen. Tidigare ignorerades den raden tyst, så
+ * föräldern fick en tom eller avhuggen svarsbubbla utan felmeddelande.
+ */
+async function readAnswer(
+  response: Response,
+  onDelta?: (delta: string, fullText: string) => void,
+): Promise<string> {
   const ctype = response.headers.get('content-type') || '';
   if (!ctype.includes('application/x-ndjson') || !response.body) {
     const data = await response.json();
@@ -99,6 +114,25 @@ export async function generateHomeworkHelp(
   const decoder = new TextDecoder();
   let pending = '';
   let full = '';
+  let streamError: string | null = null;
+
+  const handleLine = (raw: string) => {
+    const trimmed = raw.trim();
+    if (!trimmed) return;
+    try {
+      const obj = JSON.parse(trimmed) as { delta?: string; done?: boolean; text?: string; error?: string };
+      if (typeof obj.error === 'string' && obj.error) {
+        streamError = obj.error;
+      } else if (typeof obj.delta === 'string' && obj.delta.length > 0) {
+        full += obj.delta;
+        onDelta?.(obj.delta, full);
+      } else if (obj.done && typeof obj.text === 'string') {
+        full = obj.text;
+      }
+    } catch {
+      // ofullständig rad — ignoreras
+    }
+  };
 
   while (true) {
     const { done, value } = await reader.read();
@@ -106,31 +140,11 @@ export async function generateHomeworkHelp(
     pending += decoder.decode(value, { stream: true });
     const lines = pending.split('\n');
     pending = lines.pop() || '';
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-      try {
-        const obj = JSON.parse(trimmed) as { delta?: string; done?: boolean; text?: string };
-        if (typeof obj.delta === 'string' && obj.delta.length > 0) {
-          full += obj.delta;
-          onDelta?.(obj.delta, full);
-        } else if (obj.done && typeof obj.text === 'string') {
-          full = obj.text;
-        }
-      } catch {
-        // ignore malformed chunk
-      }
-    }
+    for (const line of lines) handleLine(line);
   }
+  if (pending.trim()) handleLine(pending);
 
-  if (pending.trim()) {
-    try {
-      const obj = JSON.parse(pending.trim()) as { text?: string };
-      if (typeof obj.text === 'string') full = obj.text;
-    } catch {
-      // ignore
-    }
-  }
+  if (streamError) throw new Error(streamError);
   return full;
 }
 
@@ -206,7 +220,8 @@ export async function generateExamPrep(
   description: string,
   aiNotes: string[] = [],
   linkedChatContext: string[] = [],
-  imageBase64s: string[] = []
+  imageBase64s: string[] = [],
+  childGrade?: string,
 ): Promise<string> {
   const context = aiNotes.length > 0 ? `\n\nTidigare AI-anteckningar om ämnet:\n${aiNotes.join('\n---\n')}` : '';
   const linkedChat = linkedChatContext.length > 0
@@ -223,18 +238,28 @@ Inkludera:
 4. **Facit** — Korrekta svar på övningsfrågorna
 5. **Tips till föräldern** — Hur föräldern kan förhöra barnet effektivt
 
-Skriv på svenska. Anpassa till grundskolenivå. Använd tydliga rubriker och numrering.`;
+Skriv på svenska. Använd tydliga rubriker och numrering.`;
 
-  const data = await apiRequest('chat', {
+  // Gick tidigare via apiRequest(), som avslutar med response.json() — men /api/chat
+  // svarar med NDJSON, så JSON.parse kastade på varje lyckad generering och
+  // provförberedelsen har aldrig fungerat. Läser strömmen som chatten gör.
+  return generateHomeworkHelp(
     prompt,
-    history: [],
-    imageBase64s: imageBase64s.length > 0 ? imageBase64s : undefined,
-  });
-  return data.text;
+    [],
+    undefined,
+    false,
+    undefined,
+    imageBase64s.length > 0 ? imageBase64s : undefined,
+    childGrade,
+    undefined,
+    false,
+    true,
+  );
 }
 
 export async function generateStudyPlan(
-  tasks: Array<{ subject: string; description: string; dueDay?: string; workDays?: string[]; minutesPerDay?: number; completed: boolean; completedDays?: string[] }>
+  tasks: Array<{ subject: string; description: string; dueDay?: string; workDays?: string[]; minutesPerDay?: number; completed: boolean; completedDays?: string[] }>,
+  childGrade?: string,
 ): Promise<string> {
   const taskSummary = tasks.map((t, i) =>
     `${i + 1}. ${t.subject}: ${t.description} (Inlämning: ${t.dueDay || 'ej satt'}, Tid: ${t.minutesPerDay || '?'} min/dag, Klar: ${t.completed ? 'ja' : 'nej'}, Klara dagar: ${t.completedDays?.join(', ') || 'inga'})`
@@ -253,13 +278,14 @@ Ge:
 Tänk på: svårighetsgrad, deadlines, omväxling mellan ämnen, och att inte överbelasta någon dag.
 Skriv på svenska, kortfattat och handlingsbart.`;
 
-  return generateHomeworkHelp(prompt, []);
+  return generateHomeworkHelp(prompt, [], undefined, false, undefined, undefined, childGrade);
 }
 
 export async function correctHomeworkFromImages(
   imageBase64s: string[],
   extraContext?: string,
-  language: string = 'sv'
+  language: string = 'sv',
+  childGrade?: string,
 ): Promise<string> {
   const context = extraContext?.trim()
     ? `\n\nExtra kontext från föräldern:\n${extraContext.trim().slice(0, 1000)}`
@@ -294,6 +320,10 @@ ${context}`;
     undefined,
     false,
     language,
-    imageBase64s.slice(0, 5)
+    imageBase64s.slice(0, 5),
+    childGrade,
+    undefined,
+    false,
+    true,
   );
 }

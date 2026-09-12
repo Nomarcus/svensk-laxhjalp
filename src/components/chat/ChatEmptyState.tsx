@@ -43,10 +43,10 @@ export default function ChatEmptyState({ childName, onSendStarter }: ChatEmptySt
           <p className="text-xs font-medium text-stone-700">{t('chatEmpty.cardPlan')}</p>
         </div>
       </div>
-      <p className="hidden text-stone-400 text-sm mb-4 sm:block">
+      <p className="text-stone-400 text-sm mb-4">
         {t('chatEmpty.tryClicking')}
       </p>
-      <div className="hidden flex-wrap justify-center gap-2 sm:flex">
+      <div className="flex flex-wrap justify-center gap-2">
         {starters.map((starter, i) => (
           <button
             key={i}

@@ -35,8 +35,12 @@ router.get('/billing/status', async (req: AuthenticatedRequest, res: Response) =
     const isUnmetered = isUnmeteredSubscription(tier, subscriptionStatus);
     /** API blockerar vid tak när denna är true (kräver ENFORCE_SUBSCRIPTION_LIMITS på servern). */
     const metered = enforceSubscriptionLimits() && !isUnmetered;
-    /** Visa kvarvarande gratis-kvot i UI även om tak tillfälligt är avstängt på servern. */
-    const showFreeQuota = !isUnmetered;
+    /**
+     * Visa bara kvoten när den faktiskt gäller. Tidigare visades "0 av 5 AI-svar kvar"
+     * även med taken avstängda — appen signalerade knapphet och fortsatte sedan
+     * fungera, vilket lärde föräldern att hushålla helt i onödan.
+     */
+    const showFreeQuota = metered;
     const limits = showFreeQuota
       ? {
           chatDaily: FREE_CHAT_LIMIT,

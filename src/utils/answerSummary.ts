@@ -16,9 +16,14 @@ export interface AnswerSummary {
   childExplanation: string | null;
 }
 
-/** Slutar vid Lgr22-raden, en ny rubrik eller "Vanliga fel". */
+/**
+ * Rubriken har haft två stavningar över tid — "Så säger du till barnet" i nuvarande
+ * systemprompt, "Så kan du förklara för ditt barn" i den äldre. Båda accepteras, så
+ * kortet fungerar oavsett vilken version av servern som är deployad.
+ * Slutar vid Lgr22-raden, nästa rubrik eller "Vanliga fel".
+ */
 const CHILD_EXPLANATION_RE =
-  /(?:\*\*)?\s*Så kan du förklara för ditt barn\s*:?\s*(?:\*\*)?\s*([\s\S]*?)(?=\n\s*(?:📘|#{1,3}\s|(?:\*\*)?\s*Vanliga fel)|$)/i;
+  /(?:\*\*)?\s*(?:Så säger du till barnet|Så kan du förklara för ditt barn)\s*:?\s*(?:\*\*)?\s*([\s\S]*?)(?=\n\s*(?:📘|#{1,3}\s|(?:\*\*)?\s*(?:Vanliga fel|Nästa bästa steg|Till dig som vuxen))|$)/i;
 
 /** Coach-läget visar svaret som "Facit (för dig, inte för barnet): ..." */
 const COACH_ANSWER_RE = /(?:\*\*)?\s*Facit\s*\(för dig[^)]*\)\s*:?\s*(?:\*\*)?\s*(.+)/i;
