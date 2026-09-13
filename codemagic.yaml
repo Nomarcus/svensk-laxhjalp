@@ -81,13 +81,6 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: se.foraldrahjalpen.app
-      groups:
-        # Codemagic → your app → Environment variables → create a group
-        # named "firebase_web" (or change the name below) holding any
-        # VITE_*/build-time secrets this project needs. Leave empty/remove
-        # this block if the web build has no required secrets beyond what's
-        # already committed in firebase-applet-config.json.
-        - firebase_web
       vars:
         BUNDLE_ID: "se.foraldrahjalpen.app"
         APP_STORE_APP_ID: "6798874532"
