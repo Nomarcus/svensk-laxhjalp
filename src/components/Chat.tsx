@@ -1083,7 +1083,10 @@ ${requirementsText}`;
         {displayMessages.length === 0 && !loading ? (
           <ChatEmptyState
             childName={childName}
-            onSendStarter={sendMessage}
+            onPhotoHomework={() => {
+              setSelectedImageActionId('explainSimple');
+              setPhotoPickerRequestKey((key) => key + 1);
+            }}
             onCorrectPhoto={() => {
               setSelectedImageActionId('correct');
               setPhotoPickerRequestKey((key) => key + 1);
