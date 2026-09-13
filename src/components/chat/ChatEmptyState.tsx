@@ -1,28 +1,28 @@
 import { useTranslation } from 'react-i18next';
-import { CalendarDays, Camera, ChevronRight, HeartHandshake, Sparkles } from 'lucide-react';
+import { CalendarDays, Camera, CheckCircle2, ChevronRight, HeartHandshake } from 'lucide-react';
 
 interface ChatEmptyStateProps {
   childName: string;
-  onSendStarter: (text: string) => void;
+  onPhotoHomework: () => void;
   onCorrectPhoto: () => void;
   onOpenPlanner?: () => void;
 }
 
-export default function ChatEmptyState({ childName, onSendStarter, onCorrectPhoto, onOpenPlanner }: ChatEmptyStateProps) {
+export default function ChatEmptyState({ childName, onPhotoHomework, onCorrectPhoto, onOpenPlanner }: ChatEmptyStateProps) {
   const { t } = useTranslation();
 
   const actions = [
     {
       id: 'explain',
-      Icon: Sparkles,
+      Icon: Camera,
       title: t('chatEmpty.actionExplainTitle'),
       description: t('chatEmpty.actionExplainDescription'),
-      onClick: () => onSendStarter(t('chatEmpty.starter1')),
+      onClick: onPhotoHomework,
       tone: 'bg-emerald-50 text-emerald-700 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/60',
     },
     {
       id: 'correct',
-      Icon: Camera,
+      Icon: CheckCircle2,
       title: t('chatEmpty.actionCorrectTitle'),
       description: t('chatEmpty.actionCorrectDescription'),
       onClick: onCorrectPhoto,
