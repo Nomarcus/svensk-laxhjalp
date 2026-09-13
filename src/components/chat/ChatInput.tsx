@@ -30,6 +30,7 @@ interface ChatInputProps {
   onClearImageAction?: () => void;
   coachMode?: boolean;
   hasMessages?: boolean;
+  imagePickerRequest?: { key: number; source: 'camera' | 'library' } | null;
 }
 
 const SpeechRecognitionAPI = typeof window !== 'undefined'
@@ -45,7 +46,7 @@ const homeworkImageActions = [
 
 export type HomeworkImageActionId = typeof homeworkImageActions[number]['id'];
 
-export default function ChatInput({ input, setInput, images, setImages, maxImages = 5, loading, onSubmit, selectedImageActionId, onImageActionSelect, onClearImageAction, coachMode = false, hasMessages = false }: ChatInputProps) {
+export default function ChatInput({ input, setInput, images, setImages, maxImages = 5, loading, onSubmit, selectedImageActionId, onImageActionSelect, onClearImageAction, coachMode = false, hasMessages = false, imagePickerRequest = null }: ChatInputProps) {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -54,6 +55,13 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isListening, setIsListening] = useState(false);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (imagePickerRequest && !loading && images.length < maxImages) {
+      const picker = imagePickerRequest.source === 'camera' ? cameraInputRef : fileInputRef;
+      picker.current?.click();
+    }
+  }, [imagePickerRequest]);
 
   useEffect(() => { inputRef.current = input; }, [input]);
 
