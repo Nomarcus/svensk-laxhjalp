@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
-# Engångsuppsättning: låter GitHub Actions deploya Cloud Run utan nyckelfil.
+# Engångsuppsättning: låter GitHub Actions deploya Cloud Run och Firestore-reglerna
+# utan nyckelfil.
 #
 # GitHub får utfärda en OIDC-token för varje körning. Google litar på den token
 # via en Workload Identity-pool och växlar in den mot ett kortlivat åtkomsttoken
@@ -41,6 +42,9 @@ gcloud services enable \
   run.googleapis.com \
   cloudbuild.googleapis.com \
   artifactregistry.googleapis.com \
+  firebaserules.googleapis.com \
+  firebase.googleapis.com \
+  firestore.googleapis.com \
   --project "$PROJECT_ID"
 
 say "Servicekonto som utför deployen"
@@ -49,15 +53,20 @@ gcloud iam service-accounts describe "$SA_EMAIL" --project "$PROJECT_ID" >/dev/n
     --display-name "GitHub Actions deployer" \
     --project "$PROJECT_ID"
 
-say "Ger kontot de rättigheter en källkodsdeploy behöver"
-# run.admin: skapa ny revision. cloudbuild.builds.editor: bygga imagen.
-# artifactregistry.writer + storage.admin: lagra image respektive uppladdad källkod.
+say "Ger kontot de rättigheter deployerna behöver"
+# Cloud Run: run.admin skapar ny revision, cloudbuild.builds.editor bygger imagen,
+# artifactregistry.writer + storage.admin lagrar image respektive uppladdad källkod.
+# Firestore: firebaserules.admin publicerar reglerna, datastore.indexAdmin hanterar
+# indexen, firebase.viewer låter CLI:t läsa projektets metadata.
 for ROLE in \
   roles/run.admin \
   roles/cloudbuild.builds.editor \
   roles/artifactregistry.writer \
   roles/storage.admin \
-  roles/logging.viewer
+  roles/logging.viewer \
+  roles/firebaserules.admin \
+  roles/datastore.indexAdmin \
+  roles/firebase.viewer
 do
   gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --member "serviceAccount:${SA_EMAIL}" \
@@ -144,8 +153,12 @@ https://github.com/${GITHUB_REPO}/settings/secrets/actions
   GCP_DEPLOY_SERVICE_ACCOUNT
   ${SA_EMAIL}
 
-Sedan deployar varje push till master som rör server/ automatiskt.
-Testa direkt utan att pusha: fliken Actions → "Deploy API till Cloud Run"
-→ "Run workflow".
+Samma två secrets används av båda workflowerna:
+
+  server/ m.m.          → "Deploy API till Cloud Run"
+  firestore.rules m.m.  → "Deploy Firestore-regler"
+
+De körs automatiskt vid push till master. Testa direkt utan att pusha:
+fliken Actions → välj workflow → "Run workflow".
 
 EOF

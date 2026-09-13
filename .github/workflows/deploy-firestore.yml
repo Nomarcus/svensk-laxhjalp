@@ -1,0 +1,60 @@
+name: Deploy Firestore-regler
+
+# Säkerhetsreglerna och indexen låg bara i repot tills någon körde
+# `firebase deploy` för hand. En regeländring som inte deployats syns inte i
+# koden — den syns som att appen plötsligt vägrar spara något. Nu följer de med.
+#
+# Indexen deployas utan --force med flit: saknas ett index i filen som finns i
+# projektet ska körningen fallera högljutt, inte radera ett index i produktion.
+#
+# Samma inloggning som API-deployen, satt upp av scripts/setup-deploy-auth.sh.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'firestore.rules'
+      - 'firestore.indexes.json'
+      - 'firebase.json'
+      - '.github/workflows/deploy-firestore.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-firestore
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      # Firebase-CLI:t läser inloggningen från GOOGLE_APPLICATION_CREDENTIALS, som
+      # steget ovan skriver ut. Ingen FIREBASE_TOKEN behövs.
+      - name: Deploy regler och index
+        run: |
+          npx --yes firebase-tools@13 deploy \
+            --only firestore:rules,firestore:indexes \
+            --project lead-agent-489101 \
+            --non-interactive
+
+      - name: Sammanfattning
+        run: |
+          echo "### Firestore-regler deployade :lock:" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Projekt: \`lead-agent-489101\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit: \`${GITHUB_SHA:0:7}\`" >> "$GITHUB_STEP_SUMMARY"
