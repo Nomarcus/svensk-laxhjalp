@@ -1,0 +1,75 @@
+name: Deploy API till Cloud Run
+
+# Frontenden deployas av Vercel vid varje push till master. API:t gjorde det inte,
+# utan krävde ett manuellt `npm run deploy:api` — vilket i praktiken betydde att
+# ändringar i systemprompten låg opublicerade utan att någon märkte det.
+#
+# Autentiseringen sker med Workload Identity Federation: GitHub växlar in sin egen
+# OIDC-token mot ett kortlivat Google-token. Det finns alltså ingen servicekontonyckel
+# att läcka härifrån. Körs `scripts/setup-deploy-auth.sh` en gång för att sätta upp.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'server/**'
+      - 'Dockerfile'
+      - '.dockerignore'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy-api.yml'
+  # Gör det möjligt att deploya för hand från fliken Actions, t.ex. om en deploy
+  # behöver göras om utan att det finns någon ny commit att pusha.
+  workflow_dispatch:
+
+# Två pushar strax efter varandra ska köa, inte deploya över varandra.
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Krävs för att GitHub ska få utfärda OIDC-token till Google.
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      # Typkontrollen körs före deployen — ett trasigt API ska aldrig nå produktion.
+      - name: Typkontroll
+        run: npm run lint
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      # Kör exakt samma kommando som `npm run deploy:api` lokalt, så att workflowen
+      # och den manuella vägen aldrig kan glida isär. Utan --set-env-vars behåller
+      # Cloud Run de miljövariabler tjänsten redan har (API-nycklar m.m.).
+      - name: Deploy till Cloud Run
+        run: npm run deploy:api
+
+      - name: Sammanfattning
+        run: |
+          URL=$(gcloud run services describe laxhjalp-api \
+            --region europe-west1 --project lead-agent-489101 \
+            --format 'value(status.url)')
+          echo "### API deployat :rocket:" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Tjänst: \`laxhjalp-api\` (europe-west1)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- URL: $URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit: \`${GITHUB_SHA:0:7}\`" >> "$GITHUB_STEP_SUMMARY"
