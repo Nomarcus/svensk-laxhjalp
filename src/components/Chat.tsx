@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image as ImageIcon, Loader2, Bot, X, Calculator, BookOpen, Languages, Beaker, Globe, Book, Check, Sparkles, UserPlus } from 'lucide-react';
+import { Image as ImageIcon, Loader2, Bot, X, Calculator, BookOpen, Languages, Beaker, Globe, Book, Check, Sparkles, UserPlus, Maximize2 } from 'lucide-react';
 import { db, auth, OperationType, handleFirestoreError, reportFirestoreError } from '../firebase';
 import {
   collection,
@@ -1111,6 +1111,14 @@ ${requirementsText}`;
                 <span className="text-sm text-stone-500 italic">{t('chat.thinking')}</span>
               </div>
             )}
+          </div>
+        )}
+        {!loading && focusedAnswer && !focusMode && (
+          <div className="flex justify-center pt-1">
+            <button type="button" onClick={() => setFocusMode(true)} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 shadow-sm transition-colors hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-emerald-800 dark:bg-slate-900 dark:text-emerald-100 dark:hover:bg-emerald-950/40">
+              <Maximize2 size={17} />
+              {t('chat.reopenFocus')}
+            </button>
           </div>
         )}
         <div ref={scrollRef} />

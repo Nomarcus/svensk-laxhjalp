@@ -222,7 +222,7 @@
     "firstExerciseDisplay": "Börja med första uppgiften",
     "firstExercisePrompt": "Börja med den första uppgiften som syns i samma läxbild(er) jag redan laddat upp i denna chatt. Ta bara en uppgift i taget och skriv tydligt vilket nummer du börjar med. Följ samma upplägg som vanligt och avsluta med **Vad vill du göra nu?**.",
     "firstExercisePromptCoach": "Börja med den första uppgiften i samma läxbild(er) jag redan laddat upp. Guida bara EN uppgift — den första. Följ coach-formatet exakt (🎯 Fråga barnet, 🪜 Om barnet fastnar, ✅ När barnet är nära rätt, 🔁 Förankra, 🚫 Undvik, Facit för dig). Nämn uppgiftsnumret i 🎯 Fråga barnet-punkten.",
-    "inputPlaceholder": "Ställ en fråga eller fota läxan med kameraknappen...",
+    "inputPlaceholder": "Fråga eller fota läxan…",
     "takePhoto": "Fota läxan",
     "chooseImage": "Välj bild",
     "imageStepPhoto": "Fota läxan",
@@ -313,7 +313,8 @@
     "howToSolveTitle": "Så löser ni den",
     "coachGuidanceTitle": "Hjälp barnet tänka själv",
     "showAnswer": "Visa svaret",
-    "childGrade": "Årskurs {{grade}}"
+    "childGrade": "Årskurs {{grade}}",
+    "reopenFocus": "Öppna svaret igen"
   },
   "chatEmpty": {
     "helpWith": "Hjälp {{name}} med läxan",
