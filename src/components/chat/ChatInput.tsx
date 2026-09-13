@@ -11,9 +11,7 @@ import {
   Lightbulb,
   CheckCircle2,
   HelpCircle,
-  ListChecks,
   Sparkles,
-  Wand2,
 } from 'lucide-react';
 import { compressImage } from '../../utils/image';
 import { isLikelyImageFile } from '../../utils/imageUpload';
@@ -41,10 +39,8 @@ const canUseSpeechRecognition = Boolean(SpeechRecognitionAPI) && !Capacitor.isNa
 
 const homeworkImageActions = [
   { id: 'explainSimple', icon: Sparkles },
-  { id: 'correct', icon: CheckCircle2 },
   { id: 'getStarted', icon: HelpCircle },
-  { id: 'stepByStep', icon: ListChecks },
-  { id: 'summarize', icon: Wand2 },
+  { id: 'correct', icon: CheckCircle2 },
 ] as const;
 
 export type HomeworkImageActionId = typeof homeworkImageActions[number]['id'];
@@ -57,6 +53,7 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
   const inputRef = useRef(input);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isListening, setIsListening] = useState(false);
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
   useEffect(() => { inputRef.current = input; }, [input]);
 
@@ -135,6 +132,7 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
 
   const atMax = images.length >= maxImages;
   const showHomeworkImageActions = images.length > 0;
+  const selectedAction = selectedImageActionId ?? 'explainSimple';
 
   const handleImageActionClick = (actionId: HomeworkImageActionId) => {
     if (onImageActionSelect) {
@@ -142,11 +140,6 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
     } else {
       setInput(t(`chat.imageActionPrompts.${actionId}`));
     }
-    textareaRef.current?.focus();
-  };
-
-  const focusCustomPrompt = () => {
-    onClearImageAction?.();
     textareaRef.current?.focus();
   };
 
@@ -164,7 +157,9 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
             <div className="p-2 bg-white dark:bg-slate-800 rounded-xl border border-black/5 dark:border-white/5 shadow-sm flex flex-wrap gap-2 max-w-full">
               {images.map((img, idx) => (
                 <div key={idx} className="relative group/thumb">
-                  <img src={img} alt="" className="w-12 h-12 object-cover rounded-lg border border-black/5" />
+                  <button type="button" onClick={() => setZoomedImage(img)} className="block min-h-14 min-w-14 cursor-zoom-in rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500" aria-label={t('chat.enlargeAttachment')}>
+                    <img src={img} alt={t('chat.homeworkPreview')} className="w-14 h-14 object-cover rounded-lg border border-black/5" />
+                  </button>
                   <button
                     type="button"
                     onClick={() => setImages((prev) => prev.filter((_, i) => i !== idx))}
@@ -179,19 +174,11 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
                 {images.length}/{maxImages}
               </span>
             </div>
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl border border-emerald-100 dark:border-emerald-900/50 shadow-sm">
-              <div className="mb-3 grid grid-cols-3 gap-1.5 text-[10px] font-medium text-emerald-900 dark:text-emerald-100">
-                <span className="rounded-full bg-white/80 dark:bg-slate-900/70 px-2 py-1 text-center">1. {t('chat.imageStepPhoto')}</span>
-                <span className="rounded-full bg-emerald-600 text-white px-2 py-1 text-center shadow-sm">2. {t('chat.imageStepChoose')}</span>
-                <span className="rounded-full bg-white/80 dark:bg-slate-900/70 px-2 py-1 text-center">3. {t('chat.imageStepSend')}</span>
-              </div>
+            <div className="p-3 bg-stone-50 dark:bg-slate-900 rounded-2xl border border-stone-200 dark:border-stone-700">
               <p className="mb-1 text-xs font-semibold text-emerald-900 dark:text-emerald-100">
                 {t('chat.imageActionsTitle')}
               </p>
-              <p className="mb-2 text-[10px] text-emerald-800/75 dark:text-emerald-100/75">
-                {t('chat.imageActionRecommendation')}
-              </p>
-              <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="grid gap-2 sm:grid-cols-3">
                 {homeworkImageActions.map((action) => {
                   const Icon = action.icon;
                   return (
@@ -201,34 +188,20 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
                       disabled={loading}
                       onClick={() => handleImageActionClick(action.id)}
                       className={cn(
-                        'shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-medium transition-colors',
-                        selectedImageActionId === action.id
+                        'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-colors',
+                        selectedAction === action.id
                           ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm'
                           : 'border-emerald-200 bg-white text-emerald-800 hover:border-emerald-300 hover:bg-emerald-100 dark:border-emerald-800/60 dark:bg-slate-900 dark:text-emerald-100 dark:hover:bg-emerald-900/40',
                         loading && 'cursor-not-allowed opacity-60'
                       )}
-                      aria-pressed={selectedImageActionId === action.id}
+                      aria-pressed={selectedAction === action.id}
                     >
                       <Icon size={14} />
                       {t(`chat.imageActions.${action.id}`)}
                     </button>
                   );
                 })}
-                <button
-                  type="button"
-                  disabled={loading}
-                  onClick={focusCustomPrompt}
-                  className={cn(
-                    'shrink-0 rounded-full border border-stone-200 bg-white px-3 py-2 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-50 dark:border-white/10 dark:bg-slate-900 dark:text-stone-200 dark:hover:bg-white/5',
-                    loading && 'cursor-not-allowed opacity-60'
-                  )}
-                >
-                  {t('chat.imageActions.custom')}
-                </button>
               </div>
-              <p className="mt-2 text-[10px] text-emerald-800/70 dark:text-emerald-100/70">
-                {t('chat.imageActionsHint')}
-              </p>
             </div>
           </div>
         )}
@@ -238,22 +211,25 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
             disabled={atMax || loading}
             onClick={() => cameraInputRef.current?.click()}
             className={cn(
-              'p-2 rounded-xl transition-colors',
-              atMax || loading ? 'text-stone-200 cursor-not-allowed' : 'text-stone-400 hover:text-amber-600 hover:bg-amber-50'
+              'min-h-11 rounded-xl transition-colors flex items-center justify-center gap-2 px-3',
+              atMax || loading ? 'text-stone-200 cursor-not-allowed' : !hasMessages && !showHomeworkImageActions ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'text-stone-500 hover:text-emerald-700 hover:bg-emerald-50'
             )}
             title={t('chat.takePhoto')}
+            aria-label={t('chat.takePhoto')}
           >
             <Camera size={20} />
+            {!hasMessages && !showHomeworkImageActions && <span className="text-sm font-semibold">{t('chat.takePhoto')}</span>}
           </button>
           <button
             type="button"
             disabled={atMax || loading}
             onClick={() => fileInputRef.current?.click()}
             className={cn(
-              'p-2 rounded-xl transition-colors',
+              'min-h-11 rounded-xl px-3 transition-colors',
               atMax || loading ? 'text-stone-200 cursor-not-allowed' : 'text-stone-400 hover:text-emerald-600 hover:bg-emerald-50'
             )}
             title={t('chat.chooseImage')}
+            aria-label={t('chat.chooseImage')}
           >
             <ImageIcon size={20} />
           </button>
@@ -302,7 +278,7 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onPaste={handlePaste}
-            placeholder={coachMode ? t('chat.coachPlaceholder') : t('chat.inputPlaceholder')}
+            placeholder={showHomeworkImageActions ? t('chat.imageExtraPlaceholder') : coachMode ? t('chat.coachPlaceholder') : t('chat.inputPlaceholder')}
             className="flex-1 bg-transparent border-none focus:ring-0 py-2 px-2 resize-none max-h-32 min-h-[40px] text-[15px] text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500"
             rows={1}
             onKeyDown={(e) => {
@@ -315,9 +291,9 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
           <button
             type="submit"
             disabled={(!input.trim() && images.length === 0) || loading}
-            className="p-2 bg-emerald-600 text-white rounded-xl disabled:opacity-50 disabled:bg-stone-300 transition-all shadow-sm hover:bg-emerald-700"
+            className={cn('min-h-11 bg-emerald-600 text-white rounded-xl px-3 disabled:opacity-50 disabled:bg-stone-300 transition-all shadow-sm hover:bg-emerald-700', !showHomeworkImageActions && 'min-w-11')}
           >
-            <Send size={20} />
+            {showHomeworkImageActions ? <span className="text-sm font-semibold">{t(`chat.imageSubmit.${selectedAction}`)}</span> : <Send size={20} />}
           </button>
         </div>
         {isListening && (
@@ -334,6 +310,7 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
           {t('chat.aiDisclaimer')}
         </p>
       </form>
+      {zoomedImage && <div role="dialog" aria-modal="true" aria-label={t('chat.homeworkPreview')} className="fixed inset-0 z-[90] flex items-center justify-center bg-black/85 p-4" onClick={() => setZoomedImage(null)} onKeyDown={(e) => { if (e.key === 'Escape') setZoomedImage(null); }} tabIndex={-1}><button type="button" onClick={() => setZoomedImage(null)} className="absolute right-4 top-[calc(1rem+env(safe-area-inset-top))] min-h-11 min-w-11 rounded-full bg-white/20 text-white" aria-label={t('chat.focusClose')}><X className="mx-auto" /></button><img src={zoomedImage} alt={t('chat.homeworkPreview')} className="max-h-full max-w-full rounded-xl object-contain" /></div>}
     </div>
   );
 }

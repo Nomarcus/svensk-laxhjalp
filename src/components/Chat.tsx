@@ -23,7 +23,7 @@ import { compressImage } from '../utils/image';
 import { isLikelyImageFile } from '../utils/imageUpload';
 import { cn } from '../utils/cn';
 import { isRequirementsList } from '../utils/detectRequirementsList';
-import { extractAnswerSummary } from '../utils/answerSummary';
+import { parseAnswerSections } from '../utils/answerSummary';
 import { markdownToPlainText, truncateForShare } from '../utils/plainText';
 import { isGeneralWorkspaceId } from '../constants/workspaces';
 import { useDialogA11y } from '../hooks/useDialogA11y';
@@ -160,6 +160,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   const closeFocusMode = useCallback(() => setFocusMode(false), []);
   /** Följdfråga direkt i fokusvyn — annars är svarsskärmen en återvändsgränd. */
   const [focusFollowUp, setFocusFollowUp] = useState('');
+  const [focusZoomImage, setFocusZoomImage] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const focusContentRef = useRef<HTMLDivElement>(null);
   const focusDialogRef = useDialogA11y<HTMLDivElement>(focusMode, closeFocusMode);
@@ -242,7 +243,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   }, [activeSessionId]);
 
   useEffect(() => {
-    if (images.length === 0) setSelectedImageActionId(null);
+    setSelectedImageActionId(images.length === 0 ? null : (current => current ?? 'explainSimple'));
   }, [images.length]);
 
   useEffect(() => {
@@ -357,13 +358,13 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
     : [];
   const focusedAnswer = focusedAnswers.length > 0 ? focusedAnswers[focusedAnswers.length - 1] : null;
   const focusedAnswerId = focusedAnswer?.id ?? null;
+  const focusedTaskMessage = focusedAnswerRange && focusedAnswerRange.start > 0
+    ? displayMessages[focusedAnswerRange.start - 1]
+    : null;
+  const focusedTaskImages = focusedTaskMessage?.role === 'user' ? focusedTaskMessage.attachments ?? [] : [];
   /** Svaret + barnförklaringen lyfts högst upp i fokusvyn. null = okänd struktur → visa allt som vanligt. */
   // Sammanfattningen läses ur hela svaret, inte bara sista delen — annars missas
   // "Svar:" när svaret delats upp över flera dokument.
-  const focusSummary = focusedAnswers.length > 0
-    ? extractAnswerSummary(focusedAnswers.map((m) => m.content).join('\n\n'))
-    : null;
-
   const dismissOnboardingTips = () => {
     localStorage.setItem('homework-chat-onboarding-seen', 'true');
     setShowOnboardingTips(false);
@@ -386,8 +387,8 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   };
 
   useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, loading]);
+    if (!focusMode) scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading, focusMode]);
 
   // Sidan bakom ska inte kunna scrollas medan fokusvyn är öppen.
   // Escape och fokushantering sköts av useDialogA11y (se focusDialogRef).
@@ -819,6 +820,10 @@ ${requirementsText}`;
       (isRequirementsList(msg.content) || (prevMsg?.role === 'user' && isRequirementsList(prevMsg.content)));
     const studyMaterialSource =
       prevMsg?.role === 'user' && isRequirementsList(prevMsg.content) ? prevMsg.content : msg.content;
+    const parsedForSpeech = parseAnswerSections(msg.content);
+    const speechContent = parsedForSpeech.isCoach
+      ? [parsedForSpeech.remaining, parsedForSpeech.brief, parsedForSpeech.coach].filter(Boolean).join('\n\n')
+      : msg.content;
 
     return (
       <ChatMessage
@@ -873,7 +878,8 @@ ${requirementsText}`;
           isPaused: speech.isPaused,
           currentChunk: speech.currentChunk,
           totalChunks: speech.totalChunks,
-          onSpeak: () => { speech.stop(); setSpeakingMessageId(msg.id); void speech.speak(msg.content, i18n.language); },
+          onSpeak: () => { speech.stop(); setSpeakingMessageId(msg.id); void speech.speak(speechContent, i18n.language); },
+          onSpeakText: (text) => { speech.stop(); setSpeakingMessageId(msg.id); void speech.speak(text, i18n.language); },
           onPause: speech.pause,
           onResume: speech.resume,
           onNext: speech.next,
@@ -883,7 +889,8 @@ ${requirementsText}`;
           isPaused: false,
           currentChunk: 0,
           totalChunks: 0,
-          onSpeak: () => { speech.stop(); setSpeakingMessageId(msg.id); void speech.speak(msg.content, i18n.language); },
+          onSpeak: () => { speech.stop(); setSpeakingMessageId(msg.id); void speech.speak(speechContent, i18n.language); },
+          onSpeakText: (text) => { speech.stop(); setSpeakingMessageId(msg.id); void speech.speak(text, i18n.language); },
           onPause: speech.pause,
           onResume: speech.resume,
           onNext: speech.next,
@@ -953,6 +960,7 @@ ${requirementsText}`;
 
       <ChatHeader
         childName={childName}
+        childGrade={childGrade}
         sessions={sessions}
         activeSessionId={activeSessionId}
         onSelectSession={setActiveSessionId}
@@ -1042,7 +1050,7 @@ ${requirementsText}`;
           </div>
         )}
 
-        {showOnboardingTips && displayMessages.length === 0 && !loading && (
+        {showOnboardingTips && displayMessages.length === 0 && !loading && isGeneralWorkspaceId(childId) && (
           <div className="max-w-3xl mx-auto mb-3 rounded-3xl border border-emerald-100 bg-emerald-50/90 p-3 text-sm text-emerald-950 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/25 dark:text-emerald-100 sm:mb-4 sm:p-4">
             <div className="mb-2 flex items-start justify-between gap-3">
               <div className="flex items-center gap-2 font-semibold leading-tight"><Sparkles size={16} className="shrink-0" />Kom igång på en minut</div>
@@ -1191,42 +1199,13 @@ ${requirementsText}`;
                 </div>
               ) : focusedAnswer ? (
                 <>
-                  {focusSummary && (
-                    <div className="rounded-3xl border-2 border-emerald-200 dark:border-emerald-800/60 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
-                      {focusSummary.answers.length > 0 && (
-                        <div className="p-4 md:p-5">
-                          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-                            {t('chat.summaryAnswer')}
-                          </div>
-                          <ul className="space-y-1.5">
-                            {focusSummary.answers.map((answer, i) => (
-                              <li
-                                key={i}
-                                className="text-lg md:text-xl font-semibold text-stone-900 dark:text-stone-50 break-words"
-                              >
-                                {focusSummary.answers.length > 1 && (
-                                  <span className="mr-2 text-stone-400 dark:text-stone-500">{i + 1}.</span>
-                                )}
-                                {answer}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {focusSummary.brief && (
-                        <div className="border-t border-emerald-100 p-4 dark:border-emerald-900/50 md:p-5 bg-emerald-50/60 dark:bg-emerald-950/20 first:border-t-0">
-                          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-                            {focusSummary.briefIsFallback
-                              ? t('chat.summaryChildExplanation')
-                              : t('chat.summaryBrief')}
-                          </div>
-                          {/* Raderna är innehåll: vad uppgiften går ut på, metoden, svaret. */}
-                          <p className="whitespace-pre-line text-[15px] leading-relaxed text-stone-800 dark:text-stone-100">
-                            {focusSummary.brief}
-                          </p>
-                        </div>
-                      )}
-                    </div>
+                  {focusedTaskImages.length > 0 && (
+                    <section aria-labelledby="focused-task-title" className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-black/5 dark:bg-slate-900 dark:ring-white/10">
+                      <button type="button" onClick={() => setFocusZoomImage(focusedTaskImages[0])} className="shrink-0 cursor-zoom-in rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500" aria-label={t('chat.enlargeAttachment')}>
+                        <img src={focusedTaskImages[0]} alt={t('chat.homeworkPreview')} className="h-20 w-20 rounded-xl object-cover" />
+                      </button>
+                      <div className="min-w-0"><h2 id="focused-task-title" className="font-semibold text-stone-900 dark:text-stone-100">{t('chat.taskTitle')}</h2><p className="line-clamp-2 text-sm text-stone-500 dark:text-stone-400">{focusedTaskMessage?.content}</p></div>
+                    </section>
                   )}
                   {focusedAnswers.map((m, i) =>
                     renderMessage(
@@ -1234,7 +1213,7 @@ ${requirementsText}`;
                       (focusedAnswerRange?.start ?? 0) + i,
                       // Bara sista delen får fällas ihop — annars döljs knapparna
                       // som hör till svaret bakom flera separata toggles.
-                      Boolean(focusSummary) && i === focusedAnswers.length - 1,
+                      false,
                     ),
                   )}
                 </>
@@ -1287,6 +1266,7 @@ ${requirementsText}`;
               </form>
             </div>
           </div>
+          {focusZoomImage && <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/85 p-4" role="dialog" aria-modal="true" aria-label={t('chat.homeworkPreview')} onClick={() => setFocusZoomImage(null)}><button type="button" onClick={() => setFocusZoomImage(null)} className="absolute right-4 top-[calc(1rem+env(safe-area-inset-top))] min-h-11 min-w-11 rounded-full bg-white/20 text-white" aria-label={t('chat.focusClose')}><X className="mx-auto" /></button><img src={focusZoomImage} alt={t('chat.homeworkPreview')} className="max-h-full max-w-full rounded-xl object-contain" /></div>}
         </div>
       )}
 

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { BookOpenCheck, Camera, CalendarCheck, HeartHandshake } from 'lucide-react';
+import { HeartHandshake } from 'lucide-react';
 
 interface ChatEmptyStateProps {
   childName: string;
@@ -12,9 +12,6 @@ export default function ChatEmptyState({ childName, onSendStarter }: ChatEmptySt
   const starters = [
     t('chatEmpty.starter1'),
     t('chatEmpty.starter2'),
-    t('chatEmpty.starter3'),
-    t('chatEmpty.starter4'),
-    t('chatEmpty.starter5'),
   ];
 
   return (
@@ -29,21 +26,7 @@ export default function ChatEmptyState({ childName, onSendStarter }: ChatEmptySt
       <p className="text-sm leading-relaxed text-stone-500 mb-4 sm:mb-5 sm:text-base">
         {t('chatEmpty.description', { name: childName })}
       </p>
-      <div className="hidden sm:grid sm:grid-cols-3 gap-2 w-full mb-7 text-left">
-        <div className="rounded-2xl bg-white border border-black/5 p-3 shadow-sm">
-          <BookOpenCheck size={18} className="text-emerald-600 mb-2" />
-          <p className="text-xs font-medium text-stone-700">{t('chatEmpty.cardExplain')}</p>
-        </div>
-        <div className="rounded-2xl bg-white border border-black/5 p-3 shadow-sm">
-          <Camera size={18} className="text-emerald-600 mb-2" />
-          <p className="text-xs font-medium text-stone-700">{t('chatEmpty.cardPhoto')}</p>
-        </div>
-        <div className="rounded-2xl bg-white border border-black/5 p-3 shadow-sm">
-          <CalendarCheck size={18} className="text-emerald-600 mb-2" />
-          <p className="text-xs font-medium text-stone-700">{t('chatEmpty.cardPlan')}</p>
-        </div>
-      </div>
-      <p className="text-stone-400 text-sm mb-4">
+      <p className="text-stone-400 text-sm mb-3">
         {t('chatEmpty.tryClicking')}
       </p>
       <div className="flex flex-wrap justify-center gap-2">
