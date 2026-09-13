@@ -119,7 +119,7 @@
       "stepByStep": "حل أو اشرح المهمة خطوة بخطوة. وضّح طريقة التفكير.",
       "summarize": "لخّص أهم ما في الصورة واشرح ما الذي أحتاج إلى معرفته."
     },
-    "inputPlaceholder": "اطرح سؤالاً أو صوّر الواجب بزر الكاميرا...",
+    "inputPlaceholder": "اسأل أو صوّر الواجب…",
     "takePhoto": "صوّر الواجب",
     "chooseImage": "اختر صورة",
     "imageStepPhoto": "صوّر الواجب",
@@ -215,7 +215,8 @@
     "simplerPrompt": "لم يفهم طفلي. اشرح الأمر نفسه مرة أخرى ولكن بشكل أبسط: جمل أقصر وكلمات يومية ومثال ملموس من الحياة اليومية. احتفظ بالعناوين نفسها.",
     "followUpPlaceholder": "اسأل سؤالاً آخر…",
     "followUpSend": "إرسال",
-    "newSessionTitle": "محادثة جديدة"
+    "newSessionTitle": "محادثة جديدة",
+    "reopenFocus": "افتح الإجابة مرة أخرى"
   },
   "chatEmpty": {
     "helpWith": "ساعد {{name}} في الواجبات",
@@ -229,7 +230,10 @@
     "kicker": "Föräldrahjälpen",
     "cardExplain": "يشرح خطوة بخطوة",
     "cardPhoto": "يقرأ صور الواجب",
-    "cardPlan": "يساعدك على تخطيط الأسبوع"
+    "cardPlan": "يساعدك على تخطيط الأسبوع",
+    "homeworkHelpTitle": "احصل على مساعدة في الواجب",
+    "homeworkHelpDescription": "التقط صورة أو اخترها، ثم اختر شرحها أو تصحيحها.",
+    "openPlanner": "أو افتح التخطيط"
   },
   "corrector": {
     "title": "تصحيح الواجب",
