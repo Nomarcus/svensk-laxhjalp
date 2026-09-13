@@ -101,19 +101,12 @@ export default function ChatHeader({
           <Languages size={14} />
           <span>{t('chat.simpleSwedish')}</span>
         </button>
-        {/* New Chat button - show icon only on mobile */}
         <button
           onClick={onNewSession}
-          className="flex sm:hidden items-center justify-center p-1.5 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-medium hover:bg-emerald-100 transition-all"
+          className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
           title={t('chat.newChat')}
         >
-          <Plus size={14} />
-        </button>
-        <button
-          onClick={onNewSession}
-          className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-medium hover:bg-emerald-100 transition-all"
-        >
-          <Plus size={14} />
+          <Plus size={16} />
           <span>{t('chat.newChat')}</span>
         </button>
         <button

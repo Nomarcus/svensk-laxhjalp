@@ -214,7 +214,7 @@
     "firstExerciseDisplay": "Start with the first exercise",
     "firstExercisePrompt": "Start with the first exercise visible in the same homework image(s) I already uploaded in this chat. Handle only one exercise at a time and clearly state which number you start with. Keep the same response structure and end with **What would you like to do now?**.",
     "firstExercisePromptCoach": "Start with the first exercise in the same homework image(s) I already uploaded. Coach only ONE exercise — the first. Strictly follow the coach format (🎯 Ask the child, 🪜 If the child is stuck, ✅ When the child is close, 🔁 Anchor, 🚫 Avoid, Answer key for you). Mention the exercise number inside 🎯 Ask the child.",
-    "inputPlaceholder": "Ask a question or photo homework with the camera button...",
+    "inputPlaceholder": "Ask or photograph homework…",
     "takePhoto": "Photo homework",
     "chooseImage": "Choose image",
     "imageStepPhoto": "Take a photo",
@@ -292,7 +292,8 @@
     "simplerPrompt": "My child did not understand. Explain the same thing again, but simpler: shorter sentences, everyday words, and one concrete everyday example. Keep the same headings.",
     "followUpPlaceholder": "Ask a follow-up…",
     "followUpSend": "Send",
-    "newSessionTitle": "New chat"
+    "newSessionTitle": "New chat",
+    "reopenFocus": "Open the answer again"
   },
   "chatEmpty": {
     "helpWith": "Help {{name}} with homework",
@@ -306,7 +307,10 @@
     "kicker": "Föräldrahjälpen",
     "cardExplain": "Explains step by step",
     "cardPhoto": "Reads homework photos",
-    "cardPlan": "Helps you plan the week"
+    "cardPlan": "Helps you plan the week",
+    "homeworkHelpTitle": "Get homework help",
+    "homeworkHelpDescription": "Take a photo or choose an image. Then choose whether to explain or check it.",
+    "openPlanner": "Or open the planner"
   },
   "corrector": {
     "title": "Correct homework",
