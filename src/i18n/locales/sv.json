@@ -329,9 +329,13 @@
     "cardExplain": "Förklarar steg för steg",
     "cardPhoto": "Läser bilder på läxan",
     "cardPlan": "Hjälper dig planera veckan",
-    "homeworkHelpTitle": "Få hjälp med läxan",
-    "homeworkHelpDescription": "Fota läxan eller välj en bild. Sedan väljer du om den ska förklaras eller rättas.",
-    "openPlanner": "Eller öppna planeringen"
+    "actionHeading": "Vad vill du göra?",
+    "actionExplainTitle": "Förstå en uppgift",
+    "actionExplainDescription": "Få en enkel förklaring steg för steg.",
+    "actionCorrectTitle": "Rätta en läxa",
+    "actionCorrectDescription": "Ta ett foto och gå igenom svaren.",
+    "actionPlanTitle": "Planera veckan",
+    "actionPlanDescription": "Lägg in läxor och dela upp arbetet."
   },
   "corrector": {
     "title": "Rätta läxan",

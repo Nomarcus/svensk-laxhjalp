@@ -138,7 +138,7 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   const [error, setError] = useState<string | null>(null);
   const [images, setImages] = useState<string[]>([]);
   const [selectedImageActionId, setSelectedImageActionId] = useState<HomeworkImageActionId | null>(null);
-  const [imagePickerRequest, setImagePickerRequest] = useState<{ key: number; source: 'camera' | 'library' } | null>(null);
+  const [photoPickerRequestKey, setPhotoPickerRequestKey] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [generatingImageId, setGeneratingImageId] = useState<string | null>(null);
   const generatingImageLockRef = useRef(false);
@@ -1083,8 +1083,11 @@ ${requirementsText}`;
         {displayMessages.length === 0 && !loading ? (
           <ChatEmptyState
             childName={childName}
-            onTakePhoto={() => setImagePickerRequest({ key: Date.now(), source: 'camera' })}
-            onChooseImage={() => setImagePickerRequest({ key: Date.now(), source: 'library' })}
+            onSendStarter={sendMessage}
+            onCorrectPhoto={() => {
+              setSelectedImageActionId('correct');
+              setPhotoPickerRequestKey((key) => key + 1);
+            }}
             onOpenPlanner={onCreateTask ? () => onCreateTask('', '') : undefined}
           />
         ) : (
@@ -1134,7 +1137,7 @@ ${requirementsText}`;
         onClearImageAction={() => setSelectedImageActionId(null)}
         coachMode={coachMode}
         hasMessages={displayMessages.length > 0}
-        imagePickerRequest={imagePickerRequest}
+        photoPickerRequestKey={photoPickerRequestKey}
       />
 
       {/* Task Picker Modal */}
