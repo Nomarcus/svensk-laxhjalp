@@ -306,7 +306,14 @@
     "kicker": "Föräldrahjälpen",
     "cardExplain": "Explains step by step",
     "cardPhoto": "Reads homework photos",
-    "cardPlan": "Helps you plan the week"
+    "cardPlan": "Helps you plan the week",
+    "actionHeading": "What would you like to do?",
+    "actionExplainTitle": "Understand a task",
+    "actionExplainDescription": "Get a simple step-by-step explanation.",
+    "actionCorrectTitle": "Check homework",
+    "actionCorrectDescription": "Take a photo and review the answers.",
+    "actionPlanTitle": "Plan the week",
+    "actionPlanDescription": "Add homework and spread out the work."
   },
   "corrector": {
     "title": "Correct homework",

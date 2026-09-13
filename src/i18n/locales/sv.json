@@ -327,7 +327,14 @@
     "kicker": "Föräldrahjälpen",
     "cardExplain": "Förklarar steg för steg",
     "cardPhoto": "Läser bilder på läxan",
-    "cardPlan": "Hjälper dig planera veckan"
+    "cardPlan": "Hjälper dig planera veckan",
+    "actionHeading": "Vad vill du göra?",
+    "actionExplainTitle": "Förstå en uppgift",
+    "actionExplainDescription": "Få en enkel förklaring steg för steg.",
+    "actionCorrectTitle": "Rätta en läxa",
+    "actionCorrectDescription": "Ta ett foto och gå igenom svaren.",
+    "actionPlanTitle": "Planera veckan",
+    "actionPlanDescription": "Lägg in läxor och dela upp arbetet."
   },
   "corrector": {
     "title": "Rätta läxan",

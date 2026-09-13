@@ -229,7 +229,14 @@
     "kicker": "Föräldrahjälpen",
     "cardExplain": "يشرح خطوة بخطوة",
     "cardPhoto": "يقرأ صور الواجب",
-    "cardPlan": "يساعدك على تخطيط الأسبوع"
+    "cardPlan": "يساعدك على تخطيط الأسبوع",
+    "actionHeading": "ماذا تريد أن تفعل؟",
+    "actionExplainTitle": "فهم واجب",
+    "actionExplainDescription": "احصل على شرح بسيط خطوة بخطوة.",
+    "actionCorrectTitle": "تصحيح واجب",
+    "actionCorrectDescription": "التقط صورة وراجع الإجابات.",
+    "actionPlanTitle": "خطط للأسبوع",
+    "actionPlanDescription": "أضف الواجبات ووزّع العمل."
   },
   "corrector": {
     "title": "تصحيح الواجب",
