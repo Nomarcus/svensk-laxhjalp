@@ -18,6 +18,10 @@ on:
         description: 'Testkörning — visa vad som skulle gallras utan att radera'
         type: boolean
         default: true
+      days_override:
+        description: 'Testa med kortare tid, t.ex. 1 (endast testkörning)'
+        type: string
+        default: ''
 
 concurrency:
   group: retention
@@ -54,9 +58,32 @@ jobs:
       # Schemalagda körningar gallrar på riktigt. Manuella körningar är
       # testkörningar om inte kryssrutan avmarkeras, så att det går att se vad
       # som skulle hända innan något faktiskt raderas.
+      #
+      # days_override finns för att en testkörning mot färsk data annars inte
+      # bevisar något — är allt yngre än 90 dagar rapporterar den bara noll. Med
+      # en kort tid syns det att gallringen hittar rätt dokument. Den vägrar
+      # därför köras skarpt: en förkortad tid utan testläge skulle radera allt.
       - name: Gallra
+        env:
+          DRY_RUN_REQUESTED: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+          DAYS_OVERRIDE: ${{ inputs.days_override }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "true" ]; then
+          set -euo pipefail
+          if [ -n "$DAYS_OVERRIDE" ]; then
+            if [ "$DRY_RUN_REQUESTED" != "true" ]; then
+              echo "::error::days_override kräver testkörning. Kryssa i dry_run, eller töm fältet."
+              exit 1
+            fi
+            case "$DAYS_OVERRIDE" in
+              ''|*[!0-9]*) echo "::error::days_override måste vara ett heltal."; exit 1 ;;
+            esac
+            echo "Testkörning med $DAYS_OVERRIDE dagars gräns för allt."
+            export RETENTION_IMAGE_DAYS="$DAYS_OVERRIDE"
+            export RETENTION_MESSAGE_DAYS="$DAYS_OVERRIDE"
+            export RETENTION_TASK_DAYS="$DAYS_OVERRIDE"
+            export RETENTION_SESSION_DAYS="$DAYS_OVERRIDE"
+          fi
+          if [ "$DRY_RUN_REQUESTED" = "true" ]; then
             node scripts/apply-retention.mjs --dry-run
           else
             node scripts/apply-retention.mjs
