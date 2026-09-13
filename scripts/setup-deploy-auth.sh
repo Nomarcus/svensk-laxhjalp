@@ -130,35 +130,77 @@ gcloud iam service-accounts add-iam-policy-binding "$SA_EMAIL" \
 
 PROVIDER_RESOURCE="projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL}/providers/${PROVIDER}"
 
-cat <<EOF
+say "Kontrollerar att workflowerna pekar på rätt projekt"
+# Värdena står i klartext i workflowerna i stället för som GitHub-secrets, så att
+# den här uppsättningen blir ett enda kommando utan klippa-och-klistra. Skulle
+# projektnumret inte stämma vill vi veta det nu och inte som ett kryptiskt
+# behörighetsfel i en körning om tre veckor.
+WF_DIR=".github/workflows"
+MISMATCH=0
+for WF in "$WF_DIR/deploy-api.yml" "$WF_DIR/deploy-firestore.yml"; do
+  [ -f "$WF" ] || { echo "   VARNING: hittar inte $WF"; MISMATCH=1; continue; }
+  grep -qF "$PROVIDER_RESOURCE" "$WF" || { echo "   FEL i $WF: WIF_PROVIDER stämmer inte"; MISMATCH=1; }
+  grep -qF "$SA_EMAIL" "$WF" || { echo "   FEL i $WF: DEPLOY_SA stämmer inte"; MISMATCH=1; }
+done
+if [ "$MISMATCH" = "1" ]; then
+  cat <<EOF
+
+  Workflowerna behöver dessa två rader under "env:":
+
+    WIF_PROVIDER: ${PROVIDER_RESOURCE}
+    DEPLOY_SA: ${SA_EMAIL}
+
+  Rätta dem, committa och pusha. Sedan är allt klart.
+EOF
+  exit 1
+fi
+echo "   Stämmer"
+
+# Google behöver någon minut på sig innan den nya providern går att använda.
+say "Väntar 30 sekunder så behörigheterna hinner slå igenom"
+sleep 30
+
+say "Startar deployerna"
+# Ändringarna som redan ligger i master triggar inga körningar retroaktivt, så de
+# får en knuff här. Då är produktionen ikapp koden direkt efter uppsättningen.
+if command -v gh >/dev/null && gh auth status >/dev/null 2>&1; then
+  gh workflow run deploy-api.yml --repo "$GITHUB_REPO" && echo "   API-deploy startad"
+  gh workflow run deploy-firestore.yml --repo "$GITHUB_REPO" && echo "   Regel-deploy startad"
+  cat <<EOF
 
 ────────────────────────────────────────────────────────────────
- Klart i Google Cloud. Sista steget: lägg in två secrets i GitHub.
+ Klart. Inget mer att göra — nu och framöver.
 ────────────────────────────────────────────────────────────────
 
-Har du gh-kommandot installerat räcker det med att klistra in detta:
+Följ körningarna:  gh run watch --repo ${GITHUB_REPO}
+eller              https://github.com/${GITHUB_REPO}/actions
 
-  gh secret set GCP_WORKLOAD_IDENTITY_PROVIDER --repo ${GITHUB_REPO} \\
-    --body "${PROVIDER_RESOURCE}"
-  gh secret set GCP_DEPLOY_SERVICE_ACCOUNT --repo ${GITHUB_REPO} \\
-    --body "${SA_EMAIL}"
+Härifrån deployar varje push till master automatiskt:
 
-Annars i webbläsaren, under
-https://github.com/${GITHUB_REPO}/settings/secrets/actions
-→ "New repository secret", en för varje:
-
-  GCP_WORKLOAD_IDENTITY_PROVIDER
-  ${PROVIDER_RESOURCE}
-
-  GCP_DEPLOY_SERVICE_ACCOUNT
-  ${SA_EMAIL}
-
-Samma två secrets används av båda workflowerna:
-
-  server/ m.m.          → "Deploy API till Cloud Run"
-  firestore.rules m.m.  → "Deploy Firestore-regler"
-
-De körs automatiskt vid push till master. Testa direkt utan att pusha:
-fliken Actions → välj workflow → "Run workflow".
+  src/ m.m.             → Vercel
+  server/ m.m.          → Cloud Run
+  firestore.rules m.m.  → Firestore-regler
 
 EOF
+else
+  cat <<EOF
+
+────────────────────────────────────────────────────────────────
+ Klart i Google Cloud.
+────────────────────────────────────────────────────────────────
+
+gh-kommandot saknas eller är inte inloggat, så jag kunde inte starta de
+två första körningarna åt dig. Välj ett:
+
+  Installera gh en gång och kör om det här skriptet:
+      brew install gh && gh auth login
+
+  Eller starta dem i webbläsaren, en gång:
+      https://github.com/${GITHUB_REPO}/actions
+      → välj workflow → "Run workflow"
+
+Det gäller bara den allra första gången. Därefter deployar varje push
+till master automatiskt.
+
+EOF
+fi

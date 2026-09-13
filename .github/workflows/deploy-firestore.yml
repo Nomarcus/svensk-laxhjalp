@@ -23,6 +23,11 @@ concurrency:
   group: deploy-firestore
   cancel-in-progress: false
 
+# Identifierare, inte hemligheter — se kommentaren i deploy-api.yml.
+env:
+  WIF_PROVIDER: projects/288867992327/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+  DEPLOY_SA: github-deployer@lead-agent-489101.iam.gserviceaccount.com
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -40,8 +45,8 @@ jobs:
       - id: auth
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_DEPLOY_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOY_SA }}
 
       # Firebase-CLI:t läser inloggningen från GOOGLE_APPLICATION_CREDENTIALS, som
       # steget ovan skriver ut. Ingen FIREBASE_TOKEN behövs.

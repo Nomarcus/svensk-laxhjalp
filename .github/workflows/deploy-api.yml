@@ -7,6 +7,12 @@ name: Deploy API till Cloud Run
 # Autentiseringen sker med Workload Identity Federation: GitHub växlar in sin egen
 # OIDC-token mot ett kortlivat Google-token. Det finns alltså ingen servicekontonyckel
 # att läcka härifrån. Körs `scripts/setup-deploy-auth.sh` en gång för att sätta upp.
+#
+# Värdena nedan står i klartext med flit. De är identifierare, inte hemligheter:
+# projektnumret och projekt-id:t finns redan öppet i firebase.json, package.json och
+# src/utils/apiBase.ts. Det som faktiskt skyddar deployen är attributvillkoret på
+# providern, som bara släpper in OIDC-tokens från det här repot — inte att namnen är
+# okända. Att slippa secrets gör uppsättningen till ett enda kommando.
 
 on:
   push:
@@ -26,6 +32,10 @@ on:
 concurrency:
   group: deploy-api
   cancel-in-progress: false
+
+env:
+  WIF_PROVIDER: projects/288867992327/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+  DEPLOY_SA: github-deployer@lead-agent-489101.iam.gserviceaccount.com
 
 jobs:
   deploy:
@@ -52,8 +62,8 @@ jobs:
       - id: auth
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_DEPLOY_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOY_SA }}
 
       - uses: google-github-actions/setup-gcloud@v2
 
