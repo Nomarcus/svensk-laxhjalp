@@ -5,6 +5,7 @@ import type { ChatSession } from '../../types';
 
 interface ChatHeaderProps {
   childName: string;
+  childGrade?: string;
   sessions: ChatSession[];
   activeSessionId: string | null;
   onSelectSession: (id: string) => void;
@@ -18,6 +19,7 @@ interface ChatHeaderProps {
 
 export default function ChatHeader({
   childName,
+  childGrade,
   sessions,
   activeSessionId,
   onSelectSession,
@@ -52,7 +54,7 @@ export default function ChatHeader({
               </select>
             )}
           </div>
-          <p className="hidden sm:block text-[10px] text-stone-500 uppercase tracking-wider">{t('chat.learningGuide')}</p>
+          <p className="text-xs text-stone-500 dark:text-stone-400">{childGrade ? t('chat.childGrade', { grade: childGrade }) : t('chat.learningGuide')}</p>
         </div>
       </div>
       <div className="flex items-center gap-2 flex-wrap justify-end">
@@ -69,7 +71,7 @@ export default function ChatHeader({
           title={t('chat.coachModeTooltip')}
         >
           <Lightbulb size={14} className={coachMode ? 'fill-amber-400' : ''} />
-          <span>{t('chat.coachMode')}</span>
+          <span className="hidden sm:inline">{t('chat.coachMode')}</span>
         </button>
         {/* Enkel svenska toggle - show icon only on mobile */}
         <button

@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine, X, Volume2, Square, Pause, Play, SkipForward, ListOrdered, Flag, Trash2, HeartHandshake, Baby, ChevronDown } from 'lucide-react';
+import { User, Share2, BookmarkPlus, Check, ImageIcon, Loader2, GraduationCap, Printer, CalendarPlus, ClipboardList, PlusCircle, Lightbulb, ScanLine, X, Volume2, Square, Pause, Play, SkipForward, ListOrdered, Trash2, ChevronDown } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { cn } from '../../utils/cn';
 import type { Message } from '../../types';
+import { parseAnswerSections } from '../../utils/answerSummary';
 
 /** Tydlig ram så knapparna under AI-svar känns klickbara */
 const ACTION_BTN =
-  'inline-flex items-center gap-1.5 text-[10px] px-2.5 py-1.5 rounded-lg border-2 font-medium shadow-sm transition-colors active:scale-[0.98] disabled:opacity-45 disabled:pointer-events-none';
+  'inline-flex min-h-11 items-center gap-2 text-sm px-3 py-2 rounded-xl border font-medium transition-colors active:scale-[0.98] disabled:opacity-45 disabled:pointer-events-none';
 const ACTION_FRAME = 'border-stone-400 bg-white text-stone-800 hover:bg-stone-50 dark:border-stone-500 dark:bg-slate-800 dark:text-stone-100 dark:hover:bg-slate-700/90';
 
 interface ChatMessageProps {
@@ -44,6 +45,7 @@ interface ChatMessageProps {
     currentChunk: number;
     totalChunks: number;
     onSpeak: () => void;
+    onSpeakText?: (text: string) => void;
     onPause: () => void;
     onResume: () => void;
     onNext: () => void;
@@ -83,12 +85,12 @@ export default function ChatMessage({
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [bodyExpanded, setBodyExpanded] = useState(false);
   const bodyVisible = !collapsibleBody || bodyExpanded;
-
-  const extractSectionPreview = (content: string, heading: string) => {
-    const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const match = content.match(new RegExp(`(?:\\*\\*)?${escaped}:?(?:\\*\\*)?\\s*([\\s\\S]*?)(?=\\n\\s*(?:\\*\\*)?(Till dig som vuxen|Så säger du till barnet|Nästa bästa steg|Nästa steg|📘):?|$)`, 'i'));
-    return match?.[1]?.replace(/[#*_`>-]/g, ' ').replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 220) || '';
-  };
+  const sections = msg.role === 'model' ? parseAnswerSections(msg.content) : null;
+  const Markdown = ({ children }: { children: string }) => (
+    <div className="markdown-body prose prose-stone prose-sm max-w-none break-words [overflow-wrap:anywhere] dark:prose-invert [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_code]:whitespace-pre-wrap [&_pre_code]:whitespace-pre [&_table]:block [&_table]:overflow-x-auto">
+      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[[rehypeKatex, { strict: false, throwOnError: false }]]}>{children}</ReactMarkdown>
+    </div>
+  );
 
   const isFacitMessage = (content: string) => {
     const text = content.toLowerCase();
@@ -173,27 +175,26 @@ export default function ChatMessage({
               : 'bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 shadow-sm rounded-tl-none'
           )}
         >
-          {msg.role === 'model' && (extractSectionPreview(msg.content, 'Till dig som vuxen') || extractSectionPreview(msg.content, 'Så säger du till barnet')) && (
-            <div className="mb-3 grid gap-2 sm:grid-cols-2">
-              <div className="rounded-2xl border border-emerald-100 bg-emerald-50/80 p-3 text-xs text-emerald-950 dark:border-emerald-900/50 dark:bg-emerald-950/25 dark:text-emerald-100">
-                <div className="mb-1 flex items-center gap-1.5 font-semibold"><HeartHandshake size={13} />{t('chat.parentViewTitle')}</div>
-                <p className="text-emerald-900/80 dark:text-emerald-100/80">{extractSectionPreview(msg.content, 'Till dig som vuxen') || t('chat.parentViewHint')}</p>
-              </div>
-              <div className="rounded-2xl border border-blue-100 bg-blue-50/80 p-3 text-xs text-blue-950 dark:border-blue-900/50 dark:bg-blue-950/25 dark:text-blue-100">
-                <div className="mb-1 flex items-center gap-1.5 font-semibold"><Baby size={13} />{t('chat.childViewTitle')}</div>
-                <p className="text-blue-900/80 dark:text-blue-100/80">{extractSectionPreview(msg.content, 'Så säger du till barnet') || t('chat.childViewHint')}</p>
-              </div>
-            </div>
-          )}
           {bodyVisible && (
-            <div className="markdown-body prose prose-stone prose-sm max-w-none break-words [overflow-wrap:anywhere] [&_.katex-display]:overflow-x-auto [&_pre]:overflow-x-auto [&_pre]:max-w-full [&_code]:whitespace-pre-wrap [&_pre_code]:whitespace-pre [&_table]:block [&_table]:overflow-x-auto">
-              <ReactMarkdown
-                remarkPlugins={[remarkMath]}
-                rehypePlugins={[[rehypeKatex, { strict: false, throwOnError: false }]]}
-              >
-                {msg.content}
-              </ReactMarkdown>
-            </div>
+            sections?.structured ? (
+              <article className="space-y-6">
+                {sections.task && <section><h2 className="mb-2 text-lg font-semibold">{t('chat.taskTitle')}</h2><Markdown>{sections.task}</Markdown></section>}
+                {sections.brief && <section><h2 className="mb-2 text-lg font-semibold">{t('chat.whatToDoTitle')}</h2><Markdown>{sections.brief}</Markdown></section>}
+                {sections.isCoach ? (
+                  <>
+                    {sections.remaining && <Markdown>{sections.remaining}</Markdown>}
+                    {sections.coach && <section><h2 className="mb-2 text-lg font-semibold">{t('chat.coachGuidanceTitle')}</h2><Markdown>{sections.coach}</Markdown></section>}
+                    {sections.answer && <details className="rounded-xl border border-stone-200 p-3 dark:border-stone-700"><summary className="flex min-h-11 cursor-pointer list-none items-center justify-between font-semibold text-emerald-700 dark:text-emerald-300 [&::-webkit-details-marker]:hidden">{t('chat.showAnswer')}<ChevronDown size={20} /></summary><div className="border-t border-stone-200 pt-3 dark:border-stone-700"><Markdown>{sections.answer}</Markdown></div></details>}
+                  </>
+                ) : (
+                  <>
+                    {sections.solution && <section><h2 className="mb-2 text-lg font-semibold">{t('chat.howToSolveTitle')}</h2><Markdown>{sections.solution}</Markdown></section>}
+                    {sections.child && <section className="rounded-2xl border border-blue-200 bg-blue-50/70 p-4 dark:border-blue-800/60 dark:bg-blue-950/30"><h2 className="mb-2 text-lg font-semibold text-blue-950 dark:text-blue-100">{t('chat.childViewTitle')}</h2><Markdown>{sections.child}</Markdown>{speechSupported && speechState && <button type="button" onClick={() => speechState.onSpeakText?.(sections.child!)} className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl border border-blue-300 bg-white px-3 py-2 text-sm font-medium text-blue-800 dark:border-blue-700 dark:bg-slate-900 dark:text-blue-100"><Volume2 size={18}/>{t('chat.listenChild')}</button>}</section>}
+                    {sections.remaining && <Markdown>{sections.remaining}</Markdown>}
+                  </>
+                )}
+              </article>
+            ) : <Markdown>{msg.content}</Markdown>
           )}
           {collapsibleBody && (
             <button
@@ -364,19 +365,6 @@ export default function ChatMessage({
               >
                 <ListOrdered size={12} />
                 {t('chat.nextExerciseButton')}
-              </button>
-            )}
-            {onStartFirstExercise && (
-              <button
-                type="button"
-                onClick={onStartFirstExercise}
-                className={cn(
-                  ACTION_BTN,
-                  'border-emerald-600 bg-emerald-50 text-emerald-900 hover:bg-emerald-100 dark:border-emerald-400 dark:bg-emerald-950/50 dark:text-emerald-100 dark:hover:bg-emerald-900/40',
-                )}
-              >
-                <Flag size={12} />
-                {t('chat.firstExerciseButton')}
               </button>
             )}
             {onAskFordjupning && (
