@@ -87,7 +87,8 @@ export default function PrivacyPolicy({ onBack }: PrivacyPolicyProps) {
                 <li>AI-tjänsten lagrar <strong>inte</strong> dina meddelanden permanent.</li>
                 <li>Meddelanden används <strong>inte</strong> för att träna AI-modeller.</li>
                 <li>Bilder du laddar upp analyseras av AI:n och lagras i Firebase — inte av Google Gemini.</li>
-                <li>AI-genererade illustrationer skapas via DALL·E/bildgenererings-API och lagras i din profil.</li>
+                <li>AI-genererade illustrationer skapas med Google Gemini och lagras i din profil.</li>
+                <li>Barnets namn skickas <strong>aldrig</strong> till AI-tjänsten. Endast din fråga, årskursen och eventuella bilder skickas.</li>
               </ul>
               <p className="text-xs text-stone-400 dark:text-stone-500 mt-2">
                 Google Gemini AI hanteras enligt Googles Cloud-tjänstevillkor och databehandlingsavtal.
@@ -108,6 +109,43 @@ export default function PrivacyPolicy({ onBack }: PrivacyPolicyProps) {
               <p className="text-sm text-stone-600 dark:text-stone-300 mt-3">
                 <strong>Tredjelandsöverföring:</strong> Data kan överföras till USA via Google Firebase och Vercel.
                 Båda har stöd för EU-standardavtalsklausuler (SCCs) och är certifierade under EU-US Data Privacy Framework.
+              </p>
+            </Section>
+
+            {/* Lagringstid */}
+            <Section
+              icon={<Trash2 size={18} />}
+              title="Hur länge sparas dina uppgifter?"
+            >
+              <p>
+                Vi sparar inte uppgifter längre än vi behöver. Gallringen sker automatiskt
+                varje vecka — du behöver inte begära den.
+              </p>
+              <ul className="space-y-2">
+                <li>
+                  <strong>Läxfoton: 90 dagar.</strong> Bilder du fotograferat raderas efter tre
+                  månader, både i chatten och på uppgifter i planeraren. Själva förklaringen
+                  finns kvar — det är bara bilden som försvinner.
+                </li>
+                <li>
+                  <strong>Chattmeddelanden: 12 månader.</strong> Därefter raderas de helt,
+                  tillsammans med chattar som blivit tomma.
+                </li>
+                <li>
+                  <strong>Läxor och uppgifter: 12 månader.</strong>
+                </li>
+                <li>
+                  <strong>Sparat i biblioteket: tills du tar bort det.</strong> Det du aktivt
+                  valt att spara rör vi inte — det försvinner när du raderar det eller ditt konto.
+                </li>
+                <li>
+                  <strong>Kontouppgifter: tills du raderar kontot.</strong>
+                </li>
+              </ul>
+              <p className="text-sm text-stone-600 dark:text-stone-300 mt-3">
+                Läxfoton gallras först och hårdast eftersom de är de känsligaste uppgifterna
+                i tjänsten: de kan visa barnets namn i handstil, skolans namn eller uppgifter
+                barnet skrivit om sig själv.
               </p>
             </Section>
 

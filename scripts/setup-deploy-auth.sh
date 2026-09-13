@@ -57,7 +57,8 @@ say "Ger kontot de rättigheter deployerna behöver"
 # Cloud Run: run.admin skapar ny revision, cloudbuild.builds.editor bygger imagen,
 # artifactregistry.writer + storage.admin lagrar image respektive uppladdad källkod.
 # Firestore: firebaserules.admin publicerar reglerna, datastore.indexAdmin hanterar
-# indexen, firebase.viewer låter CLI:t läsa projektets metadata.
+# indexen, firebase.viewer låter CLI:t läsa projektets metadata, datastore.user
+# låter den schemalagda gallringen läsa och radera dokument.
 for ROLE in \
   roles/run.admin \
   roles/cloudbuild.builds.editor \
@@ -66,7 +67,8 @@ for ROLE in \
   roles/logging.viewer \
   roles/firebaserules.admin \
   roles/datastore.indexAdmin \
-  roles/firebase.viewer
+  roles/firebase.viewer \
+  roles/datastore.user
 do
   gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --member "serviceAccount:${SA_EMAIL}" \

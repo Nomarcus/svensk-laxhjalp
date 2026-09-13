@@ -1,0 +1,63 @@
+name: Gallring av personuppgifter
+
+# Lagringsminimering (GDPR art. 5.1 e) kräver att uppgifter inte sparas längre än
+# nödvändigt. Utan en schemalagd körning finns ingen gallring — en policy som bara
+# står i integritetspolicyn men aldrig utförs är sämre än ingen policy alls.
+#
+# Kör varje söndag natt. Använder samma Workload Identity-inloggning som deployerna,
+# så ingen ny infrastruktur och inga nycklar behövs.
+
+on:
+  schedule:
+    # 03:15 UTC på söndagar — utanför läxtid, och inte på hel timme eftersom
+    # GitHubs schemaläggare är hårt belastad då.
+    - cron: '15 3 * * 0'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Testkörning — visa vad som skulle gallras utan att radera'
+        type: boolean
+        default: true
+
+concurrency:
+  group: retention
+  cancel-in-progress: false
+
+# Identifierare, inte hemligheter — se kommentaren i deploy-api.yml.
+env:
+  WIF_PROVIDER: projects/288867992327/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+  DEPLOY_SA: github-deployer@lead-agent-489101.iam.gserviceaccount.com
+
+jobs:
+  gallra:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOY_SA }}
+
+      # Schemalagda körningar gallrar på riktigt. Manuella körningar är
+      # testkörningar om inte kryssrutan avmarkeras, så att det går att se vad
+      # som skulle hända innan något faktiskt raderas.
+      - name: Gallra
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "true" ]; then
+            node scripts/apply-retention.mjs --dry-run
+          else
+            node scripts/apply-retention.mjs
+          fi
