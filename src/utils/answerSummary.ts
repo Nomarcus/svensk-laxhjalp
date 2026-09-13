@@ -76,10 +76,3 @@ export function parseAnswerSections(content: string): AnswerSections {
     remaining: value('remaining'), isCoach, structured: true,
   };
 }
-
-/** Bakåtkompatibel export för äldre anrop. */
-export function extractAnswerSummary(content: string) {
-  const parsed = parseAnswerSections(content);
-  if (!parsed.structured) return null;
-  return { answers: [] as string[], brief: parsed.brief, briefIsFallback: false };
-}
