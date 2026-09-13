@@ -1213,13 +1213,16 @@ ${requirementsText}`;
                           </ul>
                         </div>
                       )}
-                      {focusSummary.childExplanation && (
-                        <div className="border-t border-emerald-100 p-4 dark:border-emerald-900/50 md:p-5 bg-emerald-50/60 dark:bg-emerald-950/20">
+                      {focusSummary.brief && (
+                        <div className="border-t border-emerald-100 p-4 dark:border-emerald-900/50 md:p-5 bg-emerald-50/60 dark:bg-emerald-950/20 first:border-t-0">
                           <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-                            {t('chat.summaryChildExplanation')}
+                            {focusSummary.briefIsFallback
+                              ? t('chat.summaryChildExplanation')
+                              : t('chat.summaryBrief')}
                           </div>
-                          <p className="text-[15px] leading-relaxed text-stone-800 dark:text-stone-100">
-                            {focusSummary.childExplanation}
+                          {/* Raderna är innehåll: vad uppgiften går ut på, metoden, svaret. */}
+                          <p className="whitespace-pre-line text-[15px] leading-relaxed text-stone-800 dark:text-stone-100">
+                            {focusSummary.brief}
                           </p>
                         </div>
                       )}
