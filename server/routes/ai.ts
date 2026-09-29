@@ -14,13 +14,59 @@ const router = Router();
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
-const TEXT_MODEL = process.env.AI_TEXT_MODEL || 'gemini-2.5-flash-lite';
-const IMAGE_MODEL = process.env.AI_IMAGE_MODEL || 'gemini-2.5-flash-image';
-/** Model used when a chat message includes photos to analyze — separate from TEXT_MODEL
- * so changing AI_TEXT_MODEL doesn't silently leave the (usually pricier) image path untouched. */
-const IMAGE_ANALYSIS_MODEL = process.env.AI_IMAGE_ANALYSIS_MODEL || 'gemini-2.5-flash';
+/**
+ * Modellval. Vill du flytta ALLA textvägar på en gång räcker en variabel:
+ *
+ *   AI_MODEL=gemini-3.1-flash-lite
+ *
+ * De enskilda variablerna nedan vinner över AI_MODEL, för den som vill finjustera
+ * en väg (t.ex. dyrare modell bara för facit). Utan någon variabel körs standardvalen.
+ *
+ * Bildmodellen styrs separat av AI_IMAGE_MODEL — den är en annan sorts modell.
+ */
+const SHARED_MODEL = process.env.AI_MODEL?.trim() || '';
+const TEXT_MODEL = process.env.AI_TEXT_MODEL || SHARED_MODEL || 'gemini-2.5-flash-lite';
+/**
+ * gemini-2.5-flash-image stängs av i Gemini API den 2 oktober 2026 — efter det slutar
+ * illustrationerna fungera helt. gemini-3.1-flash-lite-image är Googles efterträdare
+ * och dessutom billigare per bild.
+ */
+const IMAGE_MODEL = process.env.AI_IMAGE_MODEL || 'gemini-3.1-flash-lite-image';
+/** Foton av läxor. Separat väg så att den syns när den byts — den är oftast den dyraste. */
+const IMAGE_ANALYSIS_MODEL = process.env.AI_IMAGE_ANALYSIS_MODEL || SHARED_MODEL || 'gemini-2.5-flash';
 /** Facit och rättning — svaret används som facit, så det ska inte köras på den billigaste modellen. */
-const PRECISION_MODEL = process.env.AI_PRECISION_MODEL || 'gemini-2.5-flash';
+const PRECISION_MODEL = process.env.AI_PRECISION_MODEL || SHARED_MODEL || 'gemini-2.5-flash';
+
+/**
+ * Kontrollerar vid uppstart att varje konfigurerad modell faktiskt finns. Ett felstavat
+ * eller avstängt modell-ID märks annars först när en förälder får ett felmeddelande.
+ * Kontrollen är gratis, blockerar aldrig uppstarten och kraschar aldrig servern.
+ * Resultatet står i Cloud Run-loggen: sök på "[models]".
+ */
+async function verifyConfiguredModels(): Promise<void> {
+  if (!process.env.GEMINI_API_KEY) return;
+  const wanted: Record<string, string[]> = {};
+  for (const [role, id] of Object.entries({
+    text: TEXT_MODEL,
+    'foto-analys': IMAGE_ANALYSIS_MODEL,
+    facit: PRECISION_MODEL,
+    illustration: IMAGE_MODEL,
+  })) {
+    (wanted[id] ||= []).push(role);
+  }
+  await Promise.all(
+    Object.entries(wanted).map(async ([id, roles]) => {
+      try {
+        await ai.models.get({ model: id });
+        console.info(`[models] OK      ${id} (${roles.join(', ')})`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`[models] SAKNAS  ${id} (${roles.join(', ')}): ${message.slice(0, 160)}`);
+      }
+    }),
+  );
+}
+void verifyConfiguredModels();
 /** Temperatur per läge. Standard är 1.0, vilket är för slumpmässigt för ett facit. */
 const TEMPERATURE_DEFAULT = Number(process.env.AI_TEMPERATURE) || 0.35;
 const TEMPERATURE_PRECISION = Number(process.env.AI_TEMPERATURE_PRECISION) || 0.15;
