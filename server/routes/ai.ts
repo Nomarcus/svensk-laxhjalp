@@ -38,6 +38,69 @@ const IMAGE_ANALYSIS_MODEL = process.env.AI_IMAGE_ANALYSIS_MODEL || SHARED_MODEL
 const PRECISION_MODEL = process.env.AI_PRECISION_MODEL || SHARED_MODEL || 'gemini-2.5-flash';
 
 /**
+ * Reservmodeller. 2.5 är billigast och fungerar, men Google har aviserat avstängning
+ * (Google Cloud: 16 okt för 2.5 Flash, 20 okt för 2.5 Flash-Lite; Gemini API har inget
+ * datum ännu). I stället för att någon ska hinna byta i tid byter servern själv:
+ * svarar Google att modellen inte finns, körs samma fråga om på reservmodellen.
+ * Föräldern märker ingenting, och loggen får en rad "[models] FALLBACK".
+ */
+const FALLBACK_MODEL = process.env.AI_FALLBACK_MODEL?.trim() || 'gemini-3.1-flash-lite';
+/** Reserv för bilder om det nya ID:t inte skulle stämma. Fungerar bara till 2 okt. */
+const IMAGE_FALLBACK_MODEL = process.env.AI_IMAGE_FALLBACK_MODEL?.trim() || 'gemini-2.5-flash-image';
+
+/** Modeller som nyss svarat "finns inte". Hoppas över en timme så att varje fråga inte först ska misslyckas. */
+const unavailableUntil = new Map<string, number>();
+const UNAVAILABLE_TTL_MS = 60 * 60 * 1000;
+
+function markUnavailable(model: string): void {
+  unavailableUntil.set(model, Date.now() + UNAVAILABLE_TTL_MS);
+}
+
+function isKnownUnavailable(model: string): boolean {
+  const until = unavailableUntil.get(model);
+  if (!until) return false;
+  if (until > Date.now()) return true;
+  unavailableUntil.delete(model);
+  return false;
+}
+
+/**
+ * Bara fel som betyder att själva modellen saknas eller är avstängd. Överbelastning
+ * (429) och serverfel (5xx) ska INTE byta modell — de går över av sig själva, och ett
+ * byte där skulle dölja ett annat problem.
+ */
+function isModelUnavailable(error: unknown): boolean {
+  const status = (error as { status?: unknown })?.status;
+  if (status === 404) return true;
+  const message = error instanceof Error ? error.message : String(error);
+  return /NOT_FOUND|models\/[\w.-]+ is not found|is not supported for|no longer (?:available|supported)|has been (?:deprecated|retired|shut ?down)/i.test(message);
+}
+
+/**
+ * Kör ett anrop mot primärmodellen och, om den inte finns, samma anrop mot reserven.
+ * `call` får modellen och en flagga om det är reserven (då får anroparen t.ex. inte
+ * använda en promptcache, eftersom cachen är knuten till primärmodellen).
+ */
+async function withModelFallback<T>(
+  primary: string,
+  fallback: string,
+  call: (model: string, isFallback: boolean) => Promise<T>,
+): Promise<T> {
+  if (primary !== fallback && isKnownUnavailable(primary)) {
+    return call(fallback, true);
+  }
+  try {
+    return await call(primary, false);
+  } catch (error) {
+    if (primary === fallback || !isModelUnavailable(error)) throw error;
+    markUnavailable(primary);
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[models] FALLBACK ${primary} -> ${fallback}: ${message.slice(0, 160)}`);
+    return call(fallback, true);
+  }
+}
+
+/**
  * Kontrollerar vid uppstart att varje konfigurerad modell faktiskt finns. Ett felstavat
  * eller avstängt modell-ID märks annars först när en förälder får ett felmeddelande.
  * Kontrollen är gratis, blockerar aldrig uppstarten och kraschar aldrig servern.
@@ -51,6 +114,8 @@ async function verifyConfiguredModels(): Promise<void> {
     'foto-analys': IMAGE_ANALYSIS_MODEL,
     facit: PRECISION_MODEL,
     illustration: IMAGE_MODEL,
+    'reserv text': FALLBACK_MODEL,
+    'reserv bild': IMAGE_FALLBACK_MODEL,
   })) {
     (wanted[id] ||= []).push(role);
   }
@@ -61,6 +126,7 @@ async function verifyConfiguredModels(): Promise<void> {
         console.info(`[models] OK      ${id} (${roles.join(', ')})`);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
+        if (isModelUnavailable(error)) markUnavailable(id);
         console.error(`[models] SAKNAS  ${id} (${roles.join(', ')}): ${message.slice(0, 160)}`);
       }
     }),
@@ -378,7 +444,22 @@ Anpassning för detta barn:
       },
     };
 
-    const stream = await ai.models.generateContentStream(requestPayload);
+    const stream = await withModelFallback(effectiveModel, FALLBACK_MODEL, (model, isFallback) =>
+      ai.models.generateContentStream(
+        isFallback
+          ? {
+              ...requestPayload,
+              model,
+              // Promptcachen hör till primärmodellen och går inte att använda här.
+              config: {
+                maxOutputTokens: requestPayload.config.maxOutputTokens,
+                temperature: requestPayload.config.temperature,
+                systemInstruction: effectiveSystemInstruction,
+              },
+            }
+          : requestPayload,
+      ),
+    );
     res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('X-Accel-Buffering', 'no');
@@ -428,8 +509,8 @@ router.post('/image', async (req: AuthenticatedRequest, res: Response) => {
     }
 
     const audienceGuidance = buildAudienceGuidance(childGrade);
-    const response = await ai.models.generateContent({
-      model: IMAGE_MODEL,
+    const response = await withModelFallback(IMAGE_MODEL, IMAGE_FALLBACK_MODEL, (model) => ai.models.generateContent({
+      model,
       contents: {
         parts: [
           {
@@ -444,7 +525,7 @@ router.post('/image', async (req: AuthenticatedRequest, res: Response) => {
         },
         maxOutputTokens: MAX_OUTPUT_TOKENS_IMAGE_GEN,
       },
-    });
+    }));
 
     if (response.candidates?.[0]?.content?.parts) {
       for (const part of response.candidates[0].content.parts) {
