@@ -225,6 +225,28 @@ function buildAudienceGuidance(rawGrade?: unknown): string {
   ].join('\n- ');
 }
 
+/**
+ * Bildstil per årskurs. Bildmodellen fick tidigare samma riktlinjer som chattsvaren
+ * ("Så säger du till barnet", notation), som inte säger något om hur en bild ska se ut,
+ * och bilderna blev ofta barnsliga även för högstadiet.
+ */
+function buildImageStyle(rawGrade?: unknown): string {
+  const grade = parseGradeLevel(rawGrade);
+  if (grade === null) {
+    return 'Neutral, saklig stil som passar både mellanstadie- och högstadieelever: ren vektorillustration, dämpade färger, inga seriefigurer.';
+  }
+  if (grade <= 3) {
+    return `Elev i årskurs ${grade}. Vänlig, färgglad men lugn illustration med enkla, tydliga former och vardagliga föremål (frukt, leksaker, djur) att räkna eller jämföra. Inga skämt eller överdrivna ansikten.`;
+  }
+  if (grade <= 6) {
+    return `Elev i årskurs ${grade}. Tydlig skolboksillustration: rena former, få färger, konkreta modeller (tallinje, cirkeldiagram, rutnät, karta). Inte gullig, inga seriefigurer med ansikten.`;
+  }
+  if (grade <= 9) {
+    return `Elev i årskurs ${grade}. Saklig och vuxen stil som i en läromedelsbok för högstadiet: diagram, schematisk figur eller realistisk skiss. Inga tecknade figurer, maskotar eller barnsliga element.`;
+  }
+  return 'Gymnasieelev. Stram, teknisk illustration som i en lärobok: diagram, graf eller schematisk modell. Helt utan barnsliga element.';
+}
+
 function gradeBucket(rawGrade?: unknown): string {
   const grade = parseGradeLevel(rawGrade);
   if (grade === null) return 'neutral';
@@ -529,13 +551,22 @@ router.post('/image', async (req: AuthenticatedRequest, res: Response) => {
       return;
     }
 
-    const audienceGuidance = buildAudienceGuidance(childGrade);
+    const style = buildImageStyle(childGrade);
     const response = await withModelFallback(IMAGE_MODEL, IMAGE_FALLBACK_MODEL, (model) => ai.models.generateContent({
       model,
       contents: {
         parts: [
           {
-            text: `Skapa en pedagogisk illustration för en svensk skoluppgift. Ämne: ${np.text}. Illustrationen ska vara tydlig, hjälpsam och åldersanpassad. Målgrupp: ${audienceGuidance} För äldre elever: mer neutral, mindre barnslig stil. Undvik text i bilden om möjligt.`,
+            text: [
+              'Skapa EN pedagogisk illustration som hjälper en elev att förstå idén i skoluppgiften nedan.',
+              `Stil och målgrupp: ${style}`,
+              'Visa begreppet konkret (till exempel bitar av en helhet för bråk, föremål i grupper för multiplikation, en enkel karta eller ett förlopp). En tydlig huvudidé, enkel bakgrund.',
+              'Matematiken i bilden måste stämma exakt med uppgiften. Visa hellre färre siffror än fel siffror.',
+              'Ingen löptext i bilden. Siffror eller enstaka ord bara om de behövs, och då på svenska och korrekt stavade.',
+              'Visa inte svaret om uppgiften går ut på att eleven ska räkna fram det.',
+              '',
+              `Uppgiften och förklaringen:\n${np.text}`,
+            ].join('\n'),
           },
         ],
       },
@@ -551,14 +582,17 @@ router.post('/image', async (req: AuthenticatedRequest, res: Response) => {
     if (response.candidates?.[0]?.content?.parts) {
       for (const part of response.candidates[0].content.parts) {
         if (part.inlineData) {
-          const imageData = `data:image/png;base64,${part.inlineData.data}`;
+          const mime = part.inlineData.mimeType || 'image/png';
+          const imageData = `data:${mime};base64,${part.inlineData.data}`;
           res.json({ imageData });
           return;
         }
       }
     }
 
-    res.json({ imageData: null });
+    // Modellen svarade med bara text. Säg det, i stället för att knappen tyst slutar snurra.
+    console.error('Image generation error: inget bildsvar', response.candidates?.[0]?.finishReason);
+    res.status(502).json({ error: 'Ingen bild skapades. Försök igen.' });
   } catch (error: any) {
     console.error('Image generation error:', error.message);
     res.status(500).json({ error: 'Ett fel uppstod vid bildgenerering.' });
