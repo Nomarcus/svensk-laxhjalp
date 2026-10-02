@@ -286,10 +286,14 @@ export function useSpeech() {
           premiumUnavailableForSession = true;
         }
 
+        // Orsaken visas kort, så att det går att se varför reservrösten användes.
+        setTtsNotice(`${t('chat.aiVoiceFailed', 'Den naturliga rösten svarade inte, använder enhetens röst')} (${resp.status})`);
         speakBrowser(readableText, lang);
-      } catch {
+      } catch (err) {
         if (requestId !== requestIdRef.current) return;
         cleanupAi();
+        const reason = err instanceof Error ? err.name || err.message : 'okänt';
+        setTtsNotice(`${t('chat.aiVoiceFailed', 'Den naturliga rösten svarade inte, använder enhetens röst')} (${reason})`);
         speakBrowser(readableText, lang);
       }
     },
