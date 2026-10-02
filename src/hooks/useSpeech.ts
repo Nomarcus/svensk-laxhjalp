@@ -52,6 +52,8 @@ let premiumUnavailableForSession = false;
 export function useSpeech() {
   const { t } = useTranslation();
   const [isSpeaking, setIsSpeaking] = useState(false);
+  // Rösten hämtas från servern (1–2 s). Under tiden ska knappen redan visa Stoppa.
+  const [isLoading, setIsLoading] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [currentChunk, setCurrentChunk] = useState(0);
   const [totalChunks, setTotalChunks] = useState(0);
@@ -240,6 +242,7 @@ export function useSpeech() {
         try { window.speechSynthesis.speak(new SpeechSynthesisUtterance('')); } catch { /* noop */ }
       }
 
+      setIsLoading(true);
       try {
         if (!ctx) throw new Error('Ingen Web Audio');
         const resp = await requestPremiumTts(readableText, lang);
@@ -295,6 +298,8 @@ export function useSpeech() {
         const reason = err instanceof Error ? err.name || err.message : 'okänt';
         setTtsNotice(`${t('chat.aiVoiceFailed', 'Den naturliga rösten svarade inte, använder enhetens röst')} (${reason})`);
         speakBrowser(readableText, lang);
+      } finally {
+        if (requestId === requestIdRef.current) setIsLoading(false);
       }
     },
     [cleanupAi, clearTtsNotice, speakBrowser, t]
@@ -343,6 +348,7 @@ export function useSpeech() {
 
   const stop = useCallback(() => {
     requestIdRef.current += 1;
+    setIsLoading(false);
     cleanupAi();
     if ('speechSynthesis' in window && window.speechSynthesis) {
       window.speechSynthesis.cancel();
@@ -372,6 +378,7 @@ export function useSpeech() {
     resume,
     next,
     isSpeaking,
+    isLoading,
     isPaused,
     isSupported,
     currentChunk,

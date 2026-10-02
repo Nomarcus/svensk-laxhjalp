@@ -11,8 +11,21 @@ if (Capacitor.isNativePlatform()) {
   document.documentElement.classList.add('capacitor-native');
 }
 
-// iOS Safari visar inte :active på knappar utan en touchstart-lyssnare någonstans.
-document.addEventListener('touchstart', () => {}, { passive: true });
+// Tryckmarkering. :active syns bara medan fingret ligger kvar, och ett snabbt tryck
+// på iPad hann knappt synas. Klassen ligger kvar en kort stund efter släppet.
+const PRESS_SELECTOR = 'button:not(:disabled), [role="button"], [role="switch"], a.inline-flex, label[for]';
+document.addEventListener('pointerdown', (e) => {
+  const el = (e.target as Element | null)?.closest?.(PRESS_SELECTOR);
+  if (!(el instanceof HTMLElement)) return;
+  el.classList.add('is-pressed');
+  const release = () => {
+    window.setTimeout(() => el.classList.remove('is-pressed'), 160);
+    document.removeEventListener('pointerup', release);
+    document.removeEventListener('pointercancel', release);
+  };
+  document.addEventListener('pointerup', release);
+  document.addEventListener('pointercancel', release);
+}, { passive: true });
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

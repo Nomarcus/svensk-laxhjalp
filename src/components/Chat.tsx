@@ -882,7 +882,7 @@ ${requirementsText}`;
         isRequirementsList={showStudyMaterialButton}
         onCreateStudyMaterial={() => handleCreateStudyMaterial(studyMaterialSource)}
         onAskCurriculum={(content) => {
-          sendMessage(`Förklara hur det du just berättade om kopplas till den svenska läroplanen (Lgr22). Vilket centralt innehåll i Lgr22 tränar uppgiften, och vad säger betygskriterierna om det om de gäller barnets årskurs? Beskriv med egna ord och citera inte läroplanen. Ge konkreta kopplingar så jag som förälder förstår varför mitt barn lär sig detta.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.curriculumLink'));
+          sendMessage(`Förklara kort hur uppgiften kopplar till läroplanen Lgr22. Svara med EXAKT två korta stycken, högst tre meningar vardera, och inget annat: inga rubriker, inga punktlistor, ingen fetstil, ingen "Så säger du till barnet" och inga förslag på vad vi kan göra sen. Stycke 1: vilket centralt innehåll i Lgr22 uppgiften tränar, med egna ord. Stycke 2: varför det är viktigt för barnet, i vardagliga ord. Citera inte läroplanen.\n\nUppgiften och förklaringen:\n${content.slice(0, 500)}`, t('chat.curriculumLink'));
         }}
         onAskFacitParent={(content) => {
           // Tidigare fanns tre facitknappar (kort, steg för steg, förälder). Föräldern
@@ -914,7 +914,7 @@ ${requirementsText}`;
             : undefined
         }
         speechState={speakingMessageId === msg.id ? {
-          isSpeaking: speech.isSpeaking,
+          isSpeaking: speech.isSpeaking || speech.isLoading,
           isPaused: speech.isPaused,
           currentChunk: speech.currentChunk,
           totalChunks: speech.totalChunks,
