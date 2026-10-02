@@ -882,7 +882,7 @@ ${requirementsText}`;
         isRequirementsList={showStudyMaterialButton}
         onCreateStudyMaterial={() => handleCreateStudyMaterial(studyMaterialSource)}
         onAskCurriculum={(content) => {
-          sendMessage(`Förklara kort hur uppgiften kopplar till läroplanen Lgr22. Svara med EXAKT två korta stycken, högst tre meningar vardera, och inget annat: inga rubriker, inga punktlistor, ingen fetstil, ingen "Så säger du till barnet" och inga förslag på vad vi kan göra sen. Stycke 1: vilket centralt innehåll i Lgr22 uppgiften tränar, med egna ord. Stycke 2: varför det är viktigt för barnet, i vardagliga ord. Citera inte läroplanen.\n\nUppgiften och förklaringen:\n${content.slice(0, 500)}`, t('chat.curriculumLink'));
+          sendMessage(`Förklara kort hur uppgiften kopplar till läroplanen Lgr22. Svara med EXAKT tre korta stycken och inget annat: inga rubriker, inga punktlistor, ingen \"Så säger du till barnet\" och inga förslag på vad vi kan göra sen. Stycke 1: vilket centralt innehåll i Lgr22 uppgiften tränar, med egna ord, högst tre meningar. Stycke 2: varför det är viktigt för barnet, i vardagliga ord, högst tre meningar. Stycke 3 börjar med en fetstilt referensrad som går att visa för en lärare, i formen **Lgr22 › Ämne › Centralt innehåll i årskurs X–Y › Kunskapsområdets rubrik** (använd kursplanens egna rubriker; är du osäker på rubriken, skriv bara ämne och stadium). Därefter två–tre meningar om hur skolan brukar lära ut detta och hur föräldern kan göra likadant hemma. Citera inte läroplanens löptext.\n\nUppgiften och förklaringen:\n${content.slice(0, 500)}`, t('chat.curriculumLink'));
         }}
         onAskFacitParent={(content) => {
           // Tidigare fanns tre facitknappar (kort, steg för steg, förälder). Föräldern
