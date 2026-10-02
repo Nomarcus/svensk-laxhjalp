@@ -442,7 +442,6 @@ export default function Planner({ childId, ownerId, childGrade, prefill, onPrefi
     return task.completed ? 100 : 0;
   };
 
-  const getTaskRemainingPercent = (task: Task) => 100 - getTaskProgressPercent(task);
   const getTaskImages = (task: Task) => {
     if (task.imageUrls?.length) return task.imageUrls;
     if (task.imageUrl) return [task.imageUrl];
@@ -826,7 +825,7 @@ export default function Planner({ childId, ownerId, childGrade, prefill, onPrefi
               <button
                 onClick={handleGenerateStudyPlan}
                 disabled={tasks.filter(t => !t.completed).length === 0 || studyPlanLoading}
-                className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-xs font-medium rounded-xl shadow-sm hover:bg-emerald-700 disabled:opacity-50 transition-all"
+                className="flex min-h-12 items-center gap-1.5 px-3 bg-emerald-600 text-white text-sm font-medium rounded-xl shadow-sm hover:bg-emerald-700 disabled:opacity-50 transition-all"
                 title="AI analyserar veckans uppgifter"
               >
                 {studyPlanLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
@@ -835,7 +834,7 @@ export default function Planner({ childId, ownerId, childGrade, prefill, onPrefi
               <button
                 onClick={() => setHideCompleted(!hideCompleted)}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all shadow-sm border",
+                  "flex min-h-12 items-center gap-1.5 px-3 rounded-xl text-sm font-medium transition-all shadow-sm border",
                   hideCompleted
                     ? "bg-amber-50 border-amber-200 text-amber-700"
                     : "bg-white dark:bg-slate-900 border-black/5 dark:border-white/5 text-stone-400 dark:text-stone-500 hover:bg-stone-50 dark:hover:bg-slate-800"
@@ -845,27 +844,21 @@ export default function Planner({ childId, ownerId, childGrade, prefill, onPrefi
                 {hideCompleted ? <EyeOff size={16} /> : <Eye size={16} />}
                 <span className="hidden sm:inline">{hideCompleted ? 'Visa klarmarkerade' : 'Dölj klarmarkerade'}</span>
               </button>
-              <div className="flex bg-white dark:bg-slate-900 rounded-xl p-1 shadow-sm border border-black/5 dark:border-white/5">
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={cn(
-                    "p-2 rounded-lg transition-all",
-                    viewMode === 'list' ? "bg-emerald-600 text-white shadow-sm" : "text-stone-400 dark:text-stone-500 hover:bg-stone-50 dark:hover:bg-slate-800"
-                  )}
-                  title="Listvy"
-                >
-                  <LayoutList size={20} />
-                </button>
-                <button
-                  onClick={() => setViewMode('calendar')}
-                  className={cn(
-                    "p-2 rounded-lg transition-all",
-                    viewMode === 'calendar' ? "bg-emerald-600 text-white shadow-sm" : "text-stone-400 dark:text-stone-500 hover:bg-stone-50 dark:hover:bg-slate-800"
-                  )}
-                  title="Kalendervy"
-                >
-                  <Calendar size={20} />
-                </button>
+              <div className="grid grid-cols-2 gap-1 rounded-xl border border-black/5 bg-white p-1 shadow-sm dark:border-white/5 dark:bg-slate-900">
+                {([['list', LayoutList, 'Lista'], ['calendar', Calendar, 'Vecka']] as const).map(([mode, Icon, label]) => (
+                  <button
+                    key={mode}
+                    onClick={() => setViewMode(mode)}
+                    aria-pressed={viewMode === mode}
+                    className={cn(
+                      "flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-all",
+                      viewMode === mode ? "bg-emerald-600 text-white shadow-sm" : "text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-slate-800"
+                    )}
+                  >
+                    <Icon size={18} />
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -1009,7 +1002,7 @@ export default function Planner({ childId, ownerId, childGrade, prefill, onPrefi
                                   isDayCompleted(task, day) ? "text-emerald-500" : "text-stone-300 hover:text-emerald-500"
                                 )}
                               >
-                                {isDayCompleted(task, day) ? <CheckCircle2 size={20} /> : <Circle size={20} />}
+                                {isDayCompleted(task, day) ? <CheckCircle2 size={26} /> : <Circle size={26} />}
                               </button>
 
                               <div className="min-w-0 flex items-center gap-2">
@@ -1054,9 +1047,6 @@ export default function Planner({ childId, ownerId, childGrade, prefill, onPrefi
                                 {task.linkedChatSessionId && (
                                   <MessageSquare size={14} className="text-emerald-500" />
                                 )}
-                                <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                                  {t('planner.remainingPercent', { value: getTaskRemainingPercent(task) })}
-                                </span>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
                                   className="p-1 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
@@ -1077,7 +1067,7 @@ export default function Planner({ childId, ownerId, childGrade, prefill, onPrefi
           </div>
         ) : (
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-black/5 dark:border-white/5 overflow-x-auto">
-            <div className="min-w-[1000px]">
+            <div className="min-w-[1050px]">
               <div className="grid grid-cols-7 gap-4 mb-6">
                 {DAYS.map(day => (
                   <div key={day} className="text-center">
@@ -1116,93 +1106,59 @@ export default function Planner({ childId, ownerId, childGrade, prefill, onPrefi
                                       : "bg-white dark:bg-slate-800 border-black/5 dark:border-white/5 text-stone-700 dark:text-stone-200"
                             )}
                           >
-                            {task.taskType === 'exam' && isDeadline && !isDayCompleted(task, day) && (
-                              <div className="flex items-center gap-1 mb-1.5 text-[9px] font-bold text-purple-700 uppercase tracking-wider">
-                                <CalendarCheck size={9} />
-                                {t('planner.examDay')}
-                              </div>
-                            )}
-                            {task.taskType === 'exam' && !isDeadline && !isDayCompleted(task, day) && task.workDays?.includes(day) && (
-                              <div className="flex items-center gap-1 mb-1.5 text-[9px] font-bold text-blue-600 uppercase tracking-wider">
-                                <Clock size={9} />
-                                {t('planner.workDay')}
-                              </div>
-                            )}
-                            {task.taskType === 'exam' && !isDeadline && !isDayCompleted(task, day) && !task.workDays?.includes(day) && (
-                              <div className="flex items-center gap-1 mb-1.5 text-[9px] font-bold text-purple-600 uppercase tracking-wider">
-                                <GraduationCap size={9} />
-                                {t('planner.typeTest')}
-                              </div>
-                            )}
-                            {task.taskType !== 'exam' && isDeadline && !isDayCompleted(task, day) && (
-                              <div className="flex items-center gap-1 mb-1.5 text-[9px] font-bold text-red-600 uppercase tracking-wider">
-                                <CalendarCheck size={9} />
-                                Inlämningsdag
-                              </div>
-                            )}
-                            {task.taskType !== 'exam' && !isDeadline && !isDayCompleted(task, day) && task.workDays?.includes(day) && (
-                              <div className="flex items-center gap-1 mb-1.5 text-[9px] font-bold text-blue-600 uppercase tracking-wider">
-                                <Clock size={9} />
-                                Arbetsdag
-                              </div>
-                            )}
-                            <div className="flex items-center gap-1.5 mb-1">
-                              <div className="opacity-50">
-                                {getSubjectIcon(task.subject)}
-                              </div>
-                              <div className="font-bold truncate">{task.subject}</div>
-                            </div>
-                            <div className="text-[10px] line-clamp-2 opacity-70">{task.description}</div>
-                            {task.minutesPerDay && (
-                              <div className="mt-1 text-[9px] text-emerald-600 flex items-center gap-0.5">
-                                <Clock size={8} /> {task.minutesPerDay} min
-                              </div>
-                            )}
-                            {task.dueDay && task.dueDay !== day && (
-                              <div className={cn(
-                                "mt-0.5 text-[9px] flex items-center gap-0.5",
-                                task.taskType === 'exam' ? "text-purple-600" : "text-amber-600"
-                              )}>
-                                <CalendarCheck size={8} /> {task.taskType === 'exam' ? t('planner.examDay') : t('planner.submissionDay')}: {task.dueDay.slice(0, 3)}
-                              </div>
-                            )}
-                            <div className="mt-1">
-                              <div className="h-1.5 bg-stone-200/80 dark:bg-slate-700 rounded-full overflow-hidden">
-                                <div
-                                  className="h-full bg-indigo-500 transition-all"
-                                  style={{ width: `${getTaskProgressPercent(task)}%` }}
-                                />
-                              </div>
-                              <div className="mt-0.5 text-[9px] text-indigo-600">
-                                {t('planner.remainingPercent', { value: getTaskRemainingPercent(task) })}
-                              </div>
-                            </div>
-                            <div className="mt-2 flex items-center justify-between">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); toggleTask(task, day); }}
-                                className={cn(
-                                  "p-1 rounded-full transition-colors",
-                                  isDayCompleted(task, day) ? "bg-emerald-200" : "bg-stone-100 hover:bg-emerald-100"
-                                )}
-                              >
-                                {isDayCompleted(task, day) ? <CheckCircle2 size={10} /> : <Circle size={10} />}
-                              </button>
-                              {task.taskType === 'exam' && (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleExamPrep(task); }}
-                                  className="p-1 text-purple-400 hover:text-purple-600"
-                                  title="Provförberedelse"
-                                >
-                                  <GraduationCap size={10} />
-                                </button>
-                              )}
-                              <button
-                                onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
-                                className="p-1 text-stone-300 hover:text-red-500"
-                              >
-                                <Trash2 size={10} />
-                              </button>
-                            </div>
+                            {/* En enda etikett per kort. Tidigare staplades etikett, minuter,
+                                inlämningsdag, förloppsstapel och procent i en smal kolumn,
+                                så att ämnesnamnet kortades till "Mate...". */}
+                            {(() => {
+                              const done = isDayCompleted(task, day);
+                              const label = done
+                                ? null
+                                : isDeadline
+                                  ? (task.taskType === 'exam' ? t('planner.examDay') : t('planner.submissionDay'))
+                                  : task.taskType === 'exam' ? t('planner.typeTest') : t('planner.workDay');
+                              const labelColor = isDeadline
+                                ? (task.taskType === 'exam' ? 'text-purple-700' : 'text-red-700')
+                                : task.taskType === 'exam' ? 'text-purple-700' : 'text-blue-700';
+                              return (
+                                <>
+                                  {label && (
+                                    <div className={cn('mb-1 text-[11px] font-semibold', labelColor)}>{label}</div>
+                                  )}
+                                  <div lang="sv" className="text-sm font-bold leading-snug break-words hyphens-auto">{task.subject}</div>
+                                  {task.description && (
+                                    <div className="mt-0.5 text-xs leading-snug line-clamp-2 opacity-70">{task.description}</div>
+                                  )}
+                                  {task.minutesPerDay && !done && (
+                                    <div className="mt-1 text-xs text-stone-500">{task.minutesPerDay} min</div>
+                                  )}
+                                  <div className={cn('mt-3 grid gap-2', task.taskType === 'exam' && !done ? 'grid-cols-2' : 'grid-cols-1')}>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); toggleTask(task, day); }}
+                                      aria-pressed={done}
+                                      title={done ? t('planner.markUndone', 'Ångra klar') : t('planner.markDone', 'Klar')}
+                                      className={cn(
+                                        'flex min-h-11 items-center justify-center gap-1 rounded-xl border text-sm font-semibold transition-colors',
+                                        done
+                                          ? 'border-emerald-600 bg-emerald-600 text-white'
+                                          : 'border-stone-300 bg-white text-stone-700 hover:border-emerald-500 hover:text-emerald-700 dark:border-stone-600 dark:bg-slate-900 dark:text-stone-200'
+                                      )}
+                                    >
+                                      {done ? <CheckCircle2 size={18} /> : <Circle size={18} />}
+                                    </button>
+                                    {task.taskType === 'exam' && !done && (
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); handleExamPrep(task); }}
+                                        title="Provförberedelse"
+                                        aria-label="Provförberedelse"
+                                        className="flex min-h-11 items-center justify-center rounded-xl border border-purple-300 bg-white text-purple-700 transition-colors hover:bg-purple-50 dark:bg-slate-900"
+                                      >
+                                        <GraduationCap size={18} />
+                                      </button>
+                                    )}
+                                  </div>
+                                </>
+                              );
+                            })()}
                           </div>
                         );
                       })}
@@ -1213,11 +1169,11 @@ export default function Planner({ childId, ownerId, childGrade, prefill, onPrefi
                         }}
                         className={cn(
                           "w-full flex items-center justify-center rounded-xl border border-dashed border-black/10 transition-all hover:bg-emerald-50 hover:border-emerald-200 group",
-                          dayTasks.length === 0 ? "flex-1 min-h-[100px]" : "py-2 mt-1"
+                          dayTasks.length === 0 ? "flex-1 min-h-[100px]" : "min-h-11 mt-1"
                         )}
                       >
-                        <Plus size={dayTasks.length === 0 ? 24 : 14} className="text-stone-300 group-hover:text-emerald-500" />
-                        {dayTasks.length > 0 && <span className="text-[10px] ml-1 text-stone-400 group-hover:text-emerald-500">Lägg till</span>}
+                        <Plus size={dayTasks.length === 0 ? 24 : 16} className="text-stone-300 group-hover:text-emerald-500" />
+                        {dayTasks.length > 0 && <span className="text-sm ml-1 text-stone-400 group-hover:text-emerald-500">Lägg till</span>}
                       </button>
                     </div>
                   );
