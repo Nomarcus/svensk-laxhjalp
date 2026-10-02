@@ -823,15 +823,6 @@ export default function Planner({ childId, ownerId, childGrade, prefill, onPrefi
             </div>
             <div className="flex items-center gap-2 ml-4">
               <button
-                onClick={handleGenerateStudyPlan}
-                disabled={tasks.filter(t => !t.completed).length === 0 || studyPlanLoading}
-                className="flex min-h-12 items-center gap-1.5 px-3 bg-emerald-600 text-white text-sm font-medium rounded-xl shadow-sm hover:bg-emerald-700 disabled:opacity-50 transition-all"
-                title="AI analyserar veckans uppgifter"
-              >
-                {studyPlanLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                <span className="hidden sm:inline">Smart planering</span>
-              </button>
-              <button
                 onClick={() => setHideCompleted(!hideCompleted)}
                 className={cn(
                   "flex min-h-12 items-center gap-1.5 px-3 rounded-xl text-sm font-medium transition-all shadow-sm border",
