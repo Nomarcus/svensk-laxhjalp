@@ -60,7 +60,7 @@
     "@capacitor-firebase/authentication": "^8.3.0"
   },
   "engines": {
-    "node": "20.x"
+    "node": "24.x"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
