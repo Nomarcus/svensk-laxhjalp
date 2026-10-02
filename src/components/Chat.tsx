@@ -58,6 +58,14 @@ import ChatMessage from './chat/ChatMessage';
 import ChatInput, { type HomeworkImageActionId } from './chat/ChatInput';
 import ChatEmptyState from './chat/ChatEmptyState';
 import { useSpeech } from '../hooks/useSpeech';
+
+/**
+ * Uppläsningen är avstängd: på iPhone lästes barnförklaringen upp flera gånger
+ * per tryck. Flaggan döljer alla tre knapparna ("Lyssna på genomgången",
+ * "Läs sammanfattning", "Lyssna på barnförklaringen"). Koden och serverns
+ * TTS-route finns kvar, så det räcker att sätta true när felet är lagat.
+ */
+const READ_ALOUD_ENABLED = false;
 import FreeTierUsageBar from './FreeTierUsageBar';
 import { bumpUsageRefresh } from '../utils/usageRefresh';
 
@@ -898,7 +906,7 @@ ${requirementsText}`;
           onStop: () => { speech.stop(); setSpeakingMessageId(null); },
         }}
         onReadSummary={readSummary}
-        speechSupported={speech.isSupported}
+        speechSupported={READ_ALOUD_ENABLED && speech.isSupported}
         onAutoCreateTask={onCreateTaskFromPhoto ? handleAutoCreateTask : undefined}
         creatingAutoTask={creatingAutoTask}
         hasImage={hasImage}
