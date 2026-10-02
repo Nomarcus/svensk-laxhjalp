@@ -848,7 +848,7 @@ ${requirementsText}`;
         isRequirementsList={showStudyMaterialButton}
         onCreateStudyMaterial={() => handleCreateStudyMaterial(studyMaterialSource)}
         onAskCurriculum={(content) => {
-          sendMessage(`Förklara hur det du just berättade om kopplas till den svenska läroplanen (Lgr22). Vilka centrala innehåll och kunskapskrav berörs? Ge konkreta kopplingar så jag som förälder förstår varför mitt barn lär sig detta.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.curriculumLink'));
+          sendMessage(`Förklara hur det du just berättade om kopplas till den svenska läroplanen (Lgr22). Vilket centralt innehåll i Lgr22 tränar uppgiften, och vad säger betygskriterierna om det om de gäller barnets årskurs? Beskriv med egna ord och citera inte läroplanen. Ge konkreta kopplingar så jag som förälder förstår varför mitt barn lär sig detta.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.curriculumLink'));
         }}
         onAskFacitShort={(content) => {
           sendMessage(`Ge ett KORT facit för uppgiften du just förklarade.\n\nVIKTIGT FORMAT:\n- Använd en numrerad lista: 1), 2), 3)\n- En rad per deluppgift\n- Skriv endast slutsvar per del\n- Avsluta med rubriken "Vanliga fel" och 2 korta punkter\n- Skriv inte långa stycken\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeyShort'), { forceCoachMode: false, precision: true });

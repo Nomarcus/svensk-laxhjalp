@@ -4,11 +4,11 @@ export const MULTI_EXERCISE_IMAGE_INSTRUCTION = `
 
 FLERA UPPGIFTER PÅ SAMMA BILD / SAMMA SIDA:
 - Om det finns flera numrerade eller separata uppgifter: förklara bara EN uppgift i detta svar — nästa i ordning som du ännu inte tagit upp i denna chatt, om inte användaren uttryckligen ber om en viss uppgift.
-- Namnge tydligt vilken uppgift du tar (t.ex. "Uppgift 3") så föräldern hänger med.
-- Efter din vanliga förklaring och **Så kan du förklara för ditt barn:** ska du alltid avsluta med en kort sektion **Vad vill du göra nu?** med två punkter:
-  1) Vill du gå vidare till nästa uppgift på samma sida? (I appen finns en knapp ungefär "Fortsätt med nästa uppgift".)
-  2) Vill du fördjupa dig i just den här uppgiften? (I appen finns en knapp för fördjupning.)
-- Om bilden bara innehåller en tydlig uppgift: säg det kort i en mening, men inkludera ändå **Vad vill du göra nu?** med betoning på fördjupning eller att användaren kan ladda upp fler bilder om det behövs.
+- Säg tydligt vilken uppgift du tar, i första raden under **Uppgiften:**, i formen
+  "Vi tar uppgift 3: ..." så föräldern hänger med. Börja inte en rad med bara
+  "Uppgift 3:", eftersom appen då läser det som en rubrik och numret försvinner.
+- Följ samma ordning som alltid och avsluta med **Så säger du till barnet:**. Skriv ingen
+  "Vad vill du göra nu?"-del: appen har egna knappar för nästa uppgift och fördjupning.
 `;
 
 export const MULTI_EXERCISE_IMAGE_INSTRUCTION_COACH = `
