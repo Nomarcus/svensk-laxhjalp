@@ -33,6 +33,7 @@ interface ChatMessageProps {
   onGenerateImage: (messageId: string, content: string) => void;
   onDeleteOwnMessage?: (messageId: string) => void;
   onAskCurriculum?: (content: string) => void;
+  onAskCurriculumDeep?: (content: string) => void;
   onAskFacitParent?: (content: string) => void;
   onAskFordjupning?: (content: string) => void;
   onStartFirstExercise?: () => void;
@@ -72,6 +73,7 @@ export default function ChatMessage({
   onGenerateImage,
   onDeleteOwnMessage,
   onAskCurriculum,
+  onAskCurriculumDeep,
   onAskFacitParent,
   onAskFordjupning,
   onStartFirstExercise,
@@ -183,6 +185,17 @@ export default function ChatMessage({
         <button key="deep" type="button" onClick={() => onAskFordjupning(msg.content)} className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-amber-500 dark:hover:border-amber-400 hover:bg-amber-50/90 dark:hover:bg-amber-950/30')}>
           <Lightbulb size={12} />
           {t('chat.deepDive')}
+        </button>,
+      );
+    }
+
+    // Svaret på "Koppling till läroplanen" har en referensrad (Lgr22 › …). Där är nästa
+    // naturliga steg en fördjupning, så knappen ligger synligt och inte under Mer.
+    if (onAskCurriculumDeep && /Lgr22\s*›/.test(msg.content)) {
+      primary.unshift(
+        <button key="curriculum-deep" type="button" onClick={() => onAskCurriculumDeep(msg.content)} className={cn(ACTION_BTN, ACTION_FRAME, 'border-blue-300 bg-blue-50 text-blue-900 hover:border-blue-600 dark:border-blue-700 dark:bg-blue-950/30 dark:text-blue-100')}>
+          <GraduationCap size={12} />
+          {t('chat.curriculumDeep')}
         </button>,
       );
     }
