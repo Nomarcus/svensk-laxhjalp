@@ -58,8 +58,14 @@ router.post('/tts', async (req: AuthenticatedRequest, res: Response) => {
         { merge: true }
       );
     }
-    res.setHeader('Content-Type', 'audio/mpeg');
     res.setHeader('Cache-Control', 'private, no-store');
+    // iOS-appen skickar fetch genom CapacitorHttp, som inte klarar binära svar:
+    // MP3-filen kom fram trasig. Med format=base64 skickas ljudet som text i JSON.
+    if (req.body?.format === 'base64') {
+      res.json({ audio: audio.toString('base64'), mime: 'audio/mpeg' });
+      return;
+    }
+    res.setHeader('Content-Type', 'audio/mpeg');
     res.send(audio);
   } catch (error: unknown) {
     console.error('TTS error:', error instanceof Error ? error.message : error);

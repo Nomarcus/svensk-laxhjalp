@@ -16,7 +16,7 @@ export async function requestPremiumTts(text: string, lang?: string): Promise<Re
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ text, lang: lang || 'sv' }),
+    body: JSON.stringify({ text, lang: lang || 'sv', format: 'base64' }),
   });
 }
 

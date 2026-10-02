@@ -235,6 +235,11 @@ export function useSpeech() {
       }
 
       // Väck ljudet och webbläsarens röst medan trycket pågår (krävs på iOS).
+      // audioSession (Safari 17+) gör att ljudet hörs även i ljudlöst läge.
+      const nav = navigator as Navigator & { audioSession?: { type: string } };
+      if (nav.audioSession) {
+        try { nav.audioSession.type = 'playback'; } catch { /* äldre webbläsare */ }
+      }
       if (!ctxRef.current) ctxRef.current = createAudioContext();
       const ctx = ctxRef.current;
       void ctx?.resume();
@@ -248,7 +253,12 @@ export function useSpeech() {
         const resp = await requestPremiumTts(readableText, lang);
         if (requestId !== requestIdRef.current) return;
         if (resp.ok) {
-          const data = await resp.arrayBuffer();
+          // Ljudet kommer som base64 i JSON (se server/routes/tts.ts).
+          const { audio: b64 } = (await resp.json()) as { audio: string };
+          const bin = atob(b64);
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          const data = bytes.buffer;
           if (requestId !== requestIdRef.current) return;
           bumpUsageRefresh();
           const buffer = await ctx.decodeAudioData(data);
