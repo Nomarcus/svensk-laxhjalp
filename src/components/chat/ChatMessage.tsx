@@ -12,6 +12,17 @@ import { parseAnswerSections } from '../../utils/answerSummary';
 const ACTION_BTN =
   'inline-flex min-h-11 items-center gap-2 text-sm px-3 py-2 rounded-xl border font-medium transition-colors active:scale-[0.98] disabled:opacity-45 disabled:pointer-events-none';
 const ACTION_FRAME = 'border-stone-400 bg-white text-stone-800 hover:bg-stone-50 dark:border-stone-500 dark:bg-slate-800 dark:text-stone-100 dark:hover:bg-slate-700/90';
+/** Celler i ett knapprutnät fyller sin ruta och centrerar innehållet. */
+const CELL = '[&>*]:w-full [&>*]:justify-center [&>*]:text-center [&>*>svg]:shrink-0';
+/** Ensam sista knapp i en tvåkolumnsrad tar hela raden, så ingen rad blir halv. */
+const ODD_LAST_FULL = '[&>*:last-child:nth-child(odd)]:col-span-2';
+/** Två lika breda kolumner, i alla skärmbredder. */
+const GRID_TWO = `grid grid-cols-2 gap-2 ${CELL} ${ODD_LAST_FULL}`;
+/**
+ * Huvudknapparna: två kolumner på mobil, en enda rad med lika breda knappar på
+ * bredare skärm. Antalet varierar (1–5) beroende på svaret.
+ */
+const ROW_EQUAL = `grid grid-cols-2 gap-2 ${CELL} ${ODD_LAST_FULL} sm:grid-flow-col sm:auto-cols-fr sm:grid-cols-none sm:[&>*:last-child:nth-child(odd)]:col-span-1`;
 
 interface ChatMessageProps {
   msg: Message;
@@ -135,6 +146,204 @@ export default function ChatMessage({
     printWindow.document.close();
     printWindow.print();
   };
+  /**
+   * Knapparna under ett svar. Varje rad fylls alltid helt: knapparna på en rad
+   * är lika breda, och blir en knapp över i en tvåkolumnsrad tar den hela raden.
+   * Tidigare varierade antalet knappar beroende på svaret, och flex-wrap gav då
+   * ojämna rader med ensamma knappar av olika bredd.
+   */
+  const renderActions = () => {
+    const speechActive = Boolean(speechSupported && speechState && (speechState.isSpeaking || speechState.isPaused));
+
+    const primary: React.ReactNode[] = [];
+    if (speechSupported && speechState && !speechActive) {
+      primary.push(
+        <button key="listen" type="button" onClick={speechState.onSpeak} title={t('chat.listenHint')} className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-emerald-600 dark:hover:border-emerald-400')}>
+          <Volume2 size={12} />
+          {t('chat.listen')}
+        </button>,
+      );
+      if (onReadSummary) {
+        primary.push(
+          <button key="summary" type="button" onClick={() => onReadSummary(msg.content)} className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-emerald-600 dark:hover:border-emerald-400')}>
+            <Volume2 size={12} />
+            {t('chat.readSummary')}
+          </button>,
+        );
+      }
+    }
+    if (!msg.generatedImage) {
+      primary.push(
+        <button key="illustrate" type="button" onClick={() => onGenerateImage(msg.id, msg.content)} disabled={generatingImageId === msg.id} className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-emerald-600 dark:hover:border-emerald-400')}>
+          {generatingImageId === msg.id ? <Loader2 size={12} className="animate-spin" /> : <ImageIcon size={12} />}
+          {generatingImageId === msg.id ? t('chat.creatingIllustration') : t('chat.illustrate')}
+        </button>,
+      );
+    }
+    if (onContinueNextExercise) {
+      primary.push(
+        <button key="next" type="button" onClick={onContinueNextExercise} className={cn(ACTION_BTN, 'border-blue-600 bg-blue-50 text-blue-900 hover:bg-blue-100 dark:border-blue-400 dark:bg-blue-950/50 dark:text-blue-100 dark:hover:bg-blue-900/40')}>
+          <ListOrdered size={12} />
+          {t('chat.nextExerciseButton')}
+        </button>,
+      );
+    }
+    if (onAskFordjupning) {
+      primary.push(
+        <button key="deep" type="button" onClick={() => onAskFordjupning(msg.content)} className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-amber-500 dark:hover:border-amber-400 hover:bg-amber-50/90 dark:hover:bg-amber-950/30')}>
+          <Lightbulb size={12} />
+          {t('chat.deepDive')}
+        </button>,
+      );
+    }
+
+    const help: React.ReactNode[] = [];
+    if (onAskCurriculum) {
+      help.push(
+        <button key="curriculum" type="button" onClick={() => onAskCurriculum(msg.content)} className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-blue-600 dark:hover:border-blue-400 hover:bg-blue-50/90 dark:hover:bg-blue-950/30')}>
+          <GraduationCap size={12} />
+          {t('chat.curriculumLink')}
+        </button>,
+      );
+    }
+    const facitClass = cn(ACTION_BTN, ACTION_FRAME, 'hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50/90 dark:hover:bg-red-950/25');
+    if (onAskFacitShort) {
+      help.push(
+        <button key="facit-short" type="button" onClick={() => onAskFacitShort(msg.content)} className={facitClass}>
+          <ClipboardList size={12} />
+          {t('chat.showAnswerKeyShort')}
+        </button>,
+      );
+    }
+    if (onAskFacitSteps) {
+      help.push(
+        <button key="facit-steps" type="button" onClick={() => onAskFacitSteps(msg.content)} className={facitClass}>
+          <ClipboardList size={12} />
+          {t('chat.showAnswerKeySteps')}
+        </button>,
+      );
+    }
+    if (onAskFacitParent) {
+      help.push(
+        <button key="facit-parent" type="button" onClick={() => onAskFacitParent(msg.content)} className={facitClass}>
+          <ClipboardList size={12} />
+          {t('chat.showAnswerKeyParent')}
+        </button>,
+      );
+    }
+
+    const save: React.ReactNode[] = [];
+    const isSaved = savedMessageIds.has(msg.id);
+    save.push(
+      <button
+        key="save"
+        type="button"
+        onClick={() => onSaveToLibrary(msg)}
+        disabled={isSaved}
+        className={cn(
+          ACTION_BTN,
+          isSaved
+            ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:border-emerald-400 dark:bg-emerald-950/40 dark:text-emerald-100'
+            : cn(ACTION_FRAME, 'hover:border-emerald-600 dark:hover:border-emerald-400'),
+        )}
+      >
+        {isSaved ? <Check size={12} /> : <BookmarkPlus size={12} />}
+        {isSaved ? t('chat.saved') : t('chat.saveToLibrary')}
+      </button>,
+    );
+    save.push(
+      <button key="print" type="button" onClick={() => handlePrint(msg.content)} className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-violet-500 dark:hover:border-violet-400 hover:bg-violet-50/90 dark:hover:bg-violet-950/25')}>
+        <Printer size={12} />
+        {t('chat.printAnswer')}
+      </button>,
+    );
+    if (onAddToPlanner) {
+      const facit = isFacitMessage(msg.content);
+      save.push(
+        <button key="planner" type="button" onClick={() => onAddToPlanner(msg.content)} className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-amber-600 dark:hover:border-amber-400 hover:bg-amber-50/90 dark:hover:bg-amber-950/25')}>
+          <CalendarPlus size={12} />
+          {facit ? t('chat.saveAnswerKeyToPlanner') : t('chat.addToPlanner')}
+        </button>,
+      );
+    }
+    if (onCreateTask) {
+      save.push(
+        <button key="create-task" type="button" onClick={() => onCreateTask(msg.content)} className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-emerald-600 dark:hover:border-emerald-400')}>
+          <PlusCircle size={12} />
+          {t('chat.createTask')}
+        </button>,
+      );
+    }
+    if (hasImage && onAutoCreateTask) {
+      save.push(
+        <button key="auto-task" type="button" onClick={() => onAutoCreateTask(msg.id, msg.content)} disabled={creatingAutoTask} className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-teal-600 dark:hover:border-teal-400 hover:bg-teal-50/90 dark:hover:bg-teal-950/25')}>
+          {creatingAutoTask ? <Loader2 size={12} className="animate-spin" /> : <ScanLine size={12} />}
+          {creatingAutoTask ? t('chat.creatingTask') : t('chat.createTaskAi')}
+        </button>,
+      );
+    }
+
+    const group = (label: string, items: React.ReactNode[]) =>
+      items.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="px-1 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">{label}</p>
+          <div className={GRID_TWO}>{items}</div>
+        </div>
+      );
+
+    return (
+      <div className="mt-1 max-w-2xl space-y-2">
+        {speechActive && speechState && (
+          <div className="flex flex-wrap items-center gap-1 rounded-lg border-2 border-stone-400 bg-stone-50/80 px-1 py-1 dark:border-stone-500 dark:bg-slate-800/80">
+            <span className="px-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">{t('chat.readingWholeAnswer')}</span>
+            <div className="h-1.5 w-20 overflow-hidden rounded-full bg-stone-200 dark:bg-slate-700"><div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${speechState.totalChunks ? ((speechState.currentChunk + 1) / speechState.totalChunks) * 100 : 0}%` }} /></div>
+            <button type="button" onClick={speechState.isSpeaking ? speechState.onPause : speechState.onResume} className={cn(ACTION_BTN, 'border-stone-300 bg-white text-emerald-700 hover:border-emerald-500 dark:border-stone-600 dark:bg-slate-800 dark:text-emerald-300')}>
+              {speechState.isSpeaking ? <Pause size={12} /> : <Play size={12} />}
+              {speechState.isSpeaking ? t('chat.pause') : t('chat.resume')}
+            </button>
+            {speechState.totalChunks > 1 && (
+              <button type="button" onClick={speechState.onNext} className={cn(ACTION_BTN, 'border-stone-300 bg-white text-emerald-700 hover:border-emerald-500 dark:border-stone-600 dark:bg-slate-800 dark:text-emerald-300')}>
+                <SkipForward size={12} />
+                {t('chat.nextChunk')}
+              </button>
+            )}
+            <button type="button" onClick={speechState.onStop} className={cn(ACTION_BTN, 'border-red-300 bg-white text-red-600 hover:border-red-500 dark:border-red-800 dark:bg-slate-800')}>
+              <Square size={10} />
+            </button>
+            {speechState.totalChunks > 1 && (
+              <span className="px-1 text-[9px] text-emerald-600/80 dark:text-emerald-400/80">
+                {t('chat.chunkProgress', { current: speechState.currentChunk + 1, total: speechState.totalChunks })}
+              </span>
+            )}
+          </div>
+        )}
+        {primary.length > 0 && <div className={ROW_EQUAL}>{primary}</div>}
+        {help.length + save.length > 0 && (
+          <details className="group/more">
+            <summary className={cn(ACTION_BTN, ACTION_FRAME, 'w-full cursor-pointer list-none justify-center hover:border-stone-600 dark:hover:border-stone-300 [&::-webkit-details-marker]:hidden')}>
+              {t('chat.moreSupport')}
+              <span className="text-[9px] transition-transform group-open/more:rotate-180">⌄</span>
+            </summary>
+            <div className="mt-2 space-y-3 rounded-2xl border border-stone-200 bg-stone-50/90 p-3 shadow-sm dark:border-white/10 dark:bg-slate-900/90">
+              {group(t('chat.moreGroupHelp'), help)}
+              {group(t('chat.moreGroupSave'), save)}
+            </div>
+          </details>
+        )}
+        {isRequirementsList && onCreateStudyMaterial && (
+          <button
+            type="button"
+            onClick={() => onCreateStudyMaterial(msg.content)}
+            className={cn(ACTION_BTN, 'w-full justify-center border-emerald-700 bg-emerald-50 font-semibold text-emerald-900 hover:bg-emerald-100 dark:border-emerald-400 dark:bg-emerald-950/50 dark:text-emerald-100 dark:hover:bg-emerald-900/40')}
+          >
+            <GraduationCap size={12} />
+            Skapa komplett läxunderlag
+          </button>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div
       className={cn(
@@ -278,231 +487,7 @@ export default function ChatMessage({
             />
           </div>
         )}
-        {msg.role === 'model' && (
-          <>
-            {/* Rutnät istället för flex-wrap: knappar av olika bredd radbröts
-                godtyckligt och gav ojämna rader med ensamma knappar. */}
-            <div className="mt-1 grid max-w-2xl grid-cols-2 gap-2 sm:grid-cols-3 [&>*]:w-full [&>button]:justify-center">
-            {speechSupported && speechState && (
-              (speechState.isSpeaking || speechState.isPaused) ? (
-                <div className="col-span-2 flex flex-wrap items-center gap-1 rounded-lg border-2 border-stone-400 dark:border-stone-500 bg-stone-50/80 dark:bg-slate-800/80 px-1 py-1 sm:col-span-3">
-                  <span className="px-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">{t('chat.readingWholeAnswer')}</span>
-                  <div className="h-1.5 w-20 overflow-hidden rounded-full bg-stone-200 dark:bg-slate-700"><div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${speechState.totalChunks ? ((speechState.currentChunk + 1) / speechState.totalChunks) * 100 : 0}%` }} /></div>
-                  <button
-                    type="button"
-                    onClick={speechState.isSpeaking ? speechState.onPause : speechState.onResume}
-                    className={cn(ACTION_BTN, 'border-stone-300 dark:border-stone-600 bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 hover:border-emerald-500')}
-                  >
-                    {speechState.isSpeaking ? <Pause size={12} /> : <Play size={12} />}
-                    {speechState.isSpeaking ? t('chat.pause') : t('chat.resume')}
-                  </button>
-                  {speechState.totalChunks > 1 && (
-                    <button
-                      type="button"
-                      onClick={speechState.onNext}
-                      className={cn(ACTION_BTN, 'border-stone-300 dark:border-stone-600 bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 hover:border-emerald-500')}
-                    >
-                      <SkipForward size={12} />
-                      {t('chat.nextChunk')}
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={speechState.onStop}
-                    className={cn(ACTION_BTN, 'border-red-300 dark:border-red-800 bg-white dark:bg-slate-800 text-red-600 hover:border-red-500')}
-                  >
-                    <Square size={10} />
-                  </button>
-                  {speechState.totalChunks > 1 && (
-                    <span className="text-[9px] text-emerald-600/80 dark:text-emerald-400/80 px-1">
-                      {t('chat.chunkProgress', { current: speechState.currentChunk + 1, total: speechState.totalChunks })}
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={speechState.onSpeak}
-                    title={t('chat.listenHint')}
-                    className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-emerald-600 dark:hover:border-emerald-400')}
-                  >
-                    <Volume2 size={12} />
-                    {t('chat.listen')}
-                  </button>
-                  {onReadSummary && (
-                    <button type="button" onClick={() => onReadSummary(msg.content)} className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-emerald-600 dark:hover:border-emerald-400')}>
-                      <Volume2 size={12} />
-                      {t('chat.readSummary')}
-                    </button>
-                  )}
-                </>
-              )
-            )}
-            {!msg.generatedImage && (
-              <button
-                type="button"
-                onClick={() => onGenerateImage(msg.id, msg.content)}
-                disabled={generatingImageId === msg.id}
-                className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-emerald-600 dark:hover:border-emerald-400')}
-              >
-                {generatingImageId === msg.id ? (
-                  <Loader2 size={12} className="animate-spin" />
-                ) : (
-                  <ImageIcon size={12} />
-                )}
-                {generatingImageId === msg.id ? t('chat.creatingIllustration') : t('chat.illustrate')}
-              </button>
-            )}
-            {onContinueNextExercise && (
-              <button
-                type="button"
-                onClick={onContinueNextExercise}
-                className={cn(
-                  ACTION_BTN,
-                  'border-blue-600 bg-blue-50 text-blue-900 hover:bg-blue-100 dark:border-blue-400 dark:bg-blue-950/50 dark:text-blue-100 dark:hover:bg-blue-900/40',
-                )}
-              >
-                <ListOrdered size={12} />
-                {t('chat.nextExerciseButton')}
-              </button>
-            )}
-            {onAskFordjupning && (
-              <button
-                type="button"
-                onClick={() => onAskFordjupning(msg.content)}
-                className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-amber-500 dark:hover:border-amber-400 hover:bg-amber-50/90 dark:hover:bg-amber-950/30')}
-              >
-                <Lightbulb size={12} />
-                {t('chat.deepDive')}
-              </button>
-            )}
-            <details className="group/more relative col-span-2 sm:col-span-3">
-              <summary className={cn(ACTION_BTN, ACTION_FRAME, 'w-full cursor-pointer list-none justify-center hover:border-stone-600 dark:hover:border-stone-300 [&::-webkit-details-marker]:hidden')}>
-                {t('chat.moreSupport')}
-                <span className="text-[9px] transition-transform group-open/more:rotate-180">⌄</span>
-              </summary>
-              <div className="mt-2 flex max-w-2xl flex-wrap gap-2 rounded-2xl border border-stone-200 bg-stone-50/90 p-2 shadow-sm dark:border-white/10 dark:bg-slate-900/90">
-            {onAskCurriculum && (
-              <button
-                type="button"
-                onClick={() => onAskCurriculum(msg.content)}
-                className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-blue-600 dark:hover:border-blue-400 hover:bg-blue-50/90 dark:hover:bg-blue-950/30')}
-              >
-                <GraduationCap size={12} />
-                {t('chat.curriculumLink')}
-              </button>
-            )}
-            {onAskFacitShort && (
-              <button
-                type="button"
-                onClick={() => onAskFacitShort(msg.content)}
-                className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50/90 dark:hover:bg-red-950/25')}
-              >
-                <ClipboardList size={12} />
-                {t('chat.showAnswerKeyShort')}
-              </button>
-            )}
-            {onAskFacitSteps && (
-              <button
-                type="button"
-                onClick={() => onAskFacitSteps(msg.content)}
-                className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50/90 dark:hover:bg-red-950/25')}
-              >
-                <ClipboardList size={12} />
-                {t('chat.showAnswerKeySteps')}
-              </button>
-            )}
-            {onAskFacitParent && (
-              <button
-                type="button"
-                onClick={() => onAskFacitParent(msg.content)}
-                className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50/90 dark:hover:bg-red-950/25')}
-              >
-                <ClipboardList size={12} />
-                {t('chat.showAnswerKeyParent')}
-              </button>
-            )}
-            {isFacitMessage(msg.content) && onAddToPlanner && (
-              <button
-                type="button"
-                onClick={() => onAddToPlanner(msg.content)}
-                className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-amber-600 dark:hover:border-amber-400 hover:bg-amber-50/90 dark:hover:bg-amber-950/25')}
-              >
-                <CalendarPlus size={12} />
-                {t('chat.saveAnswerKeyToPlanner')}
-              </button>
-            )}
-            {hasImage && onAutoCreateTask && (
-              <button
-                type="button"
-                onClick={() => onAutoCreateTask(msg.id, msg.content)}
-                disabled={creatingAutoTask}
-                className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-teal-600 dark:hover:border-teal-400 hover:bg-teal-50/90 dark:hover:bg-teal-950/25')}
-              >
-                {creatingAutoTask ? <Loader2 size={12} className="animate-spin" /> : <ScanLine size={12} />}
-                {creatingAutoTask ? t('chat.creatingTask') : t('chat.createTaskAi')}
-              </button>
-            )}
-            {/* Spara låg tidigare bara i hover-lagret uppe till höger, vilket aldrig
-                gick att nå på touch. Den hör hemma bland de synliga knapparna. */}
-            <button
-              type="button"
-              onClick={() => onSaveToLibrary(msg)}
-              disabled={savedMessageIds.has(msg.id)}
-              className={cn(
-                ACTION_BTN,
-                savedMessageIds.has(msg.id)
-                  ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:border-emerald-400 dark:bg-emerald-950/40 dark:text-emerald-100'
-                  : cn(ACTION_FRAME, 'hover:border-emerald-600 dark:hover:border-emerald-400'),
-              )}
-            >
-              {savedMessageIds.has(msg.id) ? <Check size={12} /> : <BookmarkPlus size={12} />}
-              {savedMessageIds.has(msg.id) ? t('chat.saved') : t('chat.saveToLibrary')}
-            </button>
-            <button
-              type="button"
-              onClick={() => handlePrint(msg.content)}
-              className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-violet-500 dark:hover:border-violet-400 hover:bg-violet-50/90 dark:hover:bg-violet-950/25')}
-            >
-              <Printer size={12} />
-              {t('chat.printAnswer')}
-            </button>
-            {onAddToPlanner && !isFacitMessage(msg.content) && (
-              <button
-                type="button"
-                onClick={() => onAddToPlanner(msg.content)}
-                className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-amber-600 dark:hover:border-amber-400 hover:bg-amber-50/90 dark:hover:bg-amber-950/25')}
-              >
-                <CalendarPlus size={12} />
-                {t('chat.addToPlanner')}
-              </button>
-            )}
-            {onCreateTask && (
-              <button
-                type="button"
-                onClick={() => onCreateTask(msg.content)}
-                className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-emerald-600 dark:hover:border-emerald-400')}
-              >
-                <PlusCircle size={12} />
-                {t('chat.createTask')}
-              </button>
-            )}
-              </div>
-            </details>
-            {isRequirementsList && onCreateStudyMaterial && (
-              <button
-                type="button"
-                onClick={() => onCreateStudyMaterial(msg.content)}
-                className={cn(ACTION_BTN, 'col-span-2 border-emerald-700 bg-emerald-50 text-emerald-900 hover:bg-emerald-100 dark:border-emerald-400 dark:bg-emerald-950/50 dark:text-emerald-100 dark:hover:bg-emerald-900/40 font-semibold sm:col-span-3')}
-              >
-                <GraduationCap size={12} />
-                Skapa komplett läxunderlag
-              </button>
-            )}
-            </div>
-          </>
-        )}
+        {msg.role === 'model' && renderActions()}
       </div>
     </div>
   );

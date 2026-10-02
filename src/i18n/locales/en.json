@@ -278,6 +278,8 @@
     "imageActionExtraInstruction": "Extra instruction from the user",
     "learningGuide": "Calm support for adults at home",
     "moreSupport": "More support",
+    "moreGroupHelp": "More help with the task",
+    "moreGroupSave": "Save and plan",
     "focusTitle": "Answer",
     "focusClose": "Close",
     "focusCloseHint": "Close (Esc)",
