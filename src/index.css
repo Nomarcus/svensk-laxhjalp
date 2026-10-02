@@ -202,3 +202,51 @@
 .dark .katex {
   color: rgb(231 229 228);
 }
+
+/*
+ * Tryckkänsla på alla knappar. Utan den syntes ingenting när man tryckte på iPad,
+ * eftersom hover inte finns på pekskärm, och det var oklart om trycket gick fram.
+ * Knappen trycks ner lite och mörknar så länge fingret ligger kvar.
+ */
+@layer base {
+  button,
+  [role="button"],
+  [role="switch"],
+  a.inline-flex,
+  label[for] {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition-property: transform, filter, background-color, border-color, color, box-shadow, opacity;
+    transition-duration: 120ms;
+  }
+
+  button:not(:disabled):active,
+  [role="button"]:active,
+  [role="switch"]:active,
+  a.inline-flex:active,
+  label[for]:active {
+    transform: scale(0.96);
+    filter: brightness(0.92);
+  }
+
+  button:focus-visible,
+  [role="button"]:focus-visible,
+  [role="switch"]:focus-visible {
+    outline: 2px solid #059669;
+    outline-offset: 2px;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    button:not(:disabled):active,
+    [role="button"]:active,
+    [role="switch"]:active,
+    a.inline-flex:active,
+    label[for]:active {
+      transform: none;
+    }
+  }
+}

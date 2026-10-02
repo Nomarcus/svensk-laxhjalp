@@ -613,8 +613,15 @@ ${requirementsText}`;
     setGeneratingImageId(messageId);
     const path = `users/${ownerId}/children/${childId}/chatSessions/${activeSessionId}/messages/${messageId}`;
     try {
-      const imageUrl = await generateImage(content, childGrade);
-      if (imageUrl) {
+      // Bildmodellen får uppgiften och förklaringen till barnet, inte hela svaret med
+      // rubriker till föräldern. Långa svar gav röriga bilder med text från svaret.
+      const parsed = parseAnswerSections(content);
+      const imagePrompt = parsed.structured
+        ? [parsed.task, parsed.brief, parsed.child].filter(Boolean).join('\n\n')
+        : content;
+      const imageUrl = await generateImage(imagePrompt || content, childGrade);
+      if (!imageUrl) throw new Error('Ingen bild skapades');
+      {
         const compressed = await compressForChatUpload(imageUrl);
         await updateDoc(doc(db, path), { generatedImage: compressed });
         const libraryRef = collection(db, 'users', ownerId, 'children', childId, 'library');

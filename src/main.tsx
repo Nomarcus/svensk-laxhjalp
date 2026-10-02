@@ -11,6 +11,9 @@ if (Capacitor.isNativePlatform()) {
   document.documentElement.classList.add('capacitor-native');
 }
 
+// iOS Safari visar inte :active på knappar utan en touchstart-lyssnare någonstans.
+document.addEventListener('touchstart', () => {}, { passive: true });
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AppErrorBoundary>
