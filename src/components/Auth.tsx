@@ -72,7 +72,7 @@ function AppSlideshow() {
     {
       title: t('slideshow.slide4Title'),
       description: t('slideshow.slide4Desc'),
-      image: "/screenshots/illustration.png",
+      image: "/screenshots/facit.png",
       color: "from-purple-500 to-purple-700",
     },
   ];

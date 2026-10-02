@@ -98,7 +98,7 @@
     "featurePhoto": "Fota läxan med mobilen",
     "featurePlanner": "Veckoplanering & kalender",
     "featureShare": "Dela med annan förälder",
-    "featureIllustrations": "AI-genererade illustrationer",
+    "featureIllustrations": "Facit att rätta med",
     "featureLibrary": "Resursbibliotek",
     "seeHowItWorks": "Se hur appen fungerar",
     "howWeHelp": "Så hjälper vi dig med läxorna",
@@ -162,7 +162,7 @@
     "slide3Title": "Smart veckoplanering",
     "slide3Desc": "Planera läxor med kalender, deadlines och arbetsdagar.",
     "slide4Title": "AI-genererade illustrationer",
-    "slide4Desc": "Pedagogiska bilder som gör det enklare att förstå svåra koncept."
+    "slide4Desc": "Svaret, uträkningen och vanliga misstag – så kan ni rätta tillsammans."
   },
   "chat": {
     "chatWith": "Läxguide för {{name}}",

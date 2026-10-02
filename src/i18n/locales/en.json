@@ -161,8 +161,8 @@
     "slide2Desc": "The AI explains step by step with links to the curriculum Lgr22.",
     "slide3Title": "Smart Weekly Planner",
     "slide3Desc": "Plan homework with calendar, deadlines and work days.",
-    "slide4Title": "AI-Generated Illustrations",
-    "slide4Desc": "Educational images that make it easier to understand difficult concepts."
+    "slide4Title": "Answer Key to Check With",
+    "slide4Desc": "The answer, the working and common mistakes – so you can check together."
   },
   "chat": {
     "chatWith": "Homework Guide for {{name}}",

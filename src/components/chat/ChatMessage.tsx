@@ -362,7 +362,8 @@ export default function ChatMessage({
           className={cn(
             'px-4 py-3 rounded-2xl text-[15px] leading-relaxed relative group/msg',
             msg.role === 'user'
-              ? 'bg-emerald-600 text-white rounded-tr-none'
+              // prose sätter egen textfärg (grå), som annars syntes dåligt på grönt.
+              ? 'bg-emerald-600 text-white rounded-tr-none [&_.prose]:[--tw-prose-body:#fff] [&_.prose]:[--tw-prose-bold:#fff] [&_.prose]:text-white'
               : 'bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 shadow-sm rounded-tl-none'
           )}
         >
