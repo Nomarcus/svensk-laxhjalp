@@ -14,6 +14,37 @@ interface AuthProps {
 
 type AuthView = 'main' | 'email-login' | 'email-signup' | 'reset-password';
 
+/**
+ * Ett exempel på hur ett svar ser ut, direkt efter inloggningsrutan. Tidigare såg
+ * föräldern inget svar förrän kontot var skapat. Byggt som text i appens faktiska
+ * svarsformat (Uppgiften → Kort om uppgiften → Så säger du till barnet), inte som
+ * skärmbild, så att det inte blir inaktuellt när gränssnittet ändras.
+ */
+function ExampleAnswer() {
+  const { t } = useTranslation();
+  return (
+    <figure className="mb-6 overflow-hidden rounded-2xl border border-black/5 bg-white text-left shadow-[0_18px_40px_-28px_rgba(0,0,0,0.35)] dark:border-white/10 dark:bg-slate-900">
+      <figcaption className="border-b border-black/5 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-stone-500 dark:border-white/5 dark:text-stone-400">
+        {t('landing.exampleLabel')}
+      </figcaption>
+      <div className="space-y-3 p-4 text-sm">
+        <div>
+          <p className="font-semibold text-stone-900 dark:text-stone-100">{t('chat.taskTitle')}</p>
+          <p className="text-stone-600 dark:text-stone-300">{t('landing.exampleTask')}</p>
+        </div>
+        <div>
+          <p className="font-semibold text-stone-900 dark:text-stone-100">{t('chat.whatToDoTitle')}</p>
+          <p className="text-stone-600 dark:text-stone-300">{t('landing.exampleBrief')}</p>
+        </div>
+        <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-3 dark:border-blue-800/60 dark:bg-blue-950/30">
+          <p className="font-semibold text-blue-950 dark:text-blue-100">{t('chat.childViewTitle')}</p>
+          <p className="text-stone-700 dark:text-stone-200">{t('landing.exampleChild')}</p>
+        </div>
+      </div>
+    </figure>
+  );
+}
+
 function AppSlideshow() {
   const { t } = useTranslation();
   const [current, setCurrent] = useState(0);
@@ -445,6 +476,7 @@ export default function Auth({ onShowPrivacy, onShowTerms, dark, onToggleDark, r
         {/* Story + badges + features: shown after the login card */}
         <div className="landing-hero-story flex flex-col justify-center p-6 md:p-10 lg:p-14 xl:p-20 lg:pt-0">
           <div className="max-w-lg mx-auto w-full lg:mx-0">
+            <ExampleAnswer />
             <div className="mb-6 rounded-2xl border border-emerald-200/80 dark:border-emerald-800/60 bg-emerald-50/80 dark:bg-emerald-950/40 px-4 py-3 shadow-[0_12px_26px_-20px_rgba(5,150,105,0.5)]">
               <div className="mb-1 flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
                 <FileText size={16} />
@@ -602,7 +634,7 @@ export default function Auth({ onShowPrivacy, onShowTerms, dark, onToggleDark, r
           <p className="text-stone-500 dark:text-stone-400 mb-6 max-w-xl mx-auto">
             {t('landing.freeToUseDesc')}
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 max-w-lg mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 max-w-md mx-auto">
             <div className="bg-emerald-50 rounded-2xl p-4">
               <div className="text-2xl font-bold text-emerald-700">5</div>
               <div className="text-xs text-emerald-600">{t('landing.aiQuestionsPerDay')}</div>
@@ -610,10 +642,6 @@ export default function Auth({ onShowPrivacy, onShowTerms, dark, onToggleDark, r
             <div className="bg-blue-50 rounded-2xl p-4">
               <div className="text-2xl font-bold text-blue-700">2</div>
               <div className="text-xs text-blue-600">{t('landing.imageAnalysesPerDay')}</div>
-            </div>
-            <div className="bg-purple-50 dark:bg-purple-950/40 rounded-2xl p-4">
-              <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">1</div>
-              <div className="text-xs text-purple-600 dark:text-purple-400">{t('landing.premiumTtsPerDay')}</div>
             </div>
           </div>
           <p className="text-sm text-stone-500 dark:text-stone-400">

@@ -129,9 +129,11 @@ interface ChatProps {
   onCreateTask?: (subject: string, description: string) => void;
   onCreateTaskFromPhoto?: (data: { subject: string; description: string; workDays: string[]; dueDay: string; minutesPerDay: number; imageUrl?: string }) => void;
   onManageChildren?: () => void;
+  /** Öppnar verktyget Rätta läxan. Startvyn ska leda dit, inte till en egen rättning i chatten. */
+  onOpenCorrector?: () => void;
 }
 
-export default function Chat({ childId, childName, childGrade, ownerId, tasks = [], taskContext, onTaskContextUsed, onCreateTask, onCreateTaskFromPhoto, onManageChildren }: ChatProps) {
+export default function Chat({ childId, childName, childGrade, ownerId, tasks = [], taskContext, onTaskContextUsed, onCreateTask, onCreateTaskFromPhoto, onManageChildren, onOpenCorrector }: ChatProps) {
   const { t, i18n } = useTranslation();
   const speech = useSpeech();
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
@@ -876,14 +878,11 @@ ${requirementsText}`;
         onAskCurriculum={(content) => {
           sendMessage(`Förklara hur det du just berättade om kopplas till den svenska läroplanen (Lgr22). Vilket centralt innehåll i Lgr22 tränar uppgiften, och vad säger betygskriterierna om det om de gäller barnets årskurs? Beskriv med egna ord och citera inte läroplanen. Ge konkreta kopplingar så jag som förälder förstår varför mitt barn lär sig detta.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.curriculumLink'));
         }}
-        onAskFacitShort={(content) => {
-          sendMessage(`Ge ett KORT facit för uppgiften du just förklarade.\n\nVIKTIGT FORMAT:\n- Använd en numrerad lista: 1), 2), 3)\n- En rad per deluppgift\n- Skriv endast slutsvar per del\n- Avsluta med rubriken "Vanliga fel" och 2 korta punkter\n- Skriv inte långa stycken\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeyShort'), { forceCoachMode: false, precision: true });
-        }}
-        onAskFacitSteps={(content) => {
-          sendMessage(`Ge ett FULLSTÄNDIGT facit steg för steg för uppgiften du just förklarade.\n\nDU MÅSTE SVARA I EXAKT DENNA STRUKTUR:\n## Deluppgift 1\n### Steg 1: Ställ upp\n- Visa uppställningen i ett markdown-kodblock (tre backticks) med monospace, rad för rad så kolumnerna blir tydliga.\n### Steg 2: Räkna\n- Visa mellanled i korta, separata rader.\n### Steg 3: Svar\n- **Svar: ...**\n\n(Upprepa samma struktur för varje deluppgift)\n\nAVSLUTNING:\n## Vanliga fel\n- Punkt 1\n- Punkt 2\n- Punkt 3 (vid behov)\n\nREGLER:\n- Inga långa stycken\n- Inga "-----" eller kompakta engångsrader\n- En rad per steg, tydligt spaltat\n- Vid matte-uppställning: använd alltid markdown-kodblock (tre backticks)\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeySteps'), { forceCoachMode: false, precision: true });
-        }}
         onAskFacitParent={(content) => {
-          sendMessage(`Ge ett facit anpassat för föräldern.\n\nFORMAT:\n## Deluppgift 1\n1) Svar: ...\n2) Kort förklaring: ...\n3) Vanligt misstag: ...\n\n(Upprepa för varje deluppgift)\n\nOm det är matte, lägg uppställningen i ett markdown-kodblock (tre backticks) så kolumnerna blir tydliga.\n\nAvsluta med:\n## Vanliga fel\n- 2-3 korta punkter\n\nREGLER:\n- Kort och tydligt\n- Spaltat rad för rad\n- Inga långa stycken\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKeyParent'), { forceCoachMode: false, precision: true });
+          // Tidigare fanns tre facitknappar (kort, steg för steg, förälder). Föräldern
+          // visste inte vilken hon skulle välja. En version: svaret först, sedan hur man
+          // räknar och ett vanligt misstag — det räcker för att kontrollera barnets svar.
+          sendMessage(`Ge facit för uppgiften du just förklarade, så att jag som förälder kan kontrollera mitt barns svar.\n\nFORMAT, för varje deluppgift:\n## Deluppgift 1\n**Svar:** ...\nSå räknar man: om det är matte, visa uppställningen i ett markdown-kodblock (tre backticks) rad för rad så kolumnerna blir tydliga. Annars 1-2 korta rader.\nVanligt misstag: en kort rad.\n\n(Upprepa för varje deluppgift.)\n\nREGLER:\n- Svaret först i varje deluppgift\n- Kort och spaltat, inga långa stycken\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.showAnswerKey'), { forceCoachMode: false, precision: true });
         }}
         onAskFordjupning={(content) => {
           sendMessage(`Baserat på din förklaring, ge förslag på relaterade ämnen och kopplingar som kan fördjupa mitt barns förståelse. Ge 2-3 konkreta förslag på vad vi kan utforska vidare, med en kort förklaring av hur det kopplar till det vi just pratat om. Skriv det så att jag som förälder kan ta upp det med mitt barn.\n\nDin förklaring var:\n${content.slice(0, 500)}`, t('chat.deepDive'));
@@ -1124,10 +1123,10 @@ ${requirementsText}`;
               setSelectedImageActionId('explainSimple');
               setPhotoPickerRequestKey((key) => key + 1);
             }}
-            onCorrectPhoto={() => {
+            onCorrectPhoto={onOpenCorrector ?? (() => {
               setSelectedImageActionId('correct');
               setPhotoPickerRequestKey((key) => key + 1);
-            }}
+            })}
             onOpenPlanner={onCreateTask ? () => onCreateTask('', '') : undefined}
           />
         ) : (

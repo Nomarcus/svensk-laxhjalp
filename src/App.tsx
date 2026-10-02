@@ -564,6 +564,7 @@ export default function App() {
                 taskContext={chatFromTask}
                 onTaskContextUsed={() => setChatFromTask(null)}
                 onManageChildren={() => setShowChildManager(true)}
+                onOpenCorrector={() => setActiveTab('corrector')}
                 onCreateTask={
                   selectedChildId && isGeneralWorkspaceId(selectedChildId)
                     ? undefined
@@ -595,6 +596,7 @@ export default function App() {
             ) : activeTab === 'corrector' ? (
               <HomeworkCorrector
                 childName={selectedChild ? childDisplayName(selectedChild, t) : ''}
+                childGrade={selectedChild?.grade}
                 childId={selectedChildId!}
                 ownerId={selectedChild?.ownerId || user.uid}
                 onCreateTaskFromCorrection={

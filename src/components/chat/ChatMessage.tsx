@@ -33,8 +33,6 @@ interface ChatMessageProps {
   onGenerateImage: (messageId: string, content: string) => void;
   onDeleteOwnMessage?: (messageId: string) => void;
   onAskCurriculum?: (content: string) => void;
-  onAskFacitShort?: (content: string) => void;
-  onAskFacitSteps?: (content: string) => void;
   onAskFacitParent?: (content: string) => void;
   onAskFordjupning?: (content: string) => void;
   onStartFirstExercise?: () => void;
@@ -74,8 +72,6 @@ export default function ChatMessage({
   onGenerateImage,
   onDeleteOwnMessage,
   onAskCurriculum,
-  onAskFacitShort,
-  onAskFacitSteps,
   onAskFacitParent,
   onAskFordjupning,
   onStartFirstExercise,
@@ -207,27 +203,11 @@ export default function ChatMessage({
       );
     }
     const facitClass = cn(ACTION_BTN, ACTION_FRAME, 'hover:border-red-500 dark:hover:border-red-400 hover:bg-red-50/90 dark:hover:bg-red-950/25');
-    if (onAskFacitShort) {
-      help.push(
-        <button key="facit-short" type="button" onClick={() => onAskFacitShort(msg.content)} className={facitClass}>
-          <ClipboardList size={12} />
-          {t('chat.showAnswerKeyShort')}
-        </button>,
-      );
-    }
-    if (onAskFacitSteps) {
-      help.push(
-        <button key="facit-steps" type="button" onClick={() => onAskFacitSteps(msg.content)} className={facitClass}>
-          <ClipboardList size={12} />
-          {t('chat.showAnswerKeySteps')}
-        </button>,
-      );
-    }
     if (onAskFacitParent) {
       help.push(
         <button key="facit-parent" type="button" onClick={() => onAskFacitParent(msg.content)} className={facitClass}>
           <ClipboardList size={12} />
-          {t('chat.showAnswerKeyParent')}
+          {t('chat.showAnswerKey')}
         </button>,
       );
     }
@@ -266,19 +246,21 @@ export default function ChatMessage({
         </button>,
       );
     }
-    if (onCreateTask) {
+    // En knapp för att skapa läxa. Gäller svaret ett läxfoto fyller AI:n i ämne och
+    // dagar; annars skapas läxan med svaret som text. Tidigare var det två knappar
+    // ("Skapa läxa" och "Skapa läxa från svaret") som såg ut att göra samma sak.
+    const aiTask = Boolean(hasImage && onAutoCreateTask);
+    if (aiTask || onCreateTask) {
       save.push(
-        <button key="create-task" type="button" onClick={() => onCreateTask(msg.content)} className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-emerald-600 dark:hover:border-emerald-400')}>
-          <PlusCircle size={12} />
-          {t('chat.createTask')}
-        </button>,
-      );
-    }
-    if (hasImage && onAutoCreateTask) {
-      save.push(
-        <button key="auto-task" type="button" onClick={() => onAutoCreateTask(msg.id, msg.content)} disabled={creatingAutoTask} className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-teal-600 dark:hover:border-teal-400 hover:bg-teal-50/90 dark:hover:bg-teal-950/25')}>
-          {creatingAutoTask ? <Loader2 size={12} className="animate-spin" /> : <ScanLine size={12} />}
-          {creatingAutoTask ? t('chat.creatingTask') : t('chat.createTaskAi')}
+        <button
+          key="create-task"
+          type="button"
+          onClick={() => (aiTask ? onAutoCreateTask!(msg.id, msg.content) : onCreateTask!(msg.content))}
+          disabled={aiTask && creatingAutoTask}
+          className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-emerald-600 dark:hover:border-emerald-400')}
+        >
+          {aiTask && creatingAutoTask ? <Loader2 size={12} className="animate-spin" /> : <PlusCircle size={12} />}
+          {aiTask && creatingAutoTask ? t('chat.creatingTask') : t('chat.createTask')}
         </button>,
       );
     }

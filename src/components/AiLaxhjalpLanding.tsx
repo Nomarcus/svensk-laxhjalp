@@ -184,10 +184,6 @@ export default function AiLaxhjalpLanding({
                 <strong className="font-medium text-stone-800 dark:text-stone-200">Illustrationer</strong> — AI-genererade bilder förklarar visuella begrepp som
                 cellens delar, skalenligt, eller bråktalets geometri.
               </li>
-              <li>
-                <strong className="font-medium text-stone-800 dark:text-stone-200">Uppläsning</strong> — lyssna på svaret med en naturlig svensk röst, bra för
-                dyslexi eller när man pluggar i bilen.
-              </li>
             </ul>
           </section>
 

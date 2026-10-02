@@ -16,6 +16,8 @@ import { bumpUsageRefresh } from '../utils/usageRefresh';
 
 interface HomeworkCorrectorProps {
   childName: string;
+  /** Styr språknivå och metoder i rättningen, precis som i chatten. */
+  childGrade?: string;
   childId: string;
   ownerId: string;
   onCreateTaskFromCorrection?: (data: {
@@ -31,7 +33,7 @@ interface HomeworkCorrectorProps {
 
 const MAX_IMAGES = 5;
 
-export default function HomeworkCorrector({ childName, childId, ownerId, onCreateTaskFromCorrection }: HomeworkCorrectorProps) {
+export default function HomeworkCorrector({ childGrade, childName, childId, ownerId, onCreateTaskFromCorrection }: HomeworkCorrectorProps) {
   const { t, i18n } = useTranslation();
   const [images, setImages] = useState<string[]>([]);
   const [extraContext, setExtraContext] = useState('');
@@ -129,7 +131,7 @@ export default function HomeworkCorrector({ childName, childId, ownerId, onCreat
     if (images.length === 0 || loading) return;
     setLoading(true);
     try {
-      const text = await correctHomeworkFromImages(images, extraContext, i18n.language || 'sv');
+      const text = await correctHomeworkFromImages(images, extraContext, i18n.language || 'sv', childGrade);
       setResult(formatCorrectionText(text || t('corrector.emptyResultFallback')));
       setSavedNow(false);
       bumpUsageRefresh();
