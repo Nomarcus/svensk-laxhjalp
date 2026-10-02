@@ -375,7 +375,9 @@ export default function ChatMessage({
                 ) : (
                   <>
                     {sections.solution && <section><h2 className="mb-2 text-lg font-semibold">{t('chat.howToSolveTitle')}</h2><Markdown>{sections.solution}</Markdown></section>}
-                    {sections.child && <section className="rounded-2xl border border-blue-200 bg-blue-50/70 p-4 dark:border-blue-800/60 dark:bg-blue-950/30"><h2 className="mb-2 text-lg font-semibold text-blue-950 dark:text-blue-100">{t('chat.childViewTitle')}</h2><Markdown>{sections.child}</Markdown>{speechSupported && speechState && <button type="button" onClick={() => speechState.onSpeakText?.(sections.child!)} className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl border border-blue-300 bg-white px-3 py-2 text-sm font-medium text-blue-800 dark:border-blue-700 dark:bg-slate-900 dark:text-blue-100"><Volume2 size={18}/>{t('chat.listenChild')}</button>}</section>}
+                    {sections.child && <section className="rounded-2xl border border-blue-200 bg-blue-50/70 p-4 dark:border-blue-800/60 dark:bg-blue-950/30"><h2 className="mb-2 text-lg font-semibold text-blue-950 dark:text-blue-100">{t('chat.childViewTitle')}</h2><Markdown>{sections.child}</Markdown>{speechSupported && speechState && (speechState.isSpeaking || speechState.isPaused
+                      ? <button type="button" onClick={speechState.onStop} className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl border border-blue-600 bg-blue-600 px-3 py-2 text-sm font-medium text-white"><Square size={16} className="fill-white"/>{t('chat.stopReading', 'Stoppa uppläsningen')}</button>
+                      : <button type="button" onClick={() => speechState.onSpeakText?.(sections.child!)} className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl border border-blue-300 bg-white px-3 py-2 text-sm font-medium text-blue-800 dark:border-blue-700 dark:bg-slate-900 dark:text-blue-100"><Volume2 size={18}/>{t('chat.listenChild')}</button>)}</section>}
                     {sections.remaining && <Markdown>{sections.remaining}</Markdown>}
                   </>
                 )}
