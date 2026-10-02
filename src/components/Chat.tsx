@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image as ImageIcon, Loader2, Bot, X, Calculator, BookOpen, Languages, Beaker, Globe, Book, Check, Sparkles, UserPlus, Maximize2 } from 'lucide-react';
+import { Image as ImageIcon, Loader2, Bot, X, Calculator, BookOpen, Languages, Beaker, Globe, Book, Check, Sparkles, UserPlus, Maximize2, Camera } from 'lucide-react';
 import { db, auth, OperationType, handleFirestoreError, reportFirestoreError } from '../firebase';
 import {
   collection,
@@ -25,7 +25,8 @@ import { cn } from '../utils/cn';
 import { isRequirementsList } from '../utils/detectRequirementsList';
 import { parseAnswerSections } from '../utils/answerSummary';
 import { markdownToPlainText, truncateForShare } from '../utils/plainText';
-import { isGeneralWorkspaceId } from '../constants/workspaces';
+import { isGeneralWorkspaceId, isWorkspaceChildId } from '../constants/workspaces';
+import GradeSelect from './ui/GradeSelect';
 import { useDialogA11y } from '../hooks/useDialogA11y';
 import ConfirmDialog from './ui/ConfirmDialog';
 import type { Message, ChatSession, Task } from '../types';
@@ -144,6 +145,31 @@ export default function Chat({ childId, childName, childGrade, ownerId, tasks = 
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [savingGrade, setSavingGrade] = useState(false);
+
+  /**
+   * Utan årskurs anpassas svaren inte efter barnets ålder, och fältet var tidigare
+   * frivillig fritext som många hoppade över. Frågan visas direkt i chatten, men
+   * bara för den som äger barnprofilen: en medförälder får inte ändra den.
+   */
+  const showGradePrompt =
+    !childGrade?.trim() &&
+    Boolean(childId) &&
+    !isWorkspaceChildId(childId) &&
+    auth.currentUser?.uid === ownerId;
+
+  const saveChildGrade = async (grade: string) => {
+    if (!grade || !childId) return;
+    setSavingGrade(true);
+    try {
+      await updateDoc(doc(db, 'users', ownerId, 'children', childId), { grade });
+    } catch (err) {
+      reportFirestoreError(err, OperationType.UPDATE, `children/${childId}`);
+      setError(t('chat.gradeSaveFailed'));
+    } finally {
+      setSavingGrade(false);
+    }
+  };
   const [images, setImages] = useState<string[]>([]);
   const [selectedImageActionId, setSelectedImageActionId] = useState<HomeworkImageActionId | null>(null);
   const [photoPickerRequestKey, setPhotoPickerRequestKey] = useState(0);
@@ -932,6 +958,9 @@ ${requirementsText}`;
       onDrop={(e) => {
         e.preventDefault();
         setIsDragging(false);
+        // Miniatyrerna visas i inmatningsfältet bakom helskärmsvyn. Utan att stänga
+        // den lades bilden till men syntes inte, och det såg ut som att inget hände.
+        if (focusMode) closeFocusMode();
         const files = e.dataTransfer.files;
         if (!files?.length) return;
         void (async () => {
@@ -1135,6 +1164,17 @@ ${requirementsText}`;
         <div ref={scrollRef} />
       </div>
 
+      {showGradePrompt && (
+        <div className="px-4 pt-2 md:px-8">
+          <div className="mx-auto flex max-w-3xl flex-col gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-800/50 dark:bg-amber-950/30 sm:flex-row sm:items-center">
+            <p className="flex-1 text-sm text-amber-950 dark:text-amber-100">
+              <span className="font-semibold">{t('chat.gradeMissingTitle', { name: childName })}</span>{' '}
+              {t('chat.gradeMissingBody')}
+            </p>
+            <GradeSelect value="" onChange={(g) => void saveChildGrade(g)} disabled={savingGrade} className="sm:w-52" />
+          </div>
+        </div>
+      )}
       <ChatInput
         input={input}
         setInput={setInput}
@@ -1255,7 +1295,27 @@ ${requirementsText}`;
           {/* Utan detta går det inte att fråga vidare från svarsskärmen — man
               måste stänga, scrolla och hitta inmatningsfältet igen. */}
           <div className="shrink-0 border-t border-black/5 bg-white/95 px-4 py-3 backdrop-blur dark:border-white/5 dark:bg-slate-900/95 md:px-8">
-            <div className="mx-auto flex max-w-3xl items-center gap-2">
+            {/* På mobil: knapparna på en rad och textfältet i full bredd under,
+                annars trycks textfältet ihop till några få tecken. */}
+            <div className="mx-auto flex max-w-3xl flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="flex gap-2 sm:shrink-0 [&>button]:flex-1 [&>button]:justify-center sm:[&>button]:flex-none">
+              {/* Nästa naturliga steg efter ett svar är nästa läxa. Tidigare fanns
+                  ingen bildknapp här, så man måste stänga vyn först. */}
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => {
+                  closeFocusMode();
+                  setSelectedImageActionId('explainSimple');
+                  setPhotoPickerRequestKey((key) => key + 1);
+                }}
+                aria-label={t('chat.focusNewPhoto')}
+                title={t('chat.focusNewPhoto')}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border-2 border-stone-300 bg-white px-3 py-2 text-xs font-medium text-stone-800 transition-colors hover:border-emerald-600 hover:bg-emerald-50 disabled:opacity-40 dark:border-stone-600 dark:bg-slate-800 dark:text-stone-100"
+              >
+                <Camera size={16} className="shrink-0" />
+                <span>{t('chat.focusNewPhoto')}</span>
+              </button>
               <button
                 type="button"
                 disabled={loading || !focusedAnswer}
@@ -1263,10 +1323,11 @@ ${requirementsText}`;
                   setFocusFollowUp('');
                   void sendMessage(t('chat.simplerPrompt'), t('chat.simplerButton'));
                 }}
-                className="shrink-0 rounded-xl border-2 border-emerald-600 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-900 transition-colors hover:bg-emerald-100 disabled:opacity-40 dark:border-emerald-400 dark:bg-emerald-950/50 dark:text-emerald-100"
+                className="inline-flex shrink-0 items-center rounded-xl border-2 border-emerald-600 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-900 transition-colors hover:bg-emerald-100 disabled:opacity-40 dark:border-emerald-400 dark:bg-emerald-950/50 dark:text-emerald-100"
               >
                 {t('chat.simplerButton')}
               </button>
+              </div>
               <form
                 className="flex min-w-0 flex-1 items-center gap-2"
                 onSubmit={(e) => {

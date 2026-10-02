@@ -293,6 +293,10 @@
     "imageActionExtraInstruction": "Extra instruktion från användaren",
     "learningGuide": "Trygg läxhjälp för vuxna hemma",
     "moreSupport": "Mer",
+    "gradeMissingTitle": "Vilken årskurs går {{name}} i?",
+    "gradeMissingBody": "Då anpassas förklaringarna efter åldern.",
+    "gradeSaveFailed": "Kunde inte spara årskursen. Försök igen.",
+    "focusNewPhoto": "Fota nästa läxa",
     "moreGroupHelp": "Mer hjälp med uppgiften",
     "moreGroupSave": "Spara och planera",
     "focusTitle": "Läxanalys",
@@ -341,7 +345,7 @@
     "subtitle": "Fota läxan så rättar AI steg för steg för {{name}}.",
     "imageHint": "Lägg till upp till {{max}} bilder (fram- och baksida går bra).",
     "extraContext": "Extra kontext (valfritt)",
-    "extraContextPlaceholder": "T.ex. årskurs, vilket kapitel eller vad läraren bett om.",
+    "extraContextPlaceholder": "T.ex. vilket kapitel det gäller eller vad läraren bett om.",
     "submit": "Rätta läxan",
     "correcting": "Rättar läxan...",
     "createTask": "Skapa läxa i planeringen",
@@ -647,7 +651,8 @@
     "invite": "Bjud in",
     "shareInfo": "Föräldern måste skapa ett konto med samma e-postadress för att se barnet.",
     "childName": "Barnets namn",
-    "grade": "Klass (valfritt)",
+    "grade": "Årskurs",
+    "gradeWhy": "Årskursen styr hur enkelt svaren skrivs och vilka räknemetoder som används.",
     "save": "Spara",
     "cancel": "Avbryt",
     "addChild": "Lägg till barn",
@@ -843,5 +848,12 @@
     "back": "Tillbaka",
     "user": "Användare",
     "offlineNotice": "Du är offline. Vissa funktioner kan vara otillgängliga tills anslutningen återkommer."
+  },
+  "grade": {
+    "placeholder": "Välj årskurs",
+    "preschool": "Förskoleklass",
+    "year": "Årskurs {{n}}",
+    "upperSecondary": "Gymnasiet år {{year}}",
+    "legacy": "{{value}} (tidigare angivet)"
   }
 }

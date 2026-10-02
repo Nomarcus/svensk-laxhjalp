@@ -40,6 +40,27 @@ function headingInfo(line: string): { key: SectionKey; remainder: string } | nul
   return null;
 }
 
+/**
+ * Delar som modellen ofta skrev efter "Så säger du till barnet". Appen lägger allt
+ * som följer en rubrik i samma ruta, så de hamnade i den blå barnrutan och gjorde
+ * en mening till barnet till en hel sida. De flyttas till genomgången för föräldern.
+ * "Vad vill du göra nu?" tas bort helt: appen har egna knappar för det.
+ */
+const TAIL_TO_SOLUTION = /^(?:nästa bästa steg|koppling(?:en)? till (?:lgr22|läroplanen)|varför barnet lär sig (?:detta|det här))(?:\s*:|$)/i;
+const TAIL_DROP = /^vad vill du göra nu\??(?:\s*:|$)/i;
+
+function tailHeading(line: string): 'solution' | 'drop' | null {
+  const normalized = line
+    .trim()
+    .replace(/^#{1,6}\s*/, '')
+    .replace(/\*\*/g, '')
+    .trim();
+  if (!normalized) return null;
+  if (TAIL_DROP.test(normalized)) return 'drop';
+  if (TAIL_TO_SOLUTION.test(normalized)) return 'solution';
+  return null;
+}
+
 export function parseAnswerSections(content: string): AnswerSections {
   const empty: AnswerSections = {
     task: null, brief: null, solution: null, child: null, coach: null,
@@ -50,9 +71,27 @@ export function parseAnswerSections(content: string): AnswerSections {
   const buckets: Record<SectionKey, string[]> = {
     task: [], brief: [], solution: [], child: [], coach: [], answer: [], remaining: [],
   };
-  let current: SectionKey = 'remaining';
+  // null = vi är i en del som ska bort helt ("Vad vill du göra nu?").
+  let current: SectionKey | null = 'remaining';
   let recognized = 0;
   for (const line of content.split('\n')) {
+    // En 📘-rad om läroplanen hör till genomgången för föräldern, aldrig till
+    // det man säger till barnet — oavsett var modellen råkade placera den.
+    if (/^\s*📘/.test(line)) {
+      buckets.solution.push(line);
+      continue;
+    }
+    const tail = tailHeading(line);
+    if (tail === 'drop') {
+      current = null;
+      continue;
+    }
+    if (tail === 'solution') {
+      // Rubriken behålls så att punkterna under den fortfarande går att förstå.
+      current = 'solution';
+      buckets.solution.push(line);
+      continue;
+    }
     const heading = headingInfo(line);
     if (heading) {
       current = heading.key;
@@ -63,7 +102,7 @@ export function parseAnswerSections(content: string): AnswerSections {
       if (heading.remainder) buckets[heading.key].push(heading.remainder);
       continue;
     }
-    buckets[current].push(line);
+    if (current) buckets[current].push(line);
   }
   const value = (key: SectionKey) => buckets[key].join('\n').trim() || null;
   const isCoach = Boolean(value('coach') || value('answer')) && /(?:fråga barnet|om barnet fastnar|facit\s*\(för dig)/i.test(content);

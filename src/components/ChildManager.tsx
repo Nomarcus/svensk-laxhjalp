@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import GradeSelect from './ui/GradeSelect';
+import { gradeLabel } from '../utils/grade';
 import { useTranslation } from 'react-i18next';
 import { db, auth, OperationType, handleFirestoreError } from '../firebase';
 import { collection, onSnapshot, addDoc, deleteDoc, doc, deleteField, serverTimestamp, updateDoc } from 'firebase/firestore';
@@ -51,7 +53,7 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
 
   const addChild = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newName.trim() || !auth.currentUser) return;
+    if (!newName.trim() || !newGrade.trim() || !auth.currentUser) return;
 
     try {
       const childrenRef = collection(db, 'users', auth.currentUser.uid, 'children');
@@ -198,13 +200,7 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
                         onChange={(e) => setEditName(e.target.value)}
                         className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500/20"
                       />
-                      <input
-                        type="text"
-                        placeholder={t('childManager.grade')}
-                        value={editGrade}
-                        onChange={(e) => setEditGrade(e.target.value)}
-                        className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500/20"
-                      />
+                      <GradeSelect value={editGrade} onChange={setEditGrade} />
                       <div className="flex gap-2">
                         <button
                           type="submit"
@@ -229,7 +225,7 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
                     </div>
                     <div className="min-w-0">
                       <h3 className="font-medium text-stone-900 truncate">{child.name}</h3>
-                      {child.grade && <p className="text-xs text-stone-500 truncate">{child.grade}</p>}
+                      {child.grade && <p className="text-xs text-stone-500 truncate">{gradeLabel(child.grade, t)}</p>}
                     </div>
                   </div>
                   )}
@@ -350,18 +346,13 @@ export default function ChildManager({ onClose }: ChildManagerProps) {
                   onChange={(e) => setNewName(e.target.value)}
                   className="w-full bg-stone-50 border-none rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-emerald-500/20 transition-all"
                 />
-                <input
-                  type="text"
-                  placeholder={t('childManager.grade')}
-                  value={newGrade}
-                  onChange={(e) => setNewGrade(e.target.value)}
-                  className="w-full bg-stone-50 border-none rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-emerald-500/20 transition-all"
-                />
+                <GradeSelect value={newGrade} onChange={setNewGrade} className="border-none bg-stone-50 px-4" />
+                <p className="px-1 text-xs text-stone-500">{t('childManager.gradeWhy')}</p>
               </div>
               <div className="flex gap-2">
                 <button
                   type="submit"
-                  disabled={!newName.trim()}
+                  disabled={!newName.trim() || !newGrade.trim()}
                   className="flex-1 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                 >
                   <Check size={16} /> {t('childManager.save')}

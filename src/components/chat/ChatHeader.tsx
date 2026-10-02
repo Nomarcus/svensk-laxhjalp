@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { BookOpenCheck, Plus, Trash2, Languages, Lightbulb } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { gradeLabel } from '../../utils/grade';
 import type { ChatSession } from '../../types';
 
 interface ChatHeaderProps {
@@ -54,7 +55,7 @@ export default function ChatHeader({
               </select>
             )}
           </div>
-          <p className="text-xs text-stone-500 dark:text-stone-400">{childGrade ? t('chat.childGrade', { grade: childGrade }) : t('chat.learningGuide')}</p>
+          <p className="text-xs text-stone-500 dark:text-stone-400">{childGrade ? gradeLabel(childGrade, t) : t('chat.learningGuide')}</p>
         </div>
       </div>
       <div className="flex items-center gap-2 flex-wrap justify-end">

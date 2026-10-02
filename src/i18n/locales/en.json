@@ -278,6 +278,10 @@
     "imageActionExtraInstruction": "Extra instruction from the user",
     "learningGuide": "Calm support for adults at home",
     "moreSupport": "More support",
+    "gradeMissingTitle": "Which year is {{name}} in?",
+    "gradeMissingBody": "Then the explanations are adapted to their age.",
+    "gradeSaveFailed": "Could not save the year. Try again.",
+    "focusNewPhoto": "Photo next homework",
     "moreGroupHelp": "More help with the task",
     "moreGroupSave": "Save and plan",
     "focusTitle": "Answer",
@@ -320,7 +324,7 @@
     "subtitle": "Take photos of the homework and AI will review it step by step for {{name}}.",
     "imageHint": "Add up to {{max}} photos (front and back are supported).",
     "extraContext": "Extra context (optional)",
-    "extraContextPlaceholder": "E.g. grade level, chapter, or what the teacher asked for.",
+    "extraContextPlaceholder": "E.g. which chapter it is or what the teacher asked for.",
     "submit": "Correct homework",
     "correcting": "Correcting...",
     "createTask": "Create task in planner",
@@ -626,7 +630,8 @@
     "invite": "Invite",
     "shareInfo": "The parent must create an account with the same email address to see the child.",
     "childName": "Child's name",
-    "grade": "Grade (optional)",
+    "grade": "Year",
+    "gradeWhy": "The year decides how simply answers are written and which methods are used.",
     "save": "Save",
     "cancel": "Cancel",
     "addChild": "Add child",
@@ -822,5 +827,12 @@
     "back": "Back",
     "user": "User",
     "offlineNotice": "You're offline. Some features may be unavailable until the connection returns."
+  },
+  "grade": {
+    "placeholder": "Choose year",
+    "preschool": "Preschool class",
+    "year": "Year {{n}}",
+    "upperSecondary": "Upper secondary year {{year}}",
+    "legacy": "{{value}} (entered earlier)"
   }
 }
