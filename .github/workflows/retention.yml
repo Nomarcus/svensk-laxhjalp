@@ -29,6 +29,10 @@ concurrency:
 
 # Identifierare, inte hemligheter — se kommentaren i deploy-api.yml.
 env:
+  # Skarp gallring från schemat. Står den på 'false' blir söndagens körning en
+  # testkörning som bara rapporterar vad som skulle tas bort. Sätt 'true' först
+  # när en testkörning mot riktig data har granskats.
+  RETENTION_LIVE: 'false'
   WIF_PROVIDER: projects/288867992327/locations/global/workloadIdentityPools/github-pool/providers/github-provider
   DEPLOY_SA: github-deployer@lead-agent-489101.iam.gserviceaccount.com
 
@@ -66,9 +70,14 @@ jobs:
       - name: Gallra
         env:
           DRY_RUN_REQUESTED: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+          IS_SCHEDULE: ${{ github.event_name == 'schedule' }}
           DAYS_OVERRIDE: ${{ inputs.days_override }}
         run: |
           set -euo pipefail
+          if [ "$IS_SCHEDULE" = "true" ] && [ "$RETENTION_LIVE" != "true" ]; then
+            echo "Schemalagd körning med RETENTION_LIVE=$RETENTION_LIVE: testkörning, inget raderas."
+            DRY_RUN_REQUESTED=true
+          fi
           if [ -n "$DAYS_OVERRIDE" ]; then
             if [ "$DRY_RUN_REQUESTED" != "true" ]; then
               echo "::error::days_override kräver testkörning. Kryssa i dry_run, eller töm fältet."
