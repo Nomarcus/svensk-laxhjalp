@@ -35,8 +35,16 @@ function pickVoice(voices: SpeechSynthesisVoice[], targetLang: string): SpeechSy
 
 type PlaybackKind = 'browser' | 'ai' | null;
 
-/** Kort tyst MP3. Spelas direkt i trycket så att iOS godkänner ljudet senare. */
-const SILENT_MP3 = 'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAADB8AhSmxhIIEVCSiJrDCQBTcu3UrAIwUdkRgQbFAZC1CQEwTJ9mjRvBA4UOLD8nKVOWfh+UlK3z/177OXrfOdKl7pyn3Xf//WreyTRUoAWgBgkOAGbZHBgG1OF6zM82DWbZaUmMBptgQhGjsyYqc9ae9XFz280948NMBWInljyzsNRFLPWdnZGWrddDsjK1unuSrVN9jJsK8KuQtQCtMBjCEtImISdNKJOopIpBFpNSMbIHCSRpRR5iakjTiyzLhchUUBwCgyKiweBv/7UsQbg8isVNoMPMjAAAA0gAAABEVFGmgqK////9bP/6XCykxBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq';
+/**
+ * Ljudet spelas med Web Audio. Ett <audio>-element som startas först när servern
+ * har svarat spärras av iOS, eftersom trycket då är "förbrukat". En AudioContext
+ * som väcks i själva trycket får däremot spela upp ljud som kommer senare.
+ */
+type AudioCtx = AudioContext;
+function createAudioContext(): AudioCtx | null {
+  const Ctor = (window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext);
+  return Ctor ? new Ctor() : null;
+}
 
 /** Session-cache: om servern svarat 503 (ej konfigurerad) — hoppa framtida premium-anrop direkt. */
 let premiumUnavailableForSession = false;
@@ -52,8 +60,8 @@ export function useSpeech() {
   const langRef = useRef<string>('sv');
   const pausedMidChunkRef = useRef(false);
   const playbackKindRef = useRef<PlaybackKind>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const objectUrlRef = useRef<string | null>(null);
+  const ctxRef = useRef<AudioCtx | null>(null);
+  const sourceRef = useRef<AudioBufferSourceNode | null>(null);
   const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
   // Varje nytt tryck eller stopp får ett nytt nummer. Ett svar från servern som kommer
   // efter att man tryckt igen spelas inte upp, så samma text läses inte flera gånger.
@@ -86,23 +94,16 @@ export function useSpeech() {
   const clearTtsNotice = useCallback(() => setTtsNotice(null), []);
 
   const cleanupAi = useCallback(() => {
-    const a = audioRef.current;
-    if (a) {
-      // Handlarna kopplas loss först: src = '' utlöser annars onerror, som startade
-      // webbläsarens röst och läste upp texten en gång till.
-      a.onplay = null;
-      a.onpause = null;
-      a.onended = null;
-      a.onerror = null;
-      a.pause();
-      a.src = '';
-      audioRef.current = null;
+    const src = sourceRef.current;
+    if (src) {
+      // onended kopplas loss först så att ett stopp inte räknas som "klar" eller fel.
+      src.onended = null;
+      try { src.stop(); } catch { /* redan stoppad */ }
+      src.disconnect();
+      sourceRef.current = null;
     }
-    const u = objectUrlRef.current;
-    if (u) {
-      URL.revokeObjectURL(u);
-      objectUrlRef.current = null;
-    }
+    // En pausad (suspenderad) kontext måste igång igen inför nästa uppläsning.
+    if (ctxRef.current?.state === 'suspended') void ctxRef.current.resume();
     playbackKindRef.current = null;
   }, []);
 
@@ -231,60 +232,45 @@ export function useSpeech() {
         return;
       }
 
-      // Ljudelementet skapas och startas medan trycket pågår. iOS spärrar annars
-      // uppspelningen eftersom den startar först när servern har svarat.
-      const audio = new Audio(SILENT_MP3);
-      audioRef.current = audio;
-      audio.play().catch(() => { /* tyst ljud, ok om det inte startar */ });
+      // Väck ljudet och webbläsarens röst medan trycket pågår (krävs på iOS).
+      if (!ctxRef.current) ctxRef.current = createAudioContext();
+      const ctx = ctxRef.current;
+      void ctx?.resume();
+      if ('speechSynthesis' in window && window.speechSynthesis) {
+        try { window.speechSynthesis.speak(new SpeechSynthesisUtterance('')); } catch { /* noop */ }
+      }
 
       try {
+        if (!ctx) throw new Error('Ingen Web Audio');
         const resp = await requestPremiumTts(readableText, lang);
         if (requestId !== requestIdRef.current) return;
         if (resp.ok) {
-          const blob = await resp.blob();
+          const data = await resp.arrayBuffer();
           if (requestId !== requestIdRef.current) return;
           bumpUsageRefresh();
-          const url = URL.createObjectURL(blob);
-          objectUrlRef.current = url;
-          audio.pause();
-          audio.src = url;
+          const buffer = await ctx.decodeAudioData(data);
+          if (requestId !== requestIdRef.current) return;
+          if (ctx.state === 'suspended') await ctx.resume();
+          const source = ctx.createBufferSource();
+          source.buffer = buffer;
+          source.connect(ctx.destination);
+          sourceRef.current = source;
           playbackKindRef.current = 'ai';
           chunksRef.current = [];
           langRef.current = lang;
           setTotalChunks(1);
           setCurrentChunk(0);
           setIsPaused(false);
-
-          audio.onplay = () => {
-            setIsSpeaking(true);
-            setIsPaused(false);
-          };
-          audio.onpause = () => {
-            if (!audio.ended) {
-              setIsSpeaking(false);
-              setIsPaused(true);
-            }
-          };
-          audio.onended = () => {
-            cleanupAi();
+          setIsSpeaking(true);
+          source.onended = () => {
+            sourceRef.current = null;
+            playbackKindRef.current = null;
             setIsSpeaking(false);
             setIsPaused(false);
             setCurrentChunk(0);
             setTotalChunks(0);
           };
-          audio.onerror = () => {
-            cleanupAi();
-            if (requestId === requestIdRef.current) speakBrowser(readableText, lang);
-          };
-
-          try {
-            await audio.play();
-          } catch {
-            // Spärrad uppspelning: visa paus-läget så att ett tryck på spela startar ljudet,
-            // i stället för att låta webbläsarens röst läsa samma text.
-            setIsSpeaking(false);
-            setIsPaused(true);
-          }
+          source.start();
           return;
         }
         cleanupAi();
@@ -321,7 +307,9 @@ export function useSpeech() {
 
   const pause = useCallback(() => {
     if (playbackKindRef.current === 'ai') {
-      audioRef.current?.pause();
+      void ctxRef.current?.suspend();
+      setIsSpeaking(false);
+      setIsPaused(true);
       return;
     }
     if (!('speechSynthesis' in window) || !window.speechSynthesis) return;
@@ -333,7 +321,9 @@ export function useSpeech() {
 
   const resume = useCallback(() => {
     if (playbackKindRef.current === 'ai') {
-      void audioRef.current?.play();
+      void ctxRef.current?.resume();
+      setIsSpeaking(true);
+      setIsPaused(false);
       return;
     }
     if (!('speechSynthesis' in window) || !window.speechSynthesis) return;
