@@ -17,11 +17,8 @@ router.post('/tts', async (req: AuthenticatedRequest, res: Response) => {
       res.status(401).json({ error: 'Inte autentiserad.' });
       return;
     }
+    // Tom nyckel = servicekontot används (se googleCloudTts.ts).
     const apiKey = process.env.GOOGLE_TTS_API_KEY || '';
-    if (!apiKey) {
-      res.status(503).json({ error: 'Premiumröst är inte aktiverad på servern.', code: 'tts_unconfigured' });
-      return;
-    }
     const { text, lang = 'sv' } = req.body || {};
     if (!text || typeof text !== 'string') {
       res.status(400).json({ error: 'Text krävs.' });

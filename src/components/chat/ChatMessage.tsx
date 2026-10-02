@@ -152,21 +152,15 @@ export default function ChatMessage({
     const speechActive = Boolean(speechSupported && speechState && (speechState.isSpeaking || speechState.isPaused));
 
     const primary: React.ReactNode[] = [];
-    if (speechSupported && speechState && !speechActive) {
+    // Har svaret en ruta till barnet läses bara den upp (knappen ligger i rutan).
+    // Den är kort, så den naturliga rösten räcker och kostar lite.
+    if (speechSupported && speechState && !speechActive && !sections?.child) {
       primary.push(
         <button key="listen" type="button" onClick={speechState.onSpeak} title={t('chat.listenHint')} className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-emerald-600 dark:hover:border-emerald-400')}>
           <Volume2 size={12} />
           {t('chat.listen')}
         </button>,
       );
-      if (onReadSummary) {
-        primary.push(
-          <button key="summary" type="button" onClick={() => onReadSummary(msg.content)} className={cn(ACTION_BTN, ACTION_FRAME, 'hover:border-emerald-600 dark:hover:border-emerald-400')}>
-            <Volume2 size={12} />
-            {t('chat.readSummary')}
-          </button>,
-        );
-      }
     }
     if (!msg.generatedImage) {
       primary.push(

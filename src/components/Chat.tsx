@@ -61,12 +61,11 @@ import ChatEmptyState from './chat/ChatEmptyState';
 import { useSpeech } from '../hooks/useSpeech';
 
 /**
- * Uppläsningen är avstängd: på iPhone lästes barnförklaringen upp flera gånger
- * per tryck. Flaggan döljer alla tre knapparna ("Lyssna på genomgången",
- * "Läs sammanfattning", "Lyssna på barnförklaringen"). Koden och serverns
- * TTS-route finns kvar, så det räcker att sätta true när felet är lagat.
+ * Uppläsningen var avstängd eftersom barnförklaringen lästes upp flera gånger per
+ * tryck på iPhone (se useSpeech.ts för orsaken och lagningen). Rösten kommer från
+ * Google Text-to-Speech (Neural2) via /api/tts, med webbläsarens röst som reserv.
  */
-const READ_ALOUD_ENABLED = false;
+const READ_ALOUD_ENABLED = true;
 import FreeTierUsageBar from './FreeTierUsageBar';
 import { bumpUsageRefresh } from '../utils/usageRefresh';
 

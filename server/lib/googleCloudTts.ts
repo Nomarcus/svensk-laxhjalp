@@ -1,3 +1,6 @@
+import admin from 'firebase-admin';
+import { createHash } from 'crypto';
+
 export type TtsLangKey = 'sv' | 'en' | 'ar';
 
 const TTS_ENDPOINT = 'https://texttospeech.googleapis.com/v1/text:synthesize';
@@ -15,27 +18,49 @@ function resolveLang(lang: string | undefined): TtsLangKey {
 }
 
 /**
- * Ordningen vi försöker röster. Standard-rösterna är 4× billigare än Neural2
- * ($4/M tecken vs $16/M) och har större gratis-kvot från Google (4 M/mån vs 1 M/mån).
- * Sätt GOOGLE_TTS_USE_NEURAL=true om du vill försöka Neural2 först (t.ex. för Pro-användare).
+ * Neural2 först: Standard-rösterna låter som en gammal talsyntes. Neural2 kostar mer
+ * per tecken, men appen läser bara upp den korta rutan till barnet och cachar ljudet.
+ * GOOGLE_TTS_USE_NEURAL=false går tillbaka till Standard först.
  */
 function voiceOrder(pref: { neural?: string; standard?: string }): string[] {
-  const preferNeural = process.env.GOOGLE_TTS_USE_NEURAL === 'true';
+  const preferNeural = process.env.GOOGLE_TTS_USE_NEURAL !== 'false';
   const order = preferNeural ? [pref.neural, pref.standard] : [pref.standard, pref.neural];
   return order.filter(Boolean) as string[];
 }
+
+/**
+ * Utan API-nyckel används Cloud Run-tjänstens eget servicekonto. Då behövs bara att
+ * Text-to-Speech-API:t är påslaget i projektet, ingen nyckel att hantera.
+ */
+async function authFor(apiKey: string): Promise<{ url: string; headers: Record<string, string> }> {
+  if (apiKey) return { url: `${TTS_ENDPOINT}?key=${encodeURIComponent(apiKey)}`, headers: {} };
+  const token = await admin.credential.applicationDefault().getAccessToken();
+  return { url: TTS_ENDPOINT, headers: { Authorization: `Bearer ${token.access_token}` } };
+}
+
+/** Samma text läses ofta igen (två tryck, samma uppgift). Liten cache i minnet. */
+const CACHE_MAX = 300;
+const cache = new Map<string, Buffer>();
 
 export async function synthesizeMp3(apiKey: string, text: string, lang?: string): Promise<Buffer> {
   const key = resolveLang(lang);
   const pref = VOICE_PREF[key];
   const tryNames = voiceOrder(pref);
+  const cacheKey = createHash('sha256').update(`${key}|${tryNames[0]}|${text}`).digest('hex');
+  const hit = cache.get(cacheKey);
+  if (hit) {
+    cache.delete(cacheKey);
+    cache.set(cacheKey, hit);
+    return hit;
+  }
+  const auth = await authFor(apiKey);
 
   let lastErr = '';
   for (const name of tryNames) {
     try {
-      const res = await fetch(`${TTS_ENDPOINT}?key=${encodeURIComponent(apiKey)}`, {
+      const res = await fetch(auth.url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...auth.headers },
         body: JSON.stringify({
           input: { text },
           voice: {
@@ -60,7 +85,10 @@ export async function synthesizeMp3(apiKey: string, text: string, lang?: string)
         lastErr = 'Saknar ljuddata';
         continue;
       }
-      return Buffer.from(data.audioContent, 'base64');
+      const audio = Buffer.from(data.audioContent, 'base64');
+      cache.set(cacheKey, audio);
+      if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value as string);
+      return audio;
     } catch (e: unknown) {
       lastErr = e instanceof Error ? e.message : String(e);
     }

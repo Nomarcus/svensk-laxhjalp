@@ -35,6 +35,9 @@ function pickVoice(voices: SpeechSynthesisVoice[], targetLang: string): SpeechSy
 
 type PlaybackKind = 'browser' | 'ai' | null;
 
+/** Kort tyst MP3. Spelas direkt i trycket så att iOS godkänner ljudet senare. */
+const SILENT_MP3 = 'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAADB8AhSmxhIIEVCSiJrDCQBTcu3UrAIwUdkRgQbFAZC1CQEwTJ9mjRvBA4UOLD8nKVOWfh+UlK3z/177OXrfOdKl7pyn3Xf//WreyTRUoAWgBgkOAGbZHBgG1OF6zM82DWbZaUmMBptgQhGjsyYqc9ae9XFz280948NMBWInljyzsNRFLPWdnZGWrddDsjK1unuSrVN9jJsK8KuQtQCtMBjCEtImISdNKJOopIpBFpNSMbIHCSRpRR5iakjTiyzLhchUUBwCgyKiweBv/7UsQbg8isVNoMPMjAAAA0gAAABEVFGmgqK////9bP/6XCykxBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq';
+
 /** Session-cache: om servern svarat 503 (ej konfigurerad) — hoppa framtida premium-anrop direkt. */
 let premiumUnavailableForSession = false;
 
@@ -52,6 +55,9 @@ export function useSpeech() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const objectUrlRef = useRef<string | null>(null);
   const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+  // Varje nytt tryck eller stopp får ett nytt nummer. Ett svar från servern som kommer
+  // efter att man tryckt igen spelas inte upp, så samma text läses inte flera gånger.
+  const requestIdRef = useRef(0);
 
   const isSupported =
     typeof window !== 'undefined' &&
@@ -82,6 +88,12 @@ export function useSpeech() {
   const cleanupAi = useCallback(() => {
     const a = audioRef.current;
     if (a) {
+      // Handlarna kopplas loss först: src = '' utlöser annars onerror, som startade
+      // webbläsarens röst och läste upp texten en gång till.
+      a.onplay = null;
+      a.onpause = null;
+      a.onended = null;
+      a.onerror = null;
       a.pause();
       a.src = '';
       audioRef.current = null;
@@ -180,6 +192,7 @@ export function useSpeech() {
 
   const speak = useCallback(
     async (text: string, lang: string = 'sv') => {
+      const requestId = ++requestIdRef.current;
       clearTtsNotice();
       cleanupAi();
       if ('speechSynthesis' in window && window.speechSynthesis) {
@@ -218,15 +231,23 @@ export function useSpeech() {
         return;
       }
 
+      // Ljudelementet skapas och startas medan trycket pågår. iOS spärrar annars
+      // uppspelningen eftersom den startar först när servern har svarat.
+      const audio = new Audio(SILENT_MP3);
+      audioRef.current = audio;
+      audio.play().catch(() => { /* tyst ljud, ok om det inte startar */ });
+
       try {
         const resp = await requestPremiumTts(readableText, lang);
+        if (requestId !== requestIdRef.current) return;
         if (resp.ok) {
           const blob = await resp.blob();
+          if (requestId !== requestIdRef.current) return;
           bumpUsageRefresh();
           const url = URL.createObjectURL(blob);
           objectUrlRef.current = url;
-          const audio = new Audio(url);
-          audioRef.current = audio;
+          audio.pause();
+          audio.src = url;
           playbackKindRef.current = 'ai';
           chunksRef.current = [];
           langRef.current = lang;
@@ -253,12 +274,20 @@ export function useSpeech() {
           };
           audio.onerror = () => {
             cleanupAi();
-            speakBrowser(readableText, lang);
+            if (requestId === requestIdRef.current) speakBrowser(readableText, lang);
           };
 
-          await audio.play();
+          try {
+            await audio.play();
+          } catch {
+            // Spärrad uppspelning: visa paus-läget så att ett tryck på spela startar ljudet,
+            // i stället för att låta webbläsarens röst läsa samma text.
+            setIsSpeaking(false);
+            setIsPaused(true);
+          }
           return;
         }
+        cleanupAi();
 
         if (resp.status === 403) {
           setTtsNotice(t('chat.aiVoiceDailyUsed'));
@@ -273,6 +302,8 @@ export function useSpeech() {
 
         speakBrowser(readableText, lang);
       } catch {
+        if (requestId !== requestIdRef.current) return;
+        cleanupAi();
         speakBrowser(readableText, lang);
       }
     },
@@ -317,6 +348,7 @@ export function useSpeech() {
   }, [next]);
 
   const stop = useCallback(() => {
+    requestIdRef.current += 1;
     cleanupAi();
     if ('speechSynthesis' in window && window.speechSynthesis) {
       window.speechSynthesis.cancel();
