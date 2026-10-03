@@ -1258,7 +1258,7 @@ ${requirementsText}`;
               )}
               {loading || lastStreamingText ? (
                 <div className="flex gap-4 mr-auto min-w-0">
-                  <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white shrink-0">
+                  <div className="hidden w-8 h-8 bg-emerald-600 rounded-lg items-center justify-center text-white shrink-0 sm:flex">
                     <Bot size={16} />
                   </div>
                   {streamingModelText || lastStreamingText ? (

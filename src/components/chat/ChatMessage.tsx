@@ -334,15 +334,18 @@ export default function ChatMessage({
   };
 
   return (
+    // På mobil ligger frågan och svaret under varandra i full bredd, utan ikoner
+    // vid sidan. Chattlayouten med ikon åt vänster/höger gjorde svaret smalt och
+    // osymmetriskt på iPhone. Från sm och uppåt behålls chattlayouten.
     <div
       className={cn(
-        'flex gap-4 max-w-3xl',
-        msg.role === 'user' ? 'ml-auto flex-row-reverse' : 'mr-auto'
+        'flex w-full min-w-0 gap-4 sm:max-w-3xl',
+        msg.role === 'user' ? 'sm:ml-auto sm:flex-row-reverse' : 'sm:mr-auto'
       )}
     >
       <div
         className={cn(
-          'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
+          'hidden w-8 h-8 rounded-lg items-center justify-center shrink-0 sm:flex',
           msg.role === 'user' ? 'bg-stone-200 dark:bg-slate-700 text-stone-600 dark:text-stone-300' : 'bg-emerald-600 text-white'
         )}
       >
@@ -370,8 +373,8 @@ export default function ChatMessage({
             'px-4 py-3 rounded-2xl text-[15px] leading-relaxed relative group/msg',
             msg.role === 'user'
               // prose sätter egen textfärg (grå), som annars syntes dåligt på grönt.
-              ? 'bg-emerald-600 text-white rounded-tr-none [&_.prose]:[--tw-prose-body:#fff] [&_.prose]:[--tw-prose-bold:#fff] [&_.prose]:text-white'
-              : 'bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 shadow-sm rounded-tl-none'
+              ? 'bg-emerald-600 text-white sm:rounded-tr-none [&_.prose]:[--tw-prose-body:#fff] [&_.prose]:[--tw-prose-bold:#fff] [&_.prose]:text-white'
+              : 'bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 shadow-sm sm:rounded-tl-none'
           )}
         >
           {bodyVisible && (

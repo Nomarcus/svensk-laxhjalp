@@ -253,3 +253,21 @@
     }
   }
 }
+
+/*
+ * iPhone zoomar in när man trycker i en textruta med mindre än 16 px text. Zoomen
+ * stannade kvar efteråt: sidan gick att dra i sidled och hamnade under klockan.
+ */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Inget på sidan ska kunna dra ut den i sidled. */
+html,
+body {
+  overflow-x: clip;
+}

@@ -286,7 +286,7 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
             onChange={(e) => setInput(e.target.value)}
             onPaste={handlePaste}
             placeholder={showHomeworkImageActions ? t('chat.imageExtraPlaceholder') : coachMode ? t('chat.coachPlaceholder') : t('chat.inputPlaceholder')}
-            className="flex-1 bg-transparent border-none focus:ring-0 py-2 px-2 resize-none max-h-32 min-h-[40px] text-[15px] text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500"
+            className="flex-1 bg-transparent border-none focus:ring-0 py-2 px-2 resize-none max-h-32 min-h-[40px] text-base text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500"
             rows={1}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
