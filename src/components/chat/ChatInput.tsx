@@ -286,7 +286,9 @@ export default function ChatInput({ input, setInput, images, setImages, maxImage
             onChange={(e) => setInput(e.target.value)}
             onPaste={handlePaste}
             placeholder={showHomeworkImageActions ? t('chat.imageExtraPlaceholder') : coachMode ? t('chat.coachPlaceholder') : t('chat.inputPlaceholder')}
-            className="flex-1 bg-transparent border-none focus:ring-0 py-2 px-2 resize-none max-h-32 min-h-[40px] text-base text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500"
+            // Tom ruta: en rad som klipps i stället för att radbryta. Exempeltexten
+            // hamnade annars på två rader i en enradsruta och såg avklippt ut.
+            className={cn("min-w-0 flex-1 bg-transparent border-none focus:ring-0 py-2 px-2 resize-none max-h-32 min-h-[40px] text-base text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500", !input && "whitespace-nowrap overflow-hidden text-ellipsis")}
             rows={1}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
