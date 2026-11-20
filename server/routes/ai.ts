@@ -48,12 +48,25 @@ const FALLBACK_MODEL = process.env.AI_FALLBACK_MODEL?.trim() || 'gemini-3.1-flas
 /** Reserv för bilder om det nya ID:t inte skulle stämma. Fungerar bara till 2 okt. */
 const IMAGE_FALLBACK_MODEL = process.env.AI_IMAGE_FALLBACK_MODEL?.trim() || 'gemini-2.5-flash-image';
 
-/** Modeller som nyss svarat "finns inte". Hoppas över en timme så att varje fråga inte först ska misslyckas. */
+/**
+ * Sista utvägar för text. Google-alias som alltid pekar på aktuell Flash-modell, så de
+ * slutar aldrig fungera när en enskild version stängs av eller får sin kvot strypt.
+ */
+const LAST_RESORT_TEXT_MODELS = (process.env.AI_LAST_RESORT_MODELS?.trim() || 'gemini-flash-lite-latest,gemini-flash-latest')
+  .split(',')
+  .map((m) => m.trim())
+  .filter(Boolean);
+
+/**
+ * Modeller som nyss misslyckats. "Finns inte" hoppas över en timme; "överbelastad/kvot slut"
+ * hoppas över några minuter så att varje fråga inte först ska misslyckas.
+ */
 const unavailableUntil = new Map<string, number>();
 const UNAVAILABLE_TTL_MS = 60 * 60 * 1000;
+const OVERLOADED_TTL_MS = 5 * 60 * 1000;
 
-function markUnavailable(model: string): void {
-  unavailableUntil.set(model, Date.now() + UNAVAILABLE_TTL_MS);
+function markUnavailable(model: string, ttlMs: number = UNAVAILABLE_TTL_MS): void {
+  unavailableUntil.set(model, Date.now() + ttlMs);
 }
 
 function isKnownUnavailable(model: string): boolean {
@@ -64,11 +77,7 @@ function isKnownUnavailable(model: string): boolean {
   return false;
 }
 
-/**
- * Bara fel som betyder att själva modellen saknas eller är avstängd. Överbelastning
- * (429) och serverfel (5xx) ska INTE byta modell — de går över av sig själva, och ett
- * byte där skulle dölja ett annat problem.
- */
+/** Fel som betyder att själva modellen saknas eller är avstängd. */
 function isModelUnavailable(error: unknown): boolean {
   const status = (error as { status?: unknown })?.status;
   if (status === 404) return true;
@@ -77,27 +86,51 @@ function isModelUnavailable(error: unknown): boolean {
 }
 
 /**
- * Kör ett anrop mot primärmodellen och, om den inte finns, samma anrop mot reserven.
- * `call` får modellen och en flagga om det är reserven (då får anroparen t.ex. inte
- * använda en promptcache, eftersom cachen är knuten till primärmodellen).
+ * Överbelastning eller slut på kvot för just den modellen (429/503). Google stryper ofta
+ * kvoten på modeller som ska fasas ut, så då är det bättre att byta modell än att låta
+ * föräldern få ett felmeddelande.
+ */
+function isModelOverloaded(error: unknown): boolean {
+  const status = (error as { status?: unknown })?.status;
+  if (status === 429 || status === 503 || status === 'RESOURCE_EXHAUSTED' || status === 'UNAVAILABLE') return true;
+  const message = error instanceof Error ? error.message : String(error);
+  return /RESOURCE_EXHAUSTED|UNAVAILABLE|overloaded|quota|rate limit|"code":\s*(?:429|503)/i.test(message);
+}
+
+/**
+ * Kör ett anrop mot primärmodellen och, om den saknas eller är överbelastad, samma anrop
+ * mot nästa modell i listan. `call` får modellen och en flagga om det är en reserv (då får
+ * anroparen t.ex. inte använda en promptcache, eftersom cachen är knuten till primärmodellen).
+ * Föräldern märker ingenting, och loggen får en rad "[models] FALLBACK".
  */
 async function withModelFallback<T>(
   primary: string,
-  fallback: string,
+  fallbacks: string | string[],
   call: (model: string, isFallback: boolean) => Promise<T>,
 ): Promise<T> {
-  if (primary !== fallback && isKnownUnavailable(primary)) {
-    return call(fallback, true);
+  const chain = [...new Set([primary, ...(Array.isArray(fallbacks) ? fallbacks : [fallbacks])].filter(Boolean))];
+  const available = chain.filter((m) => !isKnownUnavailable(m));
+  // Om allt är markerat som otillgängligt: försök ändå i ordning hellre än att ge upp direkt.
+  const order = available.length > 0 ? available : chain;
+
+  let lastError: unknown;
+  for (let i = 0; i < order.length; i++) {
+    const model = order[i];
+    try {
+      return await call(model, model !== primary);
+    } catch (error) {
+      lastError = error;
+      const missing = isModelUnavailable(error);
+      const overloaded = !missing && isModelOverloaded(error);
+      if (!missing && !overloaded) throw error;
+      markUnavailable(model, missing ? UNAVAILABLE_TTL_MS : OVERLOADED_TTL_MS);
+      const next = order[i + 1];
+      if (!next) break;
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`[models] FALLBACK ${model} -> ${next} (${missing ? 'saknas' : 'överbelastad'}): ${message.slice(0, 160)}`);
+    }
   }
-  try {
-    return await call(primary, false);
-  } catch (error) {
-    if (primary === fallback || !isModelUnavailable(error)) throw error;
-    markUnavailable(primary);
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn(`[models] FALLBACK ${primary} -> ${fallback}: ${message.slice(0, 160)}`);
-    return call(fallback, true);
-  }
+  throw lastError;
 }
 
 /**
@@ -116,6 +149,7 @@ async function verifyConfiguredModels(): Promise<void> {
     illustration: IMAGE_MODEL,
     'reserv text': FALLBACK_MODEL,
     'reserv bild': IMAGE_FALLBACK_MODEL,
+    ...Object.fromEntries(LAST_RESORT_TEXT_MODELS.map((m, i) => [`sista reserv ${i + 1}`, m])),
   })) {
     (wanted[id] ||= []).push(role);
   }
@@ -487,7 +521,7 @@ Anpassning för detta barn:
       },
     };
 
-    const stream = await withModelFallback(effectiveModel, FALLBACK_MODEL, (model, isFallback) =>
+    const stream = await withModelFallback(effectiveModel, [FALLBACK_MODEL, ...LAST_RESORT_TEXT_MODELS], (model, isFallback) =>
       ai.models.generateContentStream(
         isFallback
           ? {
